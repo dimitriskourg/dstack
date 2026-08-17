@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dstack.local/schemas/adapter.schema.json",
+  "title": "dstack host adapter",
+  "type": "object",
+  "required": ["schema_version", "id", "display_name", "capabilities"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "display_name": { "type": "string", "minLength": 1 },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["status", "fallback"],
+        "properties": {
+          "status": {
+            "enum": ["enforced", "native", "advisory", "approval-required", "unavailable"]
+          },
+          "fallback": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
+

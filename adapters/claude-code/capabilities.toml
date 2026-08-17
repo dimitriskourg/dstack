@@ -1,0 +1,55 @@
+schema_version = 1
+id = "claude-code"
+display_name = "Claude Code"
+
+[capabilities.explore]
+status = "native"
+fallback = "The parent searches and reads directly."
+[capabilities.implement]
+status = "native"
+fallback = "The parent edits directly."
+[capabilities.review]
+status = "native"
+fallback = "The parent runs a separate rubric-led review and discloses that it was not independent."
+[capabilities.parallel]
+status = "native"
+fallback = "Run slices sequentially and state the collapse."
+[capabilities.ask_user]
+status = "native"
+fallback = "Ask in ordinary conversation."
+[capabilities.verify]
+status = "native"
+fallback = "Run available local checks and state any real-surface evidence gap."
+[capabilities.model_role]
+status = "native"
+fallback = "Inherit the parent model."
+[capabilities."agents.spawn"]
+status = "native"
+fallback = "Execute the packet on the parent."
+[capabilities."agents.wait"]
+status = "native"
+fallback = "Continue or complete the corresponding parent pass."
+[capabilities."agents.follow_up"]
+status = "native"
+fallback = "Resolve the focused gap on the parent."
+[capabilities."agents.interrupt"]
+status = "native"
+fallback = "Stop the corresponding parent pass."
+[capabilities."agents.collect"]
+status = "native"
+fallback = "Use the parent pass notes without reading private transcripts."
+[capabilities."agents.isolation"]
+status = "advisory"
+fallback = "Keep the helper read-only by instruction and disclose that isolation is not enforced."
+
+[capabilities."session.history"]
+status = "unavailable"
+fallback = "Use user-supplied handoffs, visible conversation, and repository state; state the gap."
+
+[capabilities."session.transcript"]
+status = "unavailable"
+fallback = "Use the visible conversation or a compact parent digest; state the gap."
+
+[capabilities."runtime.wake"]
+status = "unavailable"
+fallback = "Continue only while the parent session remains active and leave a durable handoff before stopping."

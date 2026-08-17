@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dstack.local/schemas/config.schema.json",
+  "title": "dstack personal configuration",
+  "type": "object",
+  "required": ["schema_version", "host_override", "hosts", "panels"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "host_override": {
+      "type": "string",
+      "pattern": "^(auto|[a-z][a-z0-9-]*)$"
+    },
+    "hosts": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["roles", "stale_models"],
+        "properties": {
+          "roles": {
+            "type": "object",
+            "required": [
+              "fast-explorer",
+              "feature-worker",
+              "bug-worker",
+              "deep-judgment",
+              "skeptical-reviewer",
+              "independent-judge"
+            ],
+            "properties": {
+              "fast-explorer": { "$ref": "#/$defs/modelIdentifier" },
+              "feature-worker": { "$ref": "#/$defs/modelIdentifier" },
+              "bug-worker": { "$ref": "#/$defs/modelIdentifier" },
+              "deep-judgment": { "$ref": "#/$defs/modelIdentifier" },
+              "skeptical-reviewer": { "$ref": "#/$defs/modelIdentifier" },
+              "independent-judge": { "$ref": "#/$defs/modelIdentifier" }
+            },
+            "additionalProperties": false
+          },
+          "stale_models": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/modelIdentifier" },
+            "uniqueItems": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "panels": {
+      "type": "object",
+      "required": [
+        "arena-runners",
+        "arena-cross-judge",
+        "interrogate-reviewers",
+        "architect-runners"
+      ],
+      "properties": {
+        "arena-runners": { "$ref": "#/$defs/panel" },
+        "arena-cross-judge": { "$ref": "#/$defs/panel" },
+        "interrogate-reviewers": { "$ref": "#/$defs/panel" },
+        "architect-runners": { "$ref": "#/$defs/panel" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "modelIdentifier": {
+      "type": "string",
+      "pattern": "^\\S+$"
+    },
+    "panel": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "enum": [
+          "fast-explorer",
+          "feature-worker",
+          "bug-worker",
+          "deep-judgment",
+          "skeptical-reviewer",
+          "independent-judge"
+        ]
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,15 @@
+schema_version = 1
+
+[roles.fast-explorer]
+model = "inherit-parent"
+[roles.feature-worker]
+model = "inherit-parent"
+[roles.bug-worker]
+model = "inherit-parent"
+[roles.deep-judgment]
+model = "inherit-parent"
+[roles.skeptical-reviewer]
+model = "inherit-parent"
+[roles.independent-judge]
+model = "inherit-parent"
+
