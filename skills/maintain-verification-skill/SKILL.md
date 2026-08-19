@@ -7,6 +7,8 @@ description: "Periodic pass that keeps a project's verification skill and featur
 
 ## Capability requirements
 
+Read `references/runtime.md` before any helper action.
+
 | Capability | Parent fallback |
 | --- | --- |
 | `explore` | The parent performs the same read-only pass. |

@@ -7,6 +7,8 @@ description: "Use for \"why does X work this way\", \"why did we choose Y\", des
 
 ## Capability requirements
 
+Read `references/runtime.md` before any helper action.
+
 | Capability | Parent fallback |
 | --- | --- |
 | `explore` | The parent performs the same read-only evidence search. |
@@ -116,8 +118,9 @@ Each investigator receives:
 2. the code anchor;
 3. `references/investigator-prompt.md`;
 4. `references/evidence-systems.md`;
-5. the incident-postmortem guide when the target looks defensive or operational;
-6. a requirement to return citations, null results, query coverage, confidence, contradictions, and gaps.
+5. `references/sources/code-archaeology.md` for the source-control and review investigator;
+6. the incident-postmortem guide when the target looks defensive or operational;
+7. a requirement to return citations, null results, query coverage, confidence, contradictions, and gaps.
 
 Use `model_role:fast-explorer` for category investigators. The helper may need authenticated connector access, so the adapter should choose an execution mode that preserves those tools while the prompt prohibits writes.
 

@@ -7,6 +7,8 @@ description: "Spawn Comment Sicko, fix accepted findings, and offer encodings fo
 
 ## Capability requirements
 
+Read `references/runtime.md` before any helper action.
+
 | Capability | Parent fallback |
 | --- | --- |
 | `explore` | The parent performs the same read-only pass. |

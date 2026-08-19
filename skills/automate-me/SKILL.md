@@ -7,6 +7,8 @@ description: "Use for \"automate me\", \"create or update my mode skill\", \"cap
 
 ## Capability requirements
 
+Read `references/runtime.md` before any helper action.
+
 | Capability | Parent fallback |
 | --- | --- |
 | `explore` | The parent performs the same read-only pass. |

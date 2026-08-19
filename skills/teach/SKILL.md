@@ -7,6 +7,8 @@ description: "Explain a body of work plainly so a person actually understands it
 
 ## Capability requirements
 
+Read `references/runtime.md` before any helper action.
+
 | Capability | Parent fallback |
 | --- | --- |
 | `explore` | The parent performs the same read-only pass. |

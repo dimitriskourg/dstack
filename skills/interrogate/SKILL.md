@@ -7,6 +7,8 @@ description: "Use for \"interrogate\", \"adversarial review\", \"multi-model rev
 
 ## Capability requirements
 
+Read `references/runtime.md` before any helper action.
+
 | Capability | Parent fallback |
 | --- | --- |
 | `review` | The parent performs a separate rubric-led pass and discloses that it was not independent. |

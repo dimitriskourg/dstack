@@ -7,6 +7,8 @@ description: "Spawn N parallel candidates at the same task, pick a base, graft t
 
 ## Capability requirements
 
+Read `references/runtime.md` before any helper action.
+
 | Capability | Parent fallback |
 | --- | --- |
 | `explore` | The parent performs the same read-only pass. |

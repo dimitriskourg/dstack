@@ -7,6 +7,8 @@ description: "Find what a change could break somewhere else before it ships, bey
 
 ## Capability requirements
 
+Read `references/runtime.md` before any helper action.
+
 | Capability | Parent fallback |
 | --- | --- |
 | `explore` | The parent performs the same read-only pass. |

@@ -7,6 +7,8 @@ description: "Generate a project-local verification skill that drives your app t
 
 ## Capability requirements
 
+Read `references/runtime.md` before any helper action.
+
 | Capability | Parent fallback |
 | --- | --- |
 | `explore` | The parent performs the same read-only pass. |

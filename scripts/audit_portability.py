@@ -71,6 +71,7 @@ LEAKAGE_PATTERNS: Tuple[Tuple[str, re.Pattern], ...] = (
     ("private transcript layout", re.compile(r"\bagent-transcripts\b|Application Support/Cursor", re.I)),
     ("legacy dstack brand", re.compile(r"\b(?:pstack|ystack|poteto(?:-mode)?)\b", re.I)),
 )
+ASSET_DIRECTORIES = ("references", "scripts", "assets")
 ASSET_REF = re.compile(r"(?<![A-Za-z0-9_.-])((?:references|scripts|assets)/[A-Za-z0-9_./-]+)")
 CAPABILITY_REF = re.compile(r"`(" + "|".join(re.escape(item) for item in sorted(CAPABILITIES, key=len, reverse=True)) + r")`")
 MODEL_ROLE_REF = re.compile(r"`model_role:[a-z0-9-]+`")
@@ -175,7 +176,51 @@ def check_skill(skill_dir: Path) -> List[Finding]:
                     continue
                 if not (path.parent / reference).resolve().exists():
                     findings.append(Finding(relative(path), "missing markdown link target {!r}".format(reference), line_number))
+
+    findings.extend(check_orphan_assets(skill_dir, package_texts))
     return findings
+
+
+def check_orphan_assets(skill_dir: Path, package_texts: List[Tuple[Path, str]]) -> List[Finding]:
+    findings: List[Finding] = []
+    for directory in ASSET_DIRECTORIES:
+        root = skill_dir / directory
+        if not root.is_dir():
+            continue
+        for asset in sorted(path for path in root.rglob("*") if path.is_file()):
+            sources = [(path, body) for path, body in package_texts if path != asset]
+            if any(mentions_file(body, path.parent, skill_dir, asset) for path, body in sources):
+                continue
+            containers = [parent for parent in asset.parents if root in parent.parents]
+            if any(
+                mentions_directory(body, path.parent, skill_dir, container)
+                for path, body in sources
+                for container in containers
+            ):
+                continue
+            findings.append(Finding(relative(asset), "asset is never referenced by the skill"))
+    return findings
+
+
+def reference_forms(source_dir: Path, skill_dir: Path, target: Path) -> Set[str]:
+    forms = {target.relative_to(skill_dir).as_posix()}
+    try:
+        forms.add(target.relative_to(source_dir).as_posix())
+    except ValueError:
+        pass
+    return forms
+
+
+def mentions_file(text: str, source_dir: Path, skill_dir: Path, target: Path) -> bool:
+    return any(form in text for form in reference_forms(source_dir, skill_dir, target))
+
+
+def mentions_directory(text: str, source_dir: Path, skill_dir: Path, target: Path) -> bool:
+    # The lookahead keeps a mention of a file inside the directory from covering its siblings.
+    return any(
+        re.search(re.escape(form + "/") + r"(?![\w./-])", text)
+        for form in reference_forms(source_dir, skill_dir, target)
+    )
 
 
 def parse_adapter(path: Path) -> Tuple[Dict[str, str], Dict[str, Dict[str, str]]]:

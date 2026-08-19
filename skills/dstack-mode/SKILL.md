@@ -7,6 +7,8 @@ description: "Apply dstack's rigorous engineering mode: route work through porta
 
 ## Capability requirements
 
+Read `references/runtime.md` before any helper action.
+
 | Capability | Parent fallback |
 | --- | --- |
 | `explore` | The parent performs the same read-only pass. |

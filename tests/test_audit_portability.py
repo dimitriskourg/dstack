@@ -80,6 +80,53 @@ class PortabilityAuditTests(unittest.TestCase):
             skill = self.make_skill(Path(temp), "Read `../missing/SKILL.md`.\n")
             self.assertIn("missing sibling skill '../missing/SKILL.md'", self.messages(skill))
 
+    def test_orphan_asset_fails(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(
+                Path(temp),
+                "Nothing points at the runtime notes.\n",
+                {"references/runtime.md": "Read the capability contract.\n"},
+            )
+            self.assertIn("asset is never referenced by the skill", self.messages(skill))
+
+    def test_asset_referenced_from_a_sibling_asset_passes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(
+                Path(temp),
+                "Read `references/prompt.md`.\n",
+                {
+                    "references/prompt.md": "Append `sources/incident.md` when the code is defensive.\n",
+                    "references/sources/incident.md": "Search postmortems.\n",
+                },
+            )
+            self.assertEqual([], self.messages(skill))
+
+    def test_directory_reference_covers_its_files(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(
+                Path(temp),
+                "Follow the shape in [`references/example/`](references/example/).\n",
+                {
+                    "references/example/README.md": "Index.\n",
+                    "references/example/search.md": "One feature.\n",
+                },
+            )
+            self.assertEqual([], self.messages(skill))
+
+    def test_file_inside_a_directory_does_not_cover_its_siblings(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(
+                Path(temp),
+                "Read `references/sources/incident.md`.\n",
+                {
+                    "references/sources/incident.md": "Search postmortems.\n",
+                    "references/sources/archaeology.md": "Search git history.\n",
+                },
+            )
+            self.assertEqual(
+                ["asset is never referenced by the skill"], self.messages(skill)
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

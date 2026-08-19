@@ -1,6 +1,6 @@
 # Investigator Prompt Template
 
-Build each investigator's prompt from this template and fill in the placeholders. Append the matching category from `evidence-systems.md`. If the target code looks defensive (null checks, retry logic, timeout handling, rate limiting, feature flags, egress guards, or resource-exhaustion handlers), also append `sources/incident-postmortem.md` for incident-oriented searches.
+Build each investigator's prompt from this template and fill in the placeholders. Append the matching category from `evidence-systems.md`. For the source-control and review investigator, also append `sources/code-archaeology.md` for the git and in-repo search playbook. If the target code looks defensive (null checks, retry logic, timeout handling, rate limiting, feature flags, egress guards, or resource-exhaustion handlers), also append `sources/incident-postmortem.md` for incident-oriented searches.
 
 ---
 

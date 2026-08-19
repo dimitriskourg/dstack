@@ -7,6 +7,8 @@ description: "Design an auditable playbook when no narrower one fits: a large mi
 
 ## Capability requirements
 
+Read `references/runtime.md` before any helper action.
+
 | Capability | Parent fallback |
 | --- | --- |
 | `explore` | The parent performs the same read-only pass. |

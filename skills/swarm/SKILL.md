@@ -7,6 +7,8 @@ description: "Fan out independent workers, drain them, and return one evidence-b
 
 ## Capability requirements
 
+Read `references/runtime.md` before any helper action.
+
 | Capability | Parent fallback |
 | --- | --- |
 | `explore` | The parent performs the same read-only pass. |

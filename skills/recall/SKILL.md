@@ -7,6 +7,8 @@ description: "Reconstruct recent working context from authorized conversation hi
 
 ## Capability requirements
 
+Read `references/runtime.md` before any helper action.
+
 | Capability | Parent fallback |
 | --- | --- |
 | `explore` | The parent performs the same read-only pass. |
