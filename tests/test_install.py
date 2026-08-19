@@ -261,5 +261,163 @@ class InstallerTests(unittest.TestCase):
             self.assertEqual('{"schema_version": 1}\n', config.read_text(encoding="utf-8"))
 
 
+    def test_update_adds_missing_claude_links_to_a_link_free_install(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = self.make_source(root)
+            install_status, _, _ = self.run_installer(source, self.destinations(root))
+            self.assertEqual(0, install_status)
+            self.assertFalse((root / "claude").exists())
+
+            status, stdout, stderr = self.run_installer(
+                source, ["--update", "--with-claude-links"] + self.destinations(root)
+            )
+
+            self.assertEqual(0, status)
+            self.assertEqual("", stderr)
+            self.assertIn("Linked:", stdout)
+            for name in ("alpha", "beta"):
+                link = root / "claude" / "skills" / name
+                self.assertTrue(link.is_symlink())
+                self.assertEqual(
+                    (root / "agents" / "skills" / name).resolve(), link.resolve()
+                )
+
+    def test_update_links_a_newly_added_skill_and_leaves_existing_links_alone(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = self.make_source(root)
+            install_status, _, _ = self.run_installer(
+                source, ["--with-claude-links"] + self.destinations(root)
+            )
+            self.assertEqual(0, install_status)
+            added = source / "skills" / "gamma"
+            added.mkdir(parents=True)
+            (added / "SKILL.md").write_text(
+                "---\nname: gamma\ndescription: test\n---\n", encoding="utf-8"
+            )
+
+            status, stdout, stderr = self.run_installer(
+                source, ["--update", "--with-claude-links"] + self.destinations(root)
+            )
+
+            self.assertEqual(0, status)
+            self.assertEqual("", stderr)
+            self.assertTrue((root / "agents" / "skills" / "gamma" / "SKILL.md").is_file())
+            self.assertTrue((root / "claude" / "skills" / "gamma").is_symlink())
+            self.assertIn("Already linked:", stdout)
+
+    def test_update_rejects_a_claude_link_destination_it_does_not_own(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = self.make_source(root)
+            install_status, _, _ = self.run_installer(
+                source, ["--with-claude-links"] + self.destinations(root)
+            )
+            self.assertEqual(0, install_status)
+            hijacked = root / "claude" / "skills" / "alpha"
+            hijacked.unlink()
+            hijacked.mkdir()
+
+            status, _, stderr = self.run_installer(
+                source, ["--update", "--with-claude-links"] + self.destinations(root)
+            )
+
+            self.assertEqual(2, status)
+            self.assertIn("expected compatibility link", stderr)
+            self.assertIn("No files changed.", stderr)
+            self.assertTrue(hijacked.is_dir())
+            self.assertFalse(hijacked.is_symlink())
+
+    def test_update_rejects_a_claude_link_pointing_outside_the_install(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = self.make_source(root)
+            install_status, _, _ = self.run_installer(
+                source, ["--with-claude-links"] + self.destinations(root)
+            )
+            self.assertEqual(0, install_status)
+            stray = root / "claude" / "skills" / "alpha"
+            stray.unlink()
+            stray.symlink_to(root / "elsewhere", target_is_directory=True)
+
+            status, _, stderr = self.run_installer(
+                source, ["--update", "--with-claude-links"] + self.destinations(root)
+            )
+
+            self.assertEqual(2, status)
+            self.assertIn("compatibility link points elsewhere", stderr)
+            self.assertIn("No files changed.", stderr)
+
+    def test_update_without_the_flag_leaves_the_claude_directory_untouched(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = self.make_source(root)
+            install_status, _, _ = self.run_installer(source, self.destinations(root))
+            self.assertEqual(0, install_status)
+
+            status, stdout, stderr = self.run_installer(
+                source, ["--update"] + self.destinations(root)
+            )
+
+            self.assertEqual(0, status)
+            self.assertEqual("", stderr)
+            self.assertNotIn("Linked:", stdout)
+            self.assertFalse((root / "claude").exists())
+
+    def test_remove_created_drops_a_link_without_touching_its_target(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            real = root / "real"
+            real.mkdir()
+            (real / "keep.txt").write_text("keep", encoding="utf-8")
+            link = root / "link"
+            link.symlink_to(real, target_is_directory=True)
+
+            INSTALL.remove_created(link)
+
+            self.assertFalse(INSTALL.path_exists(link))
+            self.assertTrue((real / "keep.txt").is_file())
+
+    def test_windows_links_are_created_as_junctions(self):
+        recorded = []
+        winapi = mock.Mock()
+        winapi.CreateJunction = lambda source, destination: recorded.append(
+            (source, destination)
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "source"
+            source.mkdir()
+            destination = root / "destination"
+
+            with mock.patch.object(INSTALL.os, "name", "nt"), mock.patch.object(
+                INSTALL, "_winapi", winapi
+            ):
+                INSTALL.create_compatibility_link(source, destination)
+
+            self.assertEqual([(str(source), str(destination))], recorded)
+            self.assertFalse(destination.is_symlink())
+
+    def test_windows_junction_is_accepted_as_a_compatibility_link(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary) / "junction"
+            directory.mkdir()
+
+            with mock.patch.object(INSTALL.os, "name", "nt"):
+                without_tag = os.stat_result(tuple(range(10)))
+                with mock.patch.object(INSTALL.os, "lstat", return_value=without_tag):
+                    self.assertFalse(INSTALL.is_compatibility_link(directory))
+                tagged = mock.Mock(st_reparse_tag=INSTALL.MOUNT_POINT_REPARSE_TAG)
+                with mock.patch.object(INSTALL.os, "lstat", return_value=tagged):
+                    self.assertTrue(INSTALL.is_compatibility_link(directory))
+
+    def test_plain_directory_is_not_a_compatibility_link(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary) / "plain"
+            directory.mkdir()
+
+            self.assertFalse(INSTALL.is_compatibility_link(directory))
+
 if __name__ == "__main__":
     unittest.main()

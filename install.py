@@ -7,22 +7,59 @@ import argparse
 import os
 import re
 import shutil
+import stat
 import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List, Sequence
+from typing import Iterable, List, Optional, Sequence, Tuple
+
+try:  # Windows-only; supplies CreateJunction.
+    import _winapi
+except ImportError:  # pragma: no cover - exercised on Windows only
+    _winapi = None
 
 
 SOURCE_ROOT = Path(__file__).resolve().parent
 SUPPORT_DIRECTORIES = ("adapters", "contracts", "schemas", "runtime")
 SUPPORT_FILES = ("LICENSE", "NOTICE.md")
+# stat exposes this only on Windows builds; the tag value itself is stable.
+MOUNT_POINT_REPARSE_TAG = getattr(stat, "IO_REPARSE_TAG_MOUNT_POINT", 0xA0000003)
 
 
 def path_exists(path: Path) -> bool:
     """Return true for files, directories, valid links, and broken links."""
 
     return os.path.lexists(str(path))
+
+
+def is_compatibility_link(path: Path) -> bool:
+    """Return true for symlinks everywhere and for Windows directory junctions."""
+
+    if path.is_symlink():
+        return True
+    if os.name != "nt":
+        return False
+    try:
+        reparse_tag = os.lstat(str(path)).st_reparse_tag
+    except (AttributeError, OSError):
+        return False
+    return reparse_tag == MOUNT_POINT_REPARSE_TAG
+
+
+def create_compatibility_link(source: Path, destination: Path) -> None:
+    """Link destination to source, preferring junctions on Windows.
+
+    Real symlinks need Developer Mode or an elevated shell on Windows; a
+    directory junction needs no special privilege and is discovered the same way.
+    """
+
+    if os.name == "nt":
+        create_junction = getattr(_winapi, "CreateJunction", None)
+        if create_junction is not None:
+            create_junction(str(source), str(destination))
+            return
+    destination.symlink_to(source, target_is_directory=True)
 
 
 @dataclass(frozen=True)
@@ -137,6 +174,11 @@ def update_issues(operations: Iterable[Operation]) -> List[str]:
         elif operation.kind == "copy-file":
             if not destination.is_file() or destination.is_symlink():
                 issues.append("expected installed file: {}".format(destination))
+        elif operation.kind == "link":
+            if not is_compatibility_link(destination):
+                issues.append("expected compatibility link: {}".format(destination))
+            elif destination.resolve() != operation.source.resolve():
+                issues.append("compatibility link points elsewhere: {}".format(destination))
         else:
             issues.append("updates do not manage operation kind {}: {}".format(operation.kind, destination))
     return issues
@@ -145,6 +187,10 @@ def update_issues(operations: Iterable[Operation]) -> List[str]:
 def remove_created(path: Path) -> None:
     if path.is_symlink() or path.is_file():
         path.unlink()
+    elif is_compatibility_link(path):
+        # A junction reports as a directory; rmdir drops the link, rmtree would
+        # delete the skills it points at.
+        os.rmdir(str(path))
     elif path.is_dir():
         shutil.rmtree(str(path))
 
@@ -159,7 +205,7 @@ def apply_operations(operations: Sequence[Operation]) -> None:
             elif operation.kind == "copy-file":
                 shutil.copy2(str(operation.source), str(operation.destination))
             elif operation.kind == "link":
-                operation.destination.symlink_to(operation.source, target_is_directory=True)
+                create_compatibility_link(operation.source, operation.destination)
             else:
                 raise InstallError("unknown operation kind: {}".format(operation.kind))
             created.append(operation.destination)
@@ -191,18 +237,31 @@ def stage_update(operation: Operation) -> Path:
     return stage_root
 
 
-def apply_updates(operations: Sequence[Operation]) -> None:
-    staged = []
+def apply_updates(operations: Sequence[Operation]) -> List[Tuple[Operation, str]]:
+    staged: List[Tuple[Operation, Optional[Path]]] = []
     try:
         for operation in operations:
-            staged.append((operation, stage_update(operation)))
+            staged.append(
+                (operation, None if operation.kind == "link" else stage_update(operation))
+            )
     except Exception:
         for _, stage_root in staged:
-            shutil.rmtree(str(stage_root), ignore_errors=True)
+            if stage_root is not None:
+                shutil.rmtree(str(stage_root), ignore_errors=True)
         raise
     replaced = []
+    outcomes: List[Tuple[Operation, str]] = []
     try:
         for operation, stage_root in staged:
+            if operation.kind == "link":
+                if path_exists(operation.destination):
+                    outcomes.append((operation, "Already linked"))
+                    continue
+                operation.destination.parent.mkdir(parents=True, exist_ok=True)
+                create_compatibility_link(operation.source, operation.destination)
+                replaced.append((operation.destination, None))
+                outcomes.append((operation, "Linked"))
+                continue
             backup = stage_root / "backup"
             had_destination = path_exists(operation.destination)
             if had_destination:
@@ -214,6 +273,7 @@ def apply_updates(operations: Sequence[Operation]) -> None:
                     backup.rename(operation.destination)
                 raise
             replaced.append((operation.destination, backup if had_destination else None))
+            outcomes.append((operation, "Updated"))
     except Exception:
         for destination, backup in reversed(replaced):
             remove_created(destination)
@@ -222,7 +282,9 @@ def apply_updates(operations: Sequence[Operation]) -> None:
         raise
     finally:
         for _, stage_root in staged:
-            shutil.rmtree(str(stage_root), ignore_errors=True)
+            if stage_root is not None:
+                shutil.rmtree(str(stage_root), ignore_errors=True)
+    return outcomes
 
 
 def resolve_path(value: str) -> Path:
@@ -278,7 +340,7 @@ def run(arguments: Sequence[str]) -> int:
             skills_directory=resolve_path(options.skills_dir),
             dstack_home=resolve_path(options.dstack_home),
             claude_skills_directory=resolve_path(options.claude_skills_dir),
-            with_claude_links=options.with_claude_links and not options.update,
+            with_claude_links=options.with_claude_links,
         )
         if options.update:
             update_roots = (
@@ -292,7 +354,8 @@ def run(arguments: Sequence[str]) -> int:
             ] + update_issues(operations)
             if options.dry_run:
                 for operation in operations:
-                    print("Would update: {} -> {}".format(operation.source, operation.destination))
+                    verb = "link" if operation.kind == "link" else "update"
+                    print("Would {}: {} -> {}".format(verb, operation.source, operation.destination))
                 if issues:
                     print("Update dry run found ownership or topology problems:", file=sys.stderr)
                     for issue in issues:
@@ -307,9 +370,9 @@ def run(arguments: Sequence[str]) -> int:
                     print("- {}".format(issue), file=sys.stderr)
                 print("No files changed.", file=sys.stderr)
                 return 2
-            apply_updates(operations)
-            for operation in operations:
-                print("Updated: {} -> {}".format(operation.source, operation.destination))
+            outcomes = apply_updates(operations)
+            for operation, verb in outcomes:
+                print("{}: {} -> {}".format(verb, operation.source, operation.destination))
             print(
                 "Updated dstack: {} operations completed; config.json was preserved.".format(
                     len(operations)

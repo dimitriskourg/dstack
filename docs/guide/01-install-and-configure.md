@@ -71,6 +71,13 @@ python3 install.py --with-claude-links
 This creates one link per dstack-owned skill under `~/.claude/skills`. It never
 replaces the complete Claude skills directory.
 
+If the first installation ran without links, add them later with the same flag
+on an update. See [Update an installed copy](#update-an-installed-copy).
+
+On Windows the installer creates directory junctions rather than symbolic
+links. A junction needs no elevated shell or Developer Mode, and hosts discover
+it exactly as they discover a link on macOS and Linux.
+
 ## Update an installed copy
 
 From a trusted dstack checkout, preview the exact managed destinations first:
@@ -85,9 +92,29 @@ mismatched skill identities or wrong existing destination types before writing.
 It creates missing managed artifacts inside those roots, stages every replacement
 next to its destination, and
 rolls completed replacements back if a later operation fails. It replaces only
-the dstack skill packages and support files named by the repository, preserves
-`DSTACK_HOME/config.json`, and does not modify existing Claude compatibility
-links.
+the dstack skill packages and support files named by the repository, and preserves
+`DSTACK_HOME/config.json`.
+
+An update replaces each managed skill package as a whole. Local edits inside an
+installed skill directory are lost. Keep local work outside `~/.agents/skills`.
+
+Without `--with-claude-links`, an update leaves `~/.claude/skills` untouched.
+
+### Add or refresh Claude Code links during an update
+
+Pass the flag to sync links in the same run:
+
+```bash
+python3 install.py --update --dry-run --with-claude-links
+python3 install.py --update --with-claude-links
+```
+
+This links every dstack-owned skill that is not linked yet, including skills
+added since the first installation, and leaves correct existing links alone. A
+destination that is not a dstack link stops the update before writes: a real
+directory reports `expected compatibility link`, and a link aimed somewhere else
+reports `compatibility link points elsewhere`. Resolve those by hand, since
+dstack never assumes it owns them.
 
 ## Configure models in each host
 
