@@ -23,11 +23,11 @@ Before the first helper action, reconcile the adapter with the current session:
 - helper creation, result collection, follow-up, waiting, and interruption;
 - concurrent execution and queue or concurrency limits;
 - whether read-only or filesystem isolation is enforced or advisory;
-- trustworthy model enumeration or configured bindings;
+- trustworthy model-and-effort enumeration or configured bindings, validated
+  as pairs when both values are overridden;
 - verification surfaces and external read connectors;
 - permissions or approvals that can deny an otherwise native capability.
 
 If a native action fails or is denied, apply the capability's documented
 fallback immediately and report the degradation once. Do not retry by guessing
 another host's call shape.
-

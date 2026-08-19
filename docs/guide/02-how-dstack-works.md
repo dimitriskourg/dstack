@@ -64,7 +64,7 @@ and permissions actually visible.
 
 ### Personal configuration
 
-`DSTACK_HOME/config.json` maps semantic roles to exact model identifiers for
+`DSTACK_HOME/config.json` maps semantic roles to exact model-and-effort bindings for
 each host. Skills and panels refer to roles, so the same portable workflow can
 resolve differently in Codex and Cursor.
 
@@ -75,7 +75,9 @@ arena-runners -> skeptical-reviewer, deep-judgment
 ```
 
 On Codex, those roles use the Codex host table. On Cursor, they use the Cursor
-host table. A model identifier is never copied between hosts automatically.
+host table. A binding is never copied between hosts automatically. Adapters
+validate model and effort together when the current host exposes both values;
+otherwise effort inherits and validation availability is reported honestly.
 
 ## Host selection
 

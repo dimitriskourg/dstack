@@ -29,7 +29,7 @@ desired support location.
 
 ## Understand collision behavior
 
-The installer is intentionally first-install-only. If any destination skill,
+Normal installation is intentionally first-install-only. If any destination skill,
 support directory, file, valid link, or broken link already exists, the entire
 installation stops before writes begin.
 
@@ -55,7 +55,7 @@ It does not:
 
 - install Bun or Python dependencies;
 - overwrite a previous installation;
-- update or uninstall dstack;
+- repair or uninstall dstack;
 - create a model configuration automatically.
 
 ## Add Claude Code compatibility links
@@ -71,6 +71,24 @@ python3 install.py --with-claude-links
 This creates one link per dstack-owned skill under `~/.claude/skills`. It never
 replaces the complete Claude skills directory.
 
+## Update an installed copy
+
+From a trusted dstack checkout, preview the exact managed destinations first:
+
+```bash
+python3 install.py --update --dry-run
+python3 install.py --update
+```
+
+Update mode requires the canonical skill and support roots to exist, and refuses
+mismatched skill identities or wrong existing destination types before writing.
+It creates missing managed artifacts inside those roots, stages every replacement
+next to its destination, and
+rolls completed replacements back if a later operation fails. It replaces only
+the dstack skill packages and support files named by the repository, preserves
+`DSTACK_HOME/config.json`, and does not modify existing Claude compatibility
+links.
+
 ## Configure models in each host
 
 Run `setup-dstack` in Codex, Cursor, or another supported host where you want
@@ -79,7 +97,7 @@ custom model assignments.
 The skill:
 
 1. selects the active host adapter;
-2. enumerates models only from a trustworthy host catalogue;
+2. enumerates model-effort pairs only from a trustworthy host catalogue;
 3. loads the current `DSTACK_HOME/config.json` or implicit defaults;
 4. shows current and proposed values for all roles;
 5. waits for confirmation;
@@ -103,19 +121,19 @@ Codex and Cursor mappings coexist:
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "host_override": "auto",
   "hosts": {
     "codex": {
       "roles": {
-        "fast-explorer": "inherit-parent",
-        "feature-worker": "inherit-parent",
-        "bug-worker": "inherit-parent",
-        "deep-judgment": "inherit-parent",
-        "skeptical-reviewer": "inherit-parent",
-        "independent-judge": "inherit-parent"
+        "fast-explorer": {"model": "gpt-5.6-luna", "effort": "xhigh"},
+        "feature-worker": {"model": "gpt-5.6-sol", "effort": "medium"},
+        "bug-worker": {"model": "gpt-5.6-sol", "effort": "medium"},
+        "deep-judgment": {"model": "gpt-5.6-sol", "effort": "medium"},
+        "skeptical-reviewer": {"model": "gpt-5.6-sol", "effort": "medium"},
+        "independent-judge": {"model": "gpt-5.6-sol", "effort": "medium"}
       },
-      "stale_models": []
+      "invalid_bindings": []
     }
   },
   "panels": {
@@ -132,7 +150,22 @@ Codex and Cursor mappings coexist:
 }
 ```
 
-The example intentionally uses `inherit-parent`; never invent a real model
-identifier from documentation or another host.
+The concrete example is valid only when the current Codex operation or installed
+Codex catalog exposes those exact pairs. For any host without a trustworthy
+catalog, use `{"model": "inherit-parent", "effort": "inherit-parent"}` or
+retain exact user-supplied values while clearly labeling validation unavailable.
+
+## Migrate schema version 1
+
+After updating the installed copy, migrate the existing personal configuration:
+
+```bash
+python3 ~/.agents/skills/setup-dstack/scripts/configure.py migrate
+```
+
+Migration changes each version 1 model string into a version 2 binding with
+`"effort": "inherit-parent"`. It translates stale model entries into invalid
+bindings and does not invent a host effort. A later confirmed `setup-dstack`
+run can set effort from the active host catalog.
 
 Next: [Understand how dstack works](./02-how-dstack-works.md).

@@ -5,7 +5,7 @@
   "type": "object",
   "required": ["schema_version", "roles"],
   "properties": {
-    "schema_version": { "const": 1 },
+    "schema_version": { "const": 2 },
     "roles": {
       "type": "object",
       "required": [
@@ -18,9 +18,10 @@
       ],
       "additionalProperties": {
         "type": "object",
-        "required": ["model"],
+        "required": ["model", "effort"],
         "properties": {
-          "model": { "type": "string", "minLength": 1 }
+          "model": { "type": "string", "minLength": 1 },
+          "effort": { "type": "string", "minLength": 1 }
         },
         "additionalProperties": false
       }

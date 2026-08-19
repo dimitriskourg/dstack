@@ -15,6 +15,9 @@ details and must not leak into portable skills.
 - Map `parallel` to multiple independent agent calls in one turn when supported.
 - Map `review` to separate read-only agents with distinct rubrics.
 - Pass a model only from a confirmed binding; omit it for `inherit-parent`.
+- Do not map a configured effort unless the current Claude Code operation
+  explicitly exposes an effort parameter and accepted values. Otherwise effort
+  inherits from the parent; static dstack files do not prove effort support.
 
 The common read-only boundary is advisory unless the current runtime documents
 technical enforcement. The lead owns synthesis, final judgment, artifact

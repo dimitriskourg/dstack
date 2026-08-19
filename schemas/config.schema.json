@@ -5,7 +5,7 @@
   "type": "object",
   "required": ["schema_version", "host_override", "hosts", "panels"],
   "properties": {
-    "schema_version": { "const": 1 },
+    "schema_version": { "const": 2 },
     "host_override": {
       "type": "string",
       "pattern": "^(auto|[a-z][a-z0-9-]*)$"
@@ -17,7 +17,7 @@
       },
       "additionalProperties": {
         "type": "object",
-        "required": ["roles", "stale_models"],
+        "required": ["roles", "invalid_bindings"],
         "properties": {
           "roles": {
             "type": "object",
@@ -30,18 +30,18 @@
               "independent-judge"
             ],
             "properties": {
-              "fast-explorer": { "$ref": "#/$defs/modelIdentifier" },
-              "feature-worker": { "$ref": "#/$defs/modelIdentifier" },
-              "bug-worker": { "$ref": "#/$defs/modelIdentifier" },
-              "deep-judgment": { "$ref": "#/$defs/modelIdentifier" },
-              "skeptical-reviewer": { "$ref": "#/$defs/modelIdentifier" },
-              "independent-judge": { "$ref": "#/$defs/modelIdentifier" }
+              "fast-explorer": { "$ref": "#/$defs/modelBinding" },
+              "feature-worker": { "$ref": "#/$defs/modelBinding" },
+              "bug-worker": { "$ref": "#/$defs/modelBinding" },
+              "deep-judgment": { "$ref": "#/$defs/modelBinding" },
+              "skeptical-reviewer": { "$ref": "#/$defs/modelBinding" },
+              "independent-judge": { "$ref": "#/$defs/modelBinding" }
             },
             "additionalProperties": false
           },
-          "stale_models": {
+          "invalid_bindings": {
             "type": "array",
-            "items": { "$ref": "#/$defs/modelIdentifier" },
+            "items": { "$ref": "#/$defs/modelBinding" },
             "uniqueItems": true
           }
         },
@@ -69,6 +69,26 @@
     "modelIdentifier": {
       "type": "string",
       "pattern": "^\\S+$"
+    },
+    "modelBinding": {
+      "type": "object",
+      "required": ["model", "effort"],
+      "properties": {
+        "model": { "$ref": "#/$defs/modelIdentifier" },
+        "effort": { "$ref": "#/$defs/modelIdentifier" }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": { "model": { "const": "inherit-parent" } },
+            "required": ["model"]
+          },
+          "then": {
+            "properties": { "effort": { "const": "inherit-parent" } }
+          }
+        }
+      ]
     },
     "panel": {
       "type": "array",

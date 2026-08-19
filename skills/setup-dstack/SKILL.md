@@ -1,6 +1,6 @@
 ---
 name: setup-dstack
-description: "Configure dstack host selection and semantic model-role bindings under DSTACK_HOME. Use for setup-dstack, configuring dstack models, changing role assignments, or reviewing stale model bindings. Never invents model identifiers."
+description: "Configure dstack host selection and semantic model-and-effort role bindings under DSTACK_HOME. Use for setup-dstack, configuring dstack models or reasoning effort, changing role assignments, migrating schema version 1, or reviewing invalid bindings. Never invents model identifiers or effort support."
 ---
 
 # Setup dstack
@@ -44,13 +44,17 @@ it; otherwise retain `auto`.
 ### 2. Discover models honestly
 
 Enumerate models only when the selected host exposes a trustworthy current
-catalog. Preserve exact identifiers. Never infer a slug from a display name,
+catalog. Read the selected adapter's discovery procedure and preserve exact
+model identifiers and the effort levels reported for each model. Prefer the
+current operation's tool schema when it enumerates accepted model and effort
+values. Never infer a slug or supported effort from a display name,
 documentation example, another host, or memory.
 
 When no catalog is available:
 
 - preserve existing bindings;
-- accept exact identifiers the user explicitly supplies;
+- accept exact model and effort values the user explicitly supplies, without
+  claiming they were catalog-validated;
 - default every unbound role to `inherit-parent`;
 - label catalog validation unavailable.
 
@@ -59,9 +63,9 @@ When no catalog is available:
 Run the bundled configurator's `show` command. A missing `config.json` resolves
 to valid defaults. For the selected host:
 
-- preserve bindings still present in the catalog;
-- retain removed identifiers but add them to `stale_models`;
-- remove an identifier from `stale_models` when it becomes available again;
+- preserve bindings whose model-effort pair is still present in the catalog;
+- retain unavailable pairs but add them to `invalid_bindings`;
+- remove a pair from `invalid_bindings` when it becomes valid again;
 - show newly available models without assigning them automatically;
 - preserve every other host.
 
@@ -74,11 +78,14 @@ The six required roles are:
 - `skeptical-reviewer`
 - `independent-judge`
 
-`inherit-parent` is always valid. Missing roles resolve to it.
+`{"model": "inherit-parent", "effort": "inherit-parent"}` is always valid.
+Missing roles resolve to that binding. A concrete model may use
+`"effort": "inherit-parent"` when the active host cannot map effort explicitly;
+do not claim pair validation in that case.
 
 ### 4. Propose, then confirm
 
-Show the current and proposed value for every role, stale bindings, catalog
+Show the current and proposed model and effort for every role, invalid bindings, catalog
 status, and the persistent host override. Use `ask_user` only for actual
 preferences. Recommend retaining valid bindings and using `inherit-parent` for
 unknowns.
@@ -96,14 +103,14 @@ to change it.
 {
   "host": "<selected-host>",
   "roles": {
-    "fast-explorer": "inherit-parent",
-    "feature-worker": "inherit-parent",
-    "bug-worker": "inherit-parent",
-    "deep-judgment": "inherit-parent",
-    "skeptical-reviewer": "inherit-parent",
-    "independent-judge": "inherit-parent"
+    "fast-explorer": {"model": "inherit-parent", "effort": "inherit-parent"},
+    "feature-worker": {"model": "inherit-parent", "effort": "inherit-parent"},
+    "bug-worker": {"model": "inherit-parent", "effort": "inherit-parent"},
+    "deep-judgment": {"model": "inherit-parent", "effort": "inherit-parent"},
+    "skeptical-reviewer": {"model": "inherit-parent", "effort": "inherit-parent"},
+    "independent-judge": {"model": "inherit-parent", "effort": "inherit-parent"}
   },
-  "stale_models": []
+  "invalid_bindings": []
 }
 ```
 
@@ -113,10 +120,20 @@ Invoke the bundled script by its absolute installed path:
 python3 <setup-dstack-dir>/scripts/configure.py apply --proposal <temporary-json>
 ```
 
-The helper validates schema version 1, preserves other hosts, and atomically
+The helper accepts schema version 1 as migration input, writes schema version
+2, preserves other hosts, and atomically
 replaces `config.json`. Delete the temporary proposal after the command. If it
 fails, report its exact error; do not repair or replace the previous file by
 hand.
+
+To migrate without changing any role choices, run:
+
+```text
+python3 <setup-dstack-dir>/scripts/configure.py migrate
+```
+
+Version 1 model strings become version 2 bindings with
+`"effort": "inherit-parent"`; no effort is guessed.
 
 ### 6. Report
 
@@ -125,7 +142,7 @@ Return:
 - selected host and selection evidence;
 - configuration path;
 - roles changed and preserved;
-- stale and newly available models;
+- invalid and newly available model-effort bindings;
 - whether catalog validation was available;
 - schema-validation result;
 - capabilities still inheriting or unavailable.

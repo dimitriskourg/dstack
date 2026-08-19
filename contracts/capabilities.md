@@ -60,7 +60,8 @@ must not claim to implement them.
 
 ## Semantic model roles
 
-Roles are configuration keys, never model names. Version 1 defines:
+Roles are configuration keys, never model names. Configuration version 2
+defines:
 
 | Role | Typical use |
 | --- | --- |
@@ -71,9 +72,10 @@ Roles are configuration keys, never model names. Version 1 defines:
 | `skeptical-reviewer` | Adversarial critique. |
 | `independent-judge` | Final evaluation independent of candidate work. |
 
-Every role defaults to `inherit-parent`. A concrete binding is valid only when
-the active host exposes a trustworthy catalog or the user supplies the exact
-identifier.
+Every role defaults both model and effort to `inherit-parent`. A concrete
+model-effort pair is catalog-valid only when the active host exposes that exact
+pair. An explicitly supplied value may be stored when validation is unavailable,
+but the adapter must not describe it as validated.
 
 ## Rules for portable skills
 

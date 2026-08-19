@@ -180,6 +180,86 @@ class InstallerTests(unittest.TestCase):
             )
             self.assertFalse((root / "claude").exists())
 
+    def test_update_replaces_verified_install_and_preserves_config(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = self.make_source(root)
+            install_status, _, _ = self.run_installer(source, self.destinations(root))
+            self.assertEqual(0, install_status)
+            installed_skill = root / "agents" / "skills" / "alpha" / "SKILL.md"
+            installed_skill.write_text(
+                "---\nname: alpha\ndescription: old\n---\n", encoding="utf-8"
+            )
+            config = root / "dstack-home" / "config.json"
+            config.write_text('{"schema_version": 1}\n', encoding="utf-8")
+
+            status, stdout, stderr = self.run_installer(
+                source, ["--update"] + self.destinations(root)
+            )
+
+            self.assertEqual(0, status)
+            self.assertEqual("", stderr)
+            self.assertIn("Updated dstack", stdout)
+            self.assertIn("description: test", installed_skill.read_text(encoding="utf-8"))
+            self.assertEqual('{"schema_version": 1}\n', config.read_text(encoding="utf-8"))
+
+    def test_update_rejects_unverified_skill_before_writes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = self.make_source(root)
+            install_status, _, _ = self.run_installer(source, self.destinations(root))
+            self.assertEqual(0, install_status)
+            alpha = root / "agents" / "skills" / "alpha" / "SKILL.md"
+            beta = root / "agents" / "skills" / "beta" / "SKILL.md"
+            alpha_before = alpha.read_bytes()
+            beta.write_text(
+                "---\nname: someone-else\ndescription: unmanaged\n---\n",
+                encoding="utf-8",
+            )
+
+            status, stdout, stderr = self.run_installer(
+                source, ["--update"] + self.destinations(root)
+            )
+
+            self.assertEqual(2, status)
+            self.assertEqual("", stdout)
+            self.assertIn("identity does not match", stderr)
+            self.assertEqual(alpha_before, alpha.read_bytes())
+            self.assertIn("someone-else", beta.read_text(encoding="utf-8"))
+
+    def test_update_completes_partial_install_without_touching_unrelated_files(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = self.make_source(root)
+            skills = root / "agents" / "skills"
+            skills.mkdir(parents=True)
+            unrelated = skills / "personal-skill.txt"
+            unrelated.write_text("keep\n", encoding="utf-8")
+            dstack_home = root / "dstack-home"
+            (dstack_home / "adapters").mkdir(parents=True)
+            (dstack_home / "adapters" / "content.txt").write_text(
+                "old", encoding="utf-8"
+            )
+            for name in ("contracts", "schemas"):
+                destination = dstack_home / name
+                destination.mkdir()
+                (destination / "content.txt").write_text("old", encoding="utf-8")
+            (dstack_home / "LICENSE").write_text("old", encoding="utf-8")
+            (dstack_home / "NOTICE.md").write_text("old", encoding="utf-8")
+            config = dstack_home / "config.json"
+            config.write_text('{"schema_version": 1}\n', encoding="utf-8")
+
+            status, _, stderr = self.run_installer(
+                source, ["--update"] + self.destinations(root)
+            )
+
+            self.assertEqual(0, status)
+            self.assertEqual("", stderr)
+            self.assertTrue((skills / "alpha" / "SKILL.md").is_file())
+            self.assertTrue((skills / "beta" / "SKILL.md").is_file())
+            self.assertEqual("keep\n", unrelated.read_text(encoding="utf-8"))
+            self.assertEqual('{"schema_version": 1}\n', config.read_text(encoding="utf-8"))
+
 
 if __name__ == "__main__":
     unittest.main()

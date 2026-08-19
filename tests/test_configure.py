@@ -27,13 +27,19 @@ SPEC.loader.exec_module(CONFIGURE)
 
 class ConfiguratorTests(unittest.TestCase):
     def roles(self, prefix: str):
-        return {role: "{}-{}".format(prefix, role) for role in CONFIGURE.ROLES}
+        return {
+            role: {
+                "model": "{}-{}".format(prefix, role),
+                "effort": "medium",
+            }
+            for role in CONFIGURE.ROLES
+        }
 
     def proposal(self, host: str, prefix: str):
         return {
             "host": host,
             "roles": self.roles(prefix),
-            "stale_models": [],
+            "invalid_bindings": [],
         }
 
     def write_json(self, path: Path, value):
@@ -135,13 +141,101 @@ class ConfiguratorTests(unittest.TestCase):
             self.assertIn("proposal.roles is missing: bug-worker", stderr)
             self.assertEqual(original, config.read_bytes())
 
+    def test_apply_migrates_v1_and_preserves_other_host(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = root / "config.json"
+            proposal = root / "proposal.json"
+            legacy_roles = {
+                role: "legacy-{}".format(role) for role in CONFIGURE.ROLES
+            }
+            legacy = {
+                "schema_version": 1,
+                "host_override": "auto",
+                "hosts": {
+                    "cursor": {
+                        "roles": legacy_roles,
+                        "stale_models": ["legacy-fast-explorer"],
+                    }
+                },
+                "panels": CONFIGURE.DEFAULT_PANELS,
+            }
+            self.write_json(config, legacy)
+            self.write_json(proposal, self.proposal("codex", "candidate"))
+
+            status, _, stderr = self.apply(config, proposal)
+
+            self.assertEqual(0, status)
+            self.assertEqual("", stderr)
+            saved = json.loads(config.read_text(encoding="utf-8"))
+            self.assertEqual(2, saved["schema_version"])
+            self.assertEqual(
+                {"model": "legacy-fast-explorer", "effort": "inherit-parent"},
+                saved["hosts"]["cursor"]["roles"]["fast-explorer"],
+            )
+            self.assertEqual(
+                [{"model": "legacy-fast-explorer", "effort": "inherit-parent"}],
+                saved["hosts"]["cursor"]["invalid_bindings"],
+            )
+
+    def test_migrate_command_writes_v2_without_changing_bindings(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = root / "config.json"
+            legacy = {
+                "schema_version": 1,
+                "host_override": "auto",
+                "hosts": {
+                    "codex": {
+                        "roles": {
+                            role: "old-{}".format(role) for role in CONFIGURE.ROLES
+                        },
+                        "stale_models": [],
+                    }
+                },
+                "panels": CONFIGURE.DEFAULT_PANELS,
+            }
+            self.write_json(config, legacy)
+
+            status, stdout, stderr = self.run_configurator(
+                ["--config", str(config), "migrate"]
+            )
+
+            self.assertEqual(0, status)
+            self.assertEqual("", stderr)
+            self.assertIn("schema version 2", stdout)
+            saved = json.loads(config.read_text(encoding="utf-8"))
+            self.assertEqual(2, saved["schema_version"])
+            self.assertEqual(
+                "inherit-parent",
+                saved["hosts"]["codex"]["roles"]["bug-worker"]["effort"],
+            )
+
+    def test_inherit_parent_model_rejects_concrete_effort(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = root / "config.json"
+            proposal = root / "proposal.json"
+            invalid = self.proposal("codex", "candidate")
+            invalid["roles"]["fast-explorer"] = {
+                "model": "inherit-parent",
+                "effort": "xhigh",
+            }
+            self.write_json(proposal, invalid)
+
+            status, _, stderr = self.apply(config, proposal)
+
+            self.assertEqual(2, status)
+            self.assertIn("effort must be inherit-parent", stderr)
+            self.assertFalse(config.exists())
+
     def test_unsupported_existing_schema_version_is_not_replaced(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             config = root / "config.json"
             proposal = root / "proposal.json"
             existing = CONFIGURE.default_config()
-            existing["schema_version"] = 2
+            existing["schema_version"] = 3
             config.write_text(json.dumps(existing), encoding="utf-8")
             original = config.read_bytes()
             self.write_json(proposal, self.proposal("codex", "candidate"))
@@ -149,7 +243,7 @@ class ConfiguratorTests(unittest.TestCase):
             status, _, stderr = self.apply(config, proposal)
 
             self.assertEqual(2, status)
-            self.assertIn("config.schema_version must be 1; found 2", stderr)
+            self.assertIn("config.schema_version must be 1 or 2; found 3", stderr)
             self.assertEqual(original, config.read_bytes())
 
     def test_replace_failure_preserves_previous_file_and_removes_temporary_file(self):

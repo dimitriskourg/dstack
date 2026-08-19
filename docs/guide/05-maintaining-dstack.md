@@ -73,8 +73,10 @@ The current release deliberately defers:
 - Pstack's Orchestrate runtime and playbook.
 - The bundled PR watcher.
 - A deterministic worktree-audit helper.
-- Updater, repair, doctor, uninstall, and ownership hashes.
-- Configuration migrations until schema version 2 exists.
+- General repair, doctor, uninstall, and ownership hashes. The explicit update
+  mode only refreshes a verified existing dstack topology from a trusted
+  checkout; it is not a package manager or repair tool.
+- Migrations beyond the implemented schema version 1 to version 2 conversion.
 - Stronger history, transcript, and wake classifications until live evidence
   supports them.
 

@@ -1,6 +1,6 @@
 # dstack maintainer handoff
 
-Updated 2026-08-17. Read this before changing portability contracts, porting a
+Updated 2026-08-19. Read this before changing portability contracts, porting a
 new pstack release, or claiming live host support.
 
 ## Objective
@@ -13,7 +13,8 @@ contracts, schemas, and optional runtime live under `DSTACK_HOME` (default
 The project favors a small initial product:
 
 - a collision-safe first installer, not a package manager;
-- one strict version-1 JSON configuration, not a migration framework;
+- one strict version-2 JSON configuration with a single v1-to-v2 migration,
+  not a general migration framework;
 - portable skills with explicit fallbacks, not simulated provider parity;
 - static checks separated from live host proof.
 
@@ -215,9 +216,17 @@ evidence.
 
 ### Minimal installer limitations
 
-The initial installer deliberately has no overwrite, update, repair, uninstall,
-ownership-hash, or doctor workflow. A configuration migration engine is also
-deferred until schema version 2 exists.
+The initial installer remains collision-safe and first-install-only by default.
+Real use required one explicit `--update` path: it verifies the expected skill
+identity and existing destination topology, creates missing managed artifacts
+inside existing canonical roots,
+stages replacements, rolls back failures,
+and preserves `config.json`. It is not a repair, uninstall, ownership-hash,
+doctor, or general package-management workflow.
+
+Schema version 2 stores `{model, effort}` role bindings and invalid pairs. The
+configurator accepts version 1 as migration input and provides one atomic
+`migrate` command; no general migration framework exists.
 
 Do not add this machinery speculatively. If real use demands updates, first
 define ownership and collision behavior against actual installations.

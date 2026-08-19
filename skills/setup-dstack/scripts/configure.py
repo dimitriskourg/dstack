@@ -14,7 +14,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
+LEGACY_SCHEMA_VERSION = 1
 ROLES = (
     "fast-explorer",
     "feature-worker",
@@ -82,7 +83,43 @@ def validate_host(value: Any, location: str, allow_auto: bool = False) -> str:
     return host
 
 
-def validate_roles(value: Any, location: str) -> Dict[str, str]:
+def validate_binding(value: Any, location: str) -> Dict[str, str]:
+    binding = require_object(value, location)
+    require_exact_keys(binding, ("model", "effort"), (), location)
+    checked = {
+        "model": require_identifier(binding["model"], "{}.model".format(location)),
+        "effort": require_identifier(binding["effort"], "{}.effort".format(location)),
+    }
+    if checked["model"] == "inherit-parent" and checked["effort"] != "inherit-parent":
+        raise ConfigError(
+            "{}.effort must be inherit-parent when model is inherit-parent".format(location)
+        )
+    return checked
+
+
+def validate_roles(value: Any, location: str) -> Dict[str, Dict[str, str]]:
+    roles = require_object(value, location)
+    require_exact_keys(roles, ROLES, (), location)
+    return {
+        role: validate_binding(roles[role], "{}.{}".format(location, role))
+        for role in ROLES
+    }
+
+
+def validate_invalid_bindings(value: Any, location: str) -> List[Dict[str, str]]:
+    if not isinstance(value, list):
+        raise ConfigError("{} must be an array".format(location))
+    bindings = [
+        validate_binding(binding, "{}[{}]".format(location, index))
+        for index, binding in enumerate(value)
+    ]
+    identities = [(binding["model"], binding["effort"]) for binding in bindings]
+    if len(identities) != len(set(identities)):
+        raise ConfigError("{} must not contain duplicates".format(location))
+    return bindings
+
+
+def validate_legacy_roles(value: Any, location: str) -> Dict[str, str]:
     roles = require_object(value, location)
     require_exact_keys(roles, ROLES, (), location)
     return {
@@ -91,7 +128,7 @@ def validate_roles(value: Any, location: str) -> Dict[str, str]:
     }
 
 
-def validate_stale_models(value: Any, location: str) -> List[str]:
+def validate_legacy_stale_models(value: Any, location: str) -> List[str]:
     if not isinstance(value, list):
         raise ConfigError("{} must be an array".format(location))
     models = [
@@ -127,7 +164,7 @@ def validate_panels(value: Any, location: str = "panels") -> Dict[str, List[str]
     return result
 
 
-def validate_config(value: Any) -> Dict[str, Any]:
+def validate_config_v2(value: Any) -> Dict[str, Any]:
     config = require_object(value, "config")
     require_exact_keys(
         config,
@@ -155,7 +192,7 @@ def validate_config(value: Any) -> Dict[str, Any]:
         entry = require_object(hosts[host], "config.hosts.{}".format(host))
         require_exact_keys(
             entry,
-            ("roles", "stale_models"),
+            ("roles", "invalid_bindings"),
             (),
             "config.hosts.{}".format(host),
         )
@@ -163,9 +200,9 @@ def validate_config(value: Any) -> Dict[str, Any]:
             "roles": validate_roles(
                 entry["roles"], "config.hosts.{}.roles".format(host)
             ),
-            "stale_models": validate_stale_models(
-                entry["stale_models"],
-                "config.hosts.{}.stale_models".format(host),
+            "invalid_bindings": validate_invalid_bindings(
+                entry["invalid_bindings"],
+                "config.hosts.{}.invalid_bindings".format(host),
             ),
         }
     return {
@@ -176,19 +213,81 @@ def validate_config(value: Any) -> Dict[str, Any]:
     }
 
 
+def migrate_v1(value: Any) -> Dict[str, Any]:
+    config = require_object(value, "config")
+    require_exact_keys(
+        config,
+        ("schema_version", "host_override", "hosts", "panels"),
+        (),
+        "config",
+    )
+    if config["schema_version"] != LEGACY_SCHEMA_VERSION:
+        raise ConfigError(
+            "config.schema_version must be {} or {}; found {}".format(
+                LEGACY_SCHEMA_VERSION, SCHEMA_VERSION, config["schema_version"]
+            )
+        )
+    host_override = validate_host(
+        config["host_override"], "config.host_override", allow_auto=True
+    )
+    hosts = require_object(config["hosts"], "config.hosts")
+    migrated_hosts: Dict[str, Any] = {}
+    for host in sorted(hosts):
+        validate_host(host, "config host key")
+        location = "config.hosts.{}".format(host)
+        entry = require_object(hosts[host], location)
+        require_exact_keys(entry, ("roles", "stale_models"), (), location)
+        roles = validate_legacy_roles(entry["roles"], "{}.roles".format(location))
+        stale_models = validate_legacy_stale_models(
+            entry["stale_models"], "{}.stale_models".format(location)
+        )
+        migrated_hosts[host] = {
+            "roles": {
+                role: {"model": model, "effort": "inherit-parent"}
+                for role, model in roles.items()
+            },
+            "invalid_bindings": [
+                {"model": model, "effort": "inherit-parent"}
+                for model in stale_models
+            ],
+        }
+    return validate_config_v2(
+        {
+            "schema_version": SCHEMA_VERSION,
+            "host_override": host_override,
+            "hosts": migrated_hosts,
+            "panels": validate_panels(config["panels"]),
+        }
+    )
+
+
+def validate_or_migrate_config(value: Any) -> Dict[str, Any]:
+    config = require_object(value, "config")
+    version = config.get("schema_version")
+    if version == LEGACY_SCHEMA_VERSION:
+        return migrate_v1(config)
+    if version == SCHEMA_VERSION:
+        return validate_config_v2(config)
+    raise ConfigError(
+        "config.schema_version must be {} or {}; found {}".format(
+            LEGACY_SCHEMA_VERSION, SCHEMA_VERSION, version
+        )
+    )
+
+
 def validate_proposal(value: Any) -> Dict[str, Any]:
     proposal = require_object(value, "proposal")
     require_exact_keys(
         proposal,
-        ("host", "roles", "stale_models"),
+        ("host", "roles", "invalid_bindings"),
         ("host_override", "panels"),
         "proposal",
     )
     checked = {
         "host": validate_host(proposal["host"], "proposal.host"),
         "roles": validate_roles(proposal["roles"], "proposal.roles"),
-        "stale_models": validate_stale_models(
-            proposal["stale_models"], "proposal.stale_models"
+        "invalid_bindings": validate_invalid_bindings(
+            proposal["invalid_bindings"], "proposal.invalid_bindings"
         ),
     }
     if "host_override" in proposal:
@@ -216,7 +315,7 @@ def read_json(path: Path, label: str) -> Any:
 def load_config(path: Path) -> Dict[str, Any]:
     if not path.exists():
         return default_config()
-    return validate_config(read_json(path, str(path)))
+    return validate_or_migrate_config(read_json(path, str(path)))
 
 
 def load_proposal(path: str) -> Dict[str, Any]:
@@ -237,13 +336,13 @@ def merge_proposal(config: Mapping[str, Any], proposal: Mapping[str, Any]) -> Di
     host = proposal["host"]
     merged["hosts"][host] = {
         "roles": copy.deepcopy(proposal["roles"]),
-        "stale_models": list(proposal["stale_models"]),
+        "invalid_bindings": copy.deepcopy(proposal["invalid_bindings"]),
     }
     if "host_override" in proposal:
         merged["host_override"] = proposal["host_override"]
     if "panels" in proposal:
         merged["panels"] = copy.deepcopy(proposal["panels"])
-    return validate_config(merged)
+    return validate_config_v2(merged)
 
 
 def write_atomic(path: Path, config: Mapping[str, Any]) -> None:
@@ -290,6 +389,7 @@ def parser() -> argparse.ArgumentParser:
     commands = result.add_subparsers(dest="command", required=True)
     commands.add_parser("show", help="print the validated config or implicit defaults")
     commands.add_parser("validate", help="validate the config or implicit defaults")
+    commands.add_parser("migrate", help="atomically migrate schema version 1 to version 2")
     apply = commands.add_parser("apply", help="atomically apply one confirmed host proposal")
     apply.add_argument(
         "--proposal",
@@ -304,13 +404,24 @@ def run(arguments: Sequence[str]) -> int:
     options = parser().parse_args(arguments)
     path = config_path(options.config)
     try:
-        config = load_config(path)
+        raw = read_json(path, str(path)) if path.exists() else None
+        config = default_config() if raw is None else validate_or_migrate_config(raw)
         if options.command == "show":
             print(json.dumps(config, indent=2, ensure_ascii=False))
             return 0
         if options.command == "validate":
             state = "file" if path.exists() else "implicit defaults"
             print("Valid dstack configuration ({}): {}".format(state, path))
+            return 0
+        if options.command == "migrate":
+            if raw is None:
+                print("No configuration file to migrate: {}".format(path))
+                return 0
+            if raw.get("schema_version") == SCHEMA_VERSION:
+                print("Configuration already uses schema version {}: {}".format(SCHEMA_VERSION, path))
+                return 0
+            write_atomic(path, config)
+            print("Migrated dstack configuration to schema version {}: {}".format(SCHEMA_VERSION, path))
             return 0
         proposal = load_proposal(options.proposal)
         merged = merge_proposal(config, proposal)

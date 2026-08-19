@@ -18,6 +18,9 @@ tooling agree. Otherwise select `generic`.
 - Map `review` to separate read-only tasks with explicit rubrics.
 - Supply a model identifier only from a confirmed local catalog or explicit
   user binding. Omit it for `inherit-parent`.
+- Do not map a configured effort unless the current Cursor operation explicitly
+  exposes an effort parameter and accepted values. Otherwise effort inherits
+  from the parent; static dstack files do not prove Cursor effort support.
 
 Read-only prompts are advisory unless the active helper facility explicitly
 enforces permissions. The lead owns synthesis, final judgment, diff inspection,

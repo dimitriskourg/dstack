@@ -203,9 +203,9 @@ def parse_adapter(path: Path) -> Tuple[Dict[str, str], Dict[str, Dict[str, str]]
     return root, capabilities
 
 
-def parse_profiles(path: Path) -> Tuple[Optional[str], Dict[str, str]]:
+def parse_profiles(path: Path) -> Tuple[Optional[str], Dict[str, Dict[str, str]]]:
     version: Optional[str] = None
-    roles: Dict[str, str] = {}
+    roles: Dict[str, Dict[str, str]] = {}
     current: Optional[str] = None
     for raw in path.read_text(encoding="utf-8").splitlines():
         line = raw.strip()
@@ -214,13 +214,14 @@ def parse_profiles(path: Path) -> Tuple[Optional[str], Dict[str, str]]:
         match = re.match(r"^\[roles\.([A-Za-z0-9-]+)\]$", line)
         if match:
             current = match.group(1)
+            roles[current] = {}
             continue
         if line.startswith("schema_version"):
             version = line.split("=", 1)[1].strip()
             continue
-        match = re.match(r'^model\s*=\s*"([^"]+)"$', line)
+        match = re.match(r'^(model|effort)\s*=\s*"([^"]+)"$', line)
         if match and current:
-            roles[current] = match.group(1)
+            roles[current][match.group(1)] = match.group(2)
             continue
         raise ValueError("unsupported TOML line: {}".format(raw))
     return version, roles
@@ -264,13 +265,13 @@ def check_adapters() -> List[Finding]:
         except ValueError as exc:
             findings.append(Finding(relative(profiles_file), str(exc)))
             continue
-        if version != "1":
+        if version != "2":
             findings.append(Finding(relative(profiles_file), "invalid profile schema version"))
         if set(roles) != MODEL_ROLES:
             findings.append(Finding(relative(profiles_file), "profiles must define exactly the semantic model roles"))
-        for role, model in roles.items():
-            if not model:
-                findings.append(Finding(relative(profiles_file), "role {!r} has an empty model binding".format(role)))
+        for role, binding in roles.items():
+            if set(binding) != {"model", "effort"} or not all(binding.values()):
+                findings.append(Finding(relative(profiles_file), "role {!r} must define model and effort".format(role)))
     return findings
 
 

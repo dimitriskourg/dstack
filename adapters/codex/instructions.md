@@ -16,8 +16,18 @@ alone is insufficient.
 - Map `parallel` to multiple independent spawns while the lead performs only
   non-overlapping work. Respect the session concurrency limit.
 - Map `review` to a separate read-only helper with an explicit rubric.
-- Pass a model override only when a configured role contains a confirmed model
-  identifier. Omit it for `inherit-parent`.
+- Discover the current model catalog from the operation being invoked when its
+  tool schema enumerates accepted models and efforts. This is authoritative for
+  that operation.
+- Otherwise, if the installed `codex debug --help` advertises `models`, run
+  `python3 DSTACK_HOME/adapters/codex/discover_models.py`. It reduces
+  `codex debug models` to exact model-effort pairs. If neither source exists,
+  report catalog validation unavailable and do not validate bindings.
+- Validate the configured model and effort as a pair. Pass both native model
+  and reasoning-effort parameters only when the current operation accepts the
+  pair. Omit either override whose configured value is `inherit-parent`. If a
+  concrete pair is invalid, inherit the parent settings and report the
+  degradation once.
 
 The standard explorer boundary is advisory: the prompt forbids writes, but it
 does not prove filesystem isolation. Use enforced isolation only when the

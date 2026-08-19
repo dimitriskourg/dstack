@@ -70,7 +70,7 @@ flowchart LR
 | --- | --- | --- |
 | Primary host | Cursor | Codex, Cursor, Claude Code, generic |
 | Main entry point | `poteto-mode` | `dstack-mode` |
-| Model configuration | Cursor rule with concrete models | Per-host semantic-role bindings in `config.json` |
+| Model configuration | Cursor rule with concrete models | Per-host semantic model-and-effort bindings in `config.json` |
 | Agent mechanics | Embedded Cursor assumptions | Adapter capability contract |
 | Canonical skill location | Cursor plugin installation | `~/.agents/skills` |
 | Missing capability | Usually assumes Cursor support | Declared parent-agent fallback |
@@ -102,14 +102,28 @@ python3 install.py --dry-run --with-claude-links
 python3 install.py --with-claude-links
 ```
 
-The installer is intentionally first-install-only. Any existing destination
+The default installer is intentionally first-install-only. Any existing destination
 file, directory, valid link, or broken link stops the entire installation
-before writes begin. It does not update, repair, uninstall, or install Bun.
+before writes begin. It does not repair, uninstall, or install Bun.
+
+To refresh a verified dstack installation from a trusted checkout, preview and
+then run the explicit update mode:
+
+```bash
+python3 install.py --update --dry-run
+python3 install.py --update
+```
+
+Update mode requires the canonical skill and support roots to exist and every
+existing managed destination to have the expected topology and skill identity.
+It creates missing managed artifacts inside those roots, stages
+replacements, rolls back on failure, preserves `DSTACK_HOME/config.json`, and leaves existing Claude
+compatibility links pointing at the canonical skill paths.
 
 ## Configure models
 
 Run `setup-dstack` once in each host where you want custom model assignments.
-It discovers only exact model identifiers the active host can verify, shows the
+It discovers only exact model-effort pairs the active host can verify, shows the
 proposed mapping, waits for confirmation, and atomically updates
 `~/.dstack/config.json`.
 
@@ -117,7 +131,7 @@ Codex and Cursor settings coexist in the same file. Configuring one host
 preserves the other. Without a configuration file, every role inherits the
 parent model.
 
-The six version-1 roles are:
+The six version-2 roles are:
 
 - `fast-explorer`
 - `feature-worker`
@@ -125,6 +139,10 @@ The six version-1 roles are:
 - `deep-judgment`
 - `skeptical-reviewer`
 - `independent-judge`
+
+Schema version 1 remains accepted as migration input. Run the installed
+configurator's `migrate` command to write version 2 without guessing effort;
+every migrated effort initially inherits from the parent.
 
 ## Use
 
