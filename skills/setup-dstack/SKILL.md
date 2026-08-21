@@ -1,6 +1,7 @@
 ---
 name: setup-dstack
 description: "Configure dstack host selection and semantic model-and-effort role bindings under DSTACK_HOME. Use for setup-dstack, configuring dstack models or reasoning effort, changing role assignments, migrating schema version 1, or reviewing invalid bindings. Never invents model identifiers or effort support."
+disable-model-invocation: true
 ---
 
 # Setup dstack

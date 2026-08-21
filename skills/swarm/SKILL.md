@@ -1,6 +1,7 @@
 ---
 name: swarm
 description: "Fan out independent workers, drain them, and return one evidence-backed report. Use for /swarm, \"swarm this\", parallel coverage, package-by-package checks, exploration partitions, implementation slices, races, or gauntlets."
+disable-model-invocation: true
 ---
 
 # Swarm

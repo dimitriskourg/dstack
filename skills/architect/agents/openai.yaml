@@ -1,0 +1,5 @@
+interface:
+  display_name: "Architect"
+  short_description: "Sketch types and boundaries before coding"
+policy:
+  allow_implicit_invocation: false

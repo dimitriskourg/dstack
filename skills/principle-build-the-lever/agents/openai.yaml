@@ -1,0 +1,5 @@
+interface:
+  display_name: "Principle: Build The Lever"
+  short_description: "Build the tool that does the work"
+policy:
+  allow_implicit_invocation: false

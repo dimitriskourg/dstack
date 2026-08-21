@@ -71,6 +71,13 @@ LEAKAGE_PATTERNS: Tuple[Tuple[str, re.Pattern], ...] = (
     ("private transcript layout", re.compile(r"\bagent-transcripts\b|Application Support/Cursor", re.I)),
     ("legacy dstack brand", re.compile(r"\b(?:pstack|ystack|poteto(?:-mode)?)\b", re.I)),
 )
+REQUIRED_FRONTMATTER = {"name", "description"}
+# `disable-model-invocation` is portable: every supported host implements
+# user-only invocation. Claude Code and Cursor read this key directly; the
+# Codex spelling lives in the skill's `agents/openai.yaml`. See
+# `docs/agents/invocation.md`.
+OPTIONAL_FRONTMATTER = {"disable-model-invocation"}
+CODEX_SIDECAR = Path("agents") / "openai.yaml"
 ASSET_DIRECTORIES = ("references", "scripts", "assets")
 ASSET_REF = re.compile(r"(?<![A-Za-z0-9_.-])((?:references|scripts|assets)/[A-Za-z0-9_./-]+)")
 CAPABILITY_REF = re.compile(r"`(" + "|".join(re.escape(item) for item in sorted(CAPABILITIES, key=len, reverse=True)) + r")`")
@@ -124,12 +131,25 @@ def check_skill(skill_dir: Path) -> List[Finding]:
     except ValueError as exc:
         return [Finding(relative(skill_file), str(exc))]
 
-    if set(fields) != {"name", "description"}:
-        findings.append(Finding(relative(skill_file), "frontmatter must contain only name and description"))
+    present = set(fields)
+    if not REQUIRED_FRONTMATTER <= present:
+        findings.append(Finding(relative(skill_file), "frontmatter must contain name and description"))
+    unsupported = present - REQUIRED_FRONTMATTER - OPTIONAL_FRONTMATTER
+    if unsupported:
+        findings.append(
+            Finding(relative(skill_file), "unsupported frontmatter key(s): " + ", ".join(sorted(unsupported)))
+        )
     if fields.get("name") != skill_dir.name:
         findings.append(Finding(relative(skill_file), "frontmatter name must match the skill directory"))
     if not fields.get("description"):
         findings.append(Finding(relative(skill_file), "frontmatter description is required"))
+
+    user_invoked = "disable-model-invocation" in fields
+    if user_invoked and fields.get("disable-model-invocation") != "true":
+        findings.append(
+            Finding(relative(skill_file), "disable-model-invocation must be true; omit the key to allow model invocation")
+        )
+    findings.extend(check_codex_sidecar(skill_dir, user_invoked))
 
     package_texts: List[Tuple[Path, str]] = []
     for path in sorted(skill_dir.rglob("*")):
@@ -178,6 +198,38 @@ def check_skill(skill_dir: Path) -> List[Finding]:
                     findings.append(Finding(relative(path), "missing markdown link target {!r}".format(reference), line_number))
 
     findings.extend(check_orphan_assets(skill_dir, package_texts))
+    return findings
+
+
+def check_codex_sidecar(skill_dir: Path, user_invoked: bool) -> List[Finding]:
+    """Verify the Codex spelling of invocation policy agrees with the frontmatter.
+
+    A skill is user-invoked in every host or in none. Claude Code and Cursor read
+    `disable-model-invocation` from the frontmatter; Codex reads
+    `policy.allow_implicit_invocation` from this sidecar, which also carries the
+    skill-picker metadata every skill needs.
+    """
+    findings: List[Finding] = []
+    sidecar = skill_dir / CODEX_SIDECAR
+    if not sidecar.is_file():
+        return [Finding(relative(sidecar), "missing Codex sidecar")]
+
+    lines = [line.rstrip() for line in sidecar.read_text(encoding="utf-8").splitlines()]
+    for key in ("display_name", "short_description"):
+        if not any(line.strip().startswith(key + ":") and line.strip() != key + ":" for line in lines):
+            findings.append(Finding(relative(sidecar), "sidecar interface.{} is required".format(key)))
+
+    denies_implicit = any(
+        line.strip().replace(" ", "") == "allow_implicit_invocation:false" for line in lines
+    )
+    if user_invoked and not denies_implicit:
+        findings.append(
+            Finding(relative(sidecar), "user-invoked skill needs policy.allow_implicit_invocation: false")
+        )
+    if denies_implicit and not user_invoked:
+        findings.append(
+            Finding(relative(sidecar), "sidecar denies implicit invocation but SKILL.md omits disable-model-invocation")
+        )
     return findings
 
 

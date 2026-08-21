@@ -1,6 +1,7 @@
 ---
 name: architect
 description: "Sketch types, signatures, caller usage, and module boundaries before implementation, then keep the sketch honest while code fills in. Use for /architect, \"architect this\", \"design this\", or non-trivial work where jumping to code could lock in the wrong shape."
+disable-model-invocation: true
 ---
 
 # Architect

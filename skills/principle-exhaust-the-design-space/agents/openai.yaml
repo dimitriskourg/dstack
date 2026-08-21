@@ -1,0 +1,5 @@
+interface:
+  display_name: "Principle: Exhaust The Design Space"
+  short_description: "Build several options before choosing"
+policy:
+  allow_implicit_invocation: false

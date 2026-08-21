@@ -1,0 +1,5 @@
+interface:
+  display_name: "Principle: Make Operations Idempotent"
+  short_description: "Make operations safe to rerun"
+policy:
+  allow_implicit_invocation: false

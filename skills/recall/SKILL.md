@@ -1,6 +1,7 @@
 ---
 name: recall
 description: "Reconstruct recent working context from authorized conversation history, live repository state, and the shared engineering record, then return a tight current-state brief. Use for \"recall my work on X\", \"catch me up\", \"what have I been working on\", or \"where did I leave off\"."
+disable-model-invocation: true
 ---
 
 # Recall

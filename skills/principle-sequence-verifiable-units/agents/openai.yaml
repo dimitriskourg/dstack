@@ -1,0 +1,5 @@
+interface:
+  display_name: "Principle: Sequence Verifiable Units"
+  short_description: "Break work into verifiable units"
+policy:
+  allow_implicit_invocation: false

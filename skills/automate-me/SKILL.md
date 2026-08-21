@@ -1,6 +1,7 @@
 ---
 name: automate-me
 description: "Use for \"automate me\", \"create or update my mode skill\", \"capture my working style\", or wanting future coding agents to follow the user's recurring conventions. Mines authorized recent evidence, asks for confirmation, and drafts or revises one personal -mode skill through the active host's skill-authoring workflow."
+disable-model-invocation: true
 ---
 
 # Automate me

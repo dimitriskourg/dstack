@@ -56,6 +56,16 @@ new ideas or code.
 - `dstack-mode` contains 22 portable playbooks.
 - The only missing pstack playbook is `orchestrate.md`, intentionally deferred.
 - No legacy `pstack`, `poteto-mode`, or `setup-pstack` aliases are planned.
+- Invocation parity is restored. 40 skills are user-invoked; `comment-sicko`,
+  `how`, `typescript-best-practices`, `unslop`, and `why` are model-invoked.
+  That matches upstream except for `setup-dstack`, which dstack deliberately
+  makes user-invoked: configuring host selection and role bindings is the
+  human's call, and sibling skills tell the user to run it by name rather than
+  calling it. Each skill declares this twice — as
+  `disable-model-invocation` in frontmatter for Claude Code and Cursor, and as
+  `policy.allow_implicit_invocation` in `agents/openai.yaml` for Codex — and the
+  audit fails any skill whose two declarations disagree. See
+  `docs/agents/invocation.md`.
 
 ### Portability layer
 
@@ -177,6 +187,21 @@ and uncommitted files. It must not infer ownership by scanning private history.
 `pstack/automations/benny/` depends on Cursor Automations, provider UI, Slack
 actions, cloud checkouts, and provider configuration. It is not part of dstack's
 portable skill scope.
+
+### 6. Skill descriptions are not yet typed by invocation mode — open
+
+A user-invoked skill's description is read by a human browsing slash commands,
+so it should be a one-line summary. A model-invoked skill's description is read
+by the model deciding whether to fire, so it keeps rich trigger phrasing.
+
+Most inherited user-invoked skills still carry model-facing trigger lists
+(`principle-fix-root-causes` opens "Apply when debugging", `tdd` opens "Use only
+when the user explicitly asks"). Upstream wrote them that way while also marking
+them user-invoked, so the text and the setting disagree at the source.
+
+This is cosmetic while the declarations hold: the host, not the description,
+enforces invocation. Fix it by rewriting descriptions, never by relaxing a
+`disable-model-invocation` setting to match the prose.
 
 ### 5. Provider wrappers and defaults — intentionally transformed
 

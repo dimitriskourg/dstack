@@ -1,0 +1,5 @@
+interface:
+  display_name: "dstack Mode"
+  short_description: "Rigorous engineering mode with playbooks"
+policy:
+  allow_implicit_invocation: false

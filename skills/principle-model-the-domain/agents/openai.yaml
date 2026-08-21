@@ -1,0 +1,5 @@
+interface:
+  display_name: "Principle: Model The Domain"
+  short_description: "Encode domain rules in types"
+policy:
+  allow_implicit_invocation: false

@@ -9,7 +9,9 @@ configuration, or upstream parity.
   repository; do not edit an upstream checkout as part of a dstack change.
 - Keep portable skills free of provider tool schemas, concrete model slugs,
   provider configuration paths, private transcript layouts, and unsupported
-  frontmatter.
+  frontmatter. `disable-model-invocation` is supported and deliberate; read
+  `docs/agents/invocation.md` before touching it or the `agents/openai.yaml`
+  sidecar that must agree with it.
 - Put host mechanics in `adapters/`, shared semantics in `contracts/`, strict
   data shapes in `schemas/`, and deterministic repeated behavior in scripts.
 - Every optional capability used by a skill needs an explicit parent-agent

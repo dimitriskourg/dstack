@@ -1,0 +1,5 @@
+interface:
+  display_name: "Principle: Minimize Reader Load"
+  short_description: "Cut layers between question and answer"
+policy:
+  allow_implicit_invocation: false

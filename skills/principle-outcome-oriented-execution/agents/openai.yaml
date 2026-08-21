@@ -1,0 +1,5 @@
+interface:
+  display_name: "Principle: Outcome Oriented Execution"
+  short_description: "Converge on the target architecture"
+policy:
+  allow_implicit_invocation: false

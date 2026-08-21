@@ -15,14 +15,21 @@ SPEC.loader.exec_module(AUDIT)
 
 
 class PortabilityAuditTests(unittest.TestCase):
-    def make_skill(self, root: Path, body: str, extra=None) -> Path:
+    SIDECAR = 'interface:\n  display_name: "Sample"\n  short_description: "A sample skill"\n'
+    SIDECAR_USER_INVOKED = SIDECAR + "policy:\n  allow_implicit_invocation: false\n"
+
+    def make_skill(self, root: Path, body: str, extra=None, frontmatter="", sidecar=None) -> Path:
         skill = root / "sample"
         skill.mkdir(parents=True)
         (skill / "SKILL.md").write_text(
-            "---\nname: sample\ndescription: sample skill\n---\n\n" + body,
+            "---\nname: sample\ndescription: sample skill\n" + frontmatter + "---\n\n" + body,
             encoding="utf-8",
         )
-        for name, content in (extra or {}).items():
+        files = {}
+        if sidecar is not False:
+            files["agents/openai.yaml"] = self.SIDECAR if sidecar is None else sidecar
+        files.update(extra or {})
+        for name, content in files.items():
             path = skill / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(content, encoding="utf-8")
@@ -49,6 +56,63 @@ class PortabilityAuditTests(unittest.TestCase):
             messages = self.messages(skill)
             self.assertIn("provider name", messages)
             self.assertIn("provider helper schema", messages)
+
+    def test_user_invoked_skill_with_matching_sidecar_passes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(
+                Path(temp),
+                "Do the thing.\n",
+                frontmatter="disable-model-invocation: true\n",
+                sidecar=self.SIDECAR_USER_INVOKED,
+            )
+            self.assertEqual([], self.messages(skill))
+
+    def test_frontmatter_without_sidecar_policy_fails(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(
+                Path(temp), "Do the thing.\n", frontmatter="disable-model-invocation: true\n"
+            )
+            self.assertIn(
+                "user-invoked skill needs policy.allow_implicit_invocation: false",
+                self.messages(skill),
+            )
+
+    def test_sidecar_policy_without_frontmatter_fails(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(
+                Path(temp), "Do the thing.\n", sidecar=self.SIDECAR_USER_INVOKED
+            )
+            self.assertIn(
+                "sidecar denies implicit invocation but SKILL.md omits disable-model-invocation",
+                self.messages(skill),
+            )
+
+    def test_disable_model_invocation_must_be_true(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(
+                Path(temp), "Do the thing.\n", frontmatter="disable-model-invocation: false\n"
+            )
+            self.assertIn(
+                "disable-model-invocation must be true; omit the key to allow model invocation",
+                self.messages(skill),
+            )
+
+    def test_unsupported_frontmatter_key_fails(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(Path(temp), "Do the thing.\n", frontmatter="allowed-tools: Bash\n")
+            self.assertIn("unsupported frontmatter key(s): allowed-tools", self.messages(skill))
+
+    def test_missing_sidecar_fails(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(Path(temp), "Do the thing.\n", sidecar=False)
+            self.assertIn("missing Codex sidecar", self.messages(skill))
+
+    def test_sidecar_interface_fields_are_required(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(Path(temp), "Do the thing.\n", sidecar="interface:\n")
+            messages = self.messages(skill)
+            self.assertIn("sidecar interface.display_name is required", messages)
+            self.assertIn("sidecar interface.short_description is required", messages)
 
     def test_missing_fallback_fails(self):
         with tempfile.TemporaryDirectory() as temp:

@@ -1,6 +1,7 @@
 ---
 name: reflect
 description: "Review a completed or difficult working session from three independent lenses, identify durable lessons, and route accepted lessons into concrete skill or tooling changes. Use when the user says reflect or when a repeatable workflow should be captured."
+disable-model-invocation: true
 ---
 
 # Reflect

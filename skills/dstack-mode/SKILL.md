@@ -1,6 +1,7 @@
 ---
 name: dstack-mode
 description: "Apply dstack's rigorous engineering mode: route work through portable playbooks, use deliberate delegation, prefer simple architecture, preserve evidence, and verify the real surface. Use for dstack-mode, rigorous implementation, autonomous runs, or explicit dstack playbook routing."
+disable-model-invocation: true
 ---
 
 # Dstack mode

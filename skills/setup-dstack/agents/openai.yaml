@@ -1,0 +1,5 @@
+interface:
+  display_name: "Set Up dstack"
+  short_description: "Configure hosts and model roles"
+policy:
+  allow_implicit_invocation: false

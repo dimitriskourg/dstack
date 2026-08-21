@@ -1,0 +1,5 @@
+interface:
+  display_name: "Principle: Encode Lessons In Structure"
+  short_description: "Encode repeated corrections into structure"
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,5 @@
+interface:
+  display_name: "Principle: Laziness Protocol"
+  short_description: "Bias against abstraction and layers"
+policy:
+  allow_implicit_invocation: false

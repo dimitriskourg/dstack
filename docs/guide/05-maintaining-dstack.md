@@ -50,7 +50,8 @@ Reject these from portable skills:
 - concrete model slugs;
 - private transcript directory assumptions;
 - cloud, wake, or persistent-mode assumptions without fallbacks;
-- unsupported frontmatter;
+- unsupported frontmatter (`disable-model-invocation` is supported; see
+  `docs/agents/invocation.md`);
 - references to missing assets, scripts, or sibling skills.
 
 ## Record live conformance honestly

@@ -1,0 +1,5 @@
+interface:
+  display_name: "Recall"
+  short_description: "Reconstruct recent working context"
+policy:
+  allow_implicit_invocation: false

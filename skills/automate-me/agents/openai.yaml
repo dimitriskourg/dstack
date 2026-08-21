@@ -1,0 +1,5 @@
+interface:
+  display_name: "Automate Me"
+  short_description: "Turn repeated work into a skill"
+policy:
+  allow_implicit_invocation: false
