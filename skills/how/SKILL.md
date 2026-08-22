@@ -1,146 +1,132 @@
 ---
 name: how
-description: "Use for how-does-this-work questions, code walkthroughs before changing something, and placement, ownership, or layering questions. Explains subsystem architecture and runtime flow; optionally critiques the design. Use why for historical motivation."
+description: "Use for \"how does X work\", code walkthroughs before changing something, and placement / ownership / layering questions (\"where should this live\", \"which package owns this\", \"is this the right layer\"). Explains subsystem architecture, runtime flow, onboarding mental models. Can critique architecture. Use why for motivation."
 ---
 
 # How
 
-Answer questions about how a subsystem works at the level of a senior engineer
-onboarding into it. Build a working mental model, not an annotated source dump.
+Explore the codebase to answer "how does X work?" questions. Produce clear architectural explanations at the level of a senior engineer onboarding onto a subsystem. Enough to build a working mental model, not annotated source code.
 
-There are two modes:
+Two modes:
 
-1. **Explain** is the default. Trace the system and present one coherent model.
-2. **Critique** explains the system first, then independently reviews its design.
+1. **Explain** (default). Explore the codebase and produce a clear explanation
+2. **Critique.** Explain first, then spawn multiple models to independently identify architectural issues
 
-## Capability requirements
+Helpers below are read-only. If your host cannot enforce that, instruct the helper not to write and don't describe the boundary as enforced. Model roles resolve through your configured profile; a role bound to `inherit-parent` means use the parent model.
 
-Read `references/runtime.md` before any helper action.
+## Explain Mode
 
-| Capability | Use | Fallback |
-| --- | --- | --- |
-| `explore` | Read-only code tracing. | The parent performs the same search and trace. |
-| `review` | Independent architectural criticism. | The parent runs a distinct rubric-led pass and discloses that it was not independent. |
-| `parallel` | Two to four independent exploration or review slices. | Run slices sequentially and state that fan-out collapsed. |
-| `verify` | Exercise a live surface when source cannot settle behavior. | The parent runs available checks and states the remaining evidence gap. |
-| `model_role` | Prefer `fast-explorer`, `deep-judgment`, or `skeptical-reviewer`. | Inherit the parent model. |
-| `agents.spawn` | Start a bounded explorer or critic. | Execute its task packet on the parent. |
-| `agents.wait` | Await active helpers. | Complete the corresponding parent pass. |
-| `agents.follow_up` | Resolve a focused gap or contradiction. | Resolve it on the parent from repository evidence. |
-| `agents.interrupt` | Stop obsolete or out-of-scope work. | Stop the corresponding parent pass. |
-| `agents.collect` | Receive structured findings. | Use the parent pass's notes. |
-| `agents.isolation` | Keep exploration and criticism from changing state. | Treat read-only behavior as advisory and disclose that it is not enforced. |
+### Step 1. Understand the Question and Assess Complexity
 
-Do not use a write-capable path for this skill. Read-only intent forbids
-repository edits and external mutations, while still allowing authorized reads
-from evidence systems. Never claim that a prompt creates enforced isolation.
+Parse what the user is asking about:
 
-## Explain mode
+- "How does the rate limiter work?", a subsystem
+- "How do we handle billing for on-demand usage?", a feature flow
+- "How is the auth service structured?", an architectural overview
+- "Walk me through what happens when a user submits a form", a runtime trace
 
-### 1. Interpret and size the question
+Identify the scope. If ambiguous, state your best-guess interpretation before exploring. Don't ask. Let the user redirect if you're off.
 
-Identify the target, requested depth, and likely entry point. If wording is
-ambiguous, state the best current interpretation and proceed; let the user
-redirect rather than blocking on a fact the repository can answer.
+**Assess complexity to decide the approach:**
 
-Classify the investigation:
+- **Simple** (a single module, a small utility, a narrow question like "how does function X work"): skip explorer agents; the explainer explores and explains in a single pass. Go to Step 2b.
+- **Complex** (a subsystem spanning multiple files/services, a cross-cutting feature, a full architectural overview): spawn parallel explorer agents first, then hand off to the explainer. Go to Step 2a.
 
-- **Simple:** one function, module, or narrow data path that fits in one pass.
-- **Complex:** a subsystem spanning files, services, packages, runtime
-  surfaces, or ownership boundaries.
+When in doubt, lean simple. You can always spawn explorers if the explainer hits a wall.
 
-Lean simple when uncertain. Fan out only when independent angles will reduce
-blind spots or protect the parent context.
+### Step 2a. Explore (complex questions only)
 
-### 2a. Explore a complex subsystem
+Decompose the question into 2-4 parallel exploration angles, each a distinct slice of the subsystem so explorers don't duplicate work. Example split for "how does the rate limiter work?":
 
-Split the question into two to four distinct angles, such as:
+- Explorer 1: data model and state management
+- Explorer 2: request path and enforcement
+- Explorer 3: configuration and metrics infrastructure
 
-- data model and state ownership;
-- request, event, or command path;
-- configuration and dependency wiring;
-- persistence, queues, or external boundaries;
-- runtime effects, metrics, and failure handling;
-- tests and public extension points.
+The right decomposition depends on the question. Use your judgment. Narrow questions: 2 explorers is fine. Broad subsystems: up to 4.
 
-Use `parallel` with one read-only `explore` pass per slice. Request the
-`fast-explorer` model role. Each pass follows
-`references/explorer-prompt.md` and returns structured findings with exact file
-and symbol pointers. File names alone are not evidence.
+Spawn all explorers at once:
 
-Use the active adapter's lifecycle operations. If spawning is missing or
-denied, execute every slice on the parent, preserve the decomposition, and say
-that parallel exploration collapsed. If model selection is missing or denied,
-inherit the parent model.
+- helper: a general-purpose subagent, read-only
+- model: your configured `fast-explorer` role
 
-### 2b. Explore a simple target
+Each explorer gets the same base prompt from `references/explorer-prompt.md` plus a specific exploration angle naming its slice. Each explorer should:
+- Start broad: Glob for relevant directories, Grep for key types/interfaces/class names
+- Follow the thread: from an entry point, trace the call chain (callers, callees, data flow, type definitions)
+- Read the actual code, don't guess from file names
+- Stop when it can describe the full path from input to output (or trigger to effect) without hand-waving any step
+- Note things that are surprising, non-obvious, or that a newcomer would get wrong
 
-Perform one read-only `explore` pass on the parent. Spawn a helper only when it
-will materially improve tracing, not merely because helpers exist. Request the
-`deep-judgment` role if model roles are available.
+Each explorer returns structured findings: components found, flow traced, files read, anything non-obvious. Overlap between explorers is fine; the explainer reconciles.
 
-Read `references/explainer-prompt.md`. Trace the complete path before writing;
-do not stop at the first matching symbol.
+Then proceed to Step 3.
 
-### 3. Synthesize complex findings
+### Step 2b. Direct Explain (simple questions)
 
-Collect all exploration results. The parent owns synthesis; it may use one
-read-only `explore` helper with the `deep-judgment` role when the evidence is
-too large for a reliable parent pass.
+Spawn a single subagent that explores and explains in one pass:
 
-Reconcile overlap, resolve contradictions by reading the code or sending one
-focused follow-up, and distinguish confirmed behavior from inference. Verify
-every load-bearing claim that appears only in a helper summary.
+- helper: a general-purpose subagent, read-only
+- model: your configured `deep-judgment` role
 
-### 4. Present
+The agent does its own exploration (Glob, Grep, Read) and writes the explanation directly. Read `references/explainer-prompt.md` for the communication style and output format. Same structure, just no explorer findings as input.
 
-Use the sections that fit the question:
+Proceed to Step 4.
 
-- **Overview:** what the subsystem is, what it does, and where its boundary sits.
-- **Key concepts:** the few types, services, state containers, or protocols
-  needed to follow the rest.
-- **How it works:** a step-by-step runtime or data-flow narrative with exact
-  file and symbol references.
-- **Where things live:** the files a maintainer should open first.
-- **Gotchas:** hidden state, ordering constraints, compatibility paths,
-  misleading names, or unverified facts.
+### Step 3. Synthesize (complex questions only)
 
-Use a diagram only when component relationships or state transitions are
-materially clearer than prose. When source cannot settle a live-behavior claim,
-use `verify` through the parent and state any remaining evidence gap.
+Once all explorers return, spawn a single subagent to synthesize their findings into one coherent explanation:
 
-## Critique mode
+- helper: a general-purpose subagent, read-only
+- model: your configured `deep-judgment` role
 
-Critique starts only after Explain mode has established a grounded model.
+The explainer gets all explorers' findings and writes the human-facing explanation (output format below). Read `references/explainer-prompt.md` for the full prompt template. The explainer reconciles overlapping findings, resolves contradictions, and weaves the slices into a unified picture.
 
-### 1. Frame the review
+### Step 4. Present
 
-State the architecture's goal, confirmed constraints, and review scope.
-Reviewers judge the design against that intent, not personal style.
+Present the explainer's output to the user. You may lightly edit for clarity or add context from the conversation, but don't substantially rewrite. The explainer's communication is the product.
 
-### 2. Run independent critics
+### Output Format
 
-Use `parallel` with two or more read-only `review` passes. Request the
-`skeptical-reviewer` role and diverse configured bindings when available.
-Every critic receives:
+Follow this structure, adapted to the question. Not every section is needed for every question.
 
-1. the explanation;
-2. relevant file and symbol pointers;
-3. `references/critic-prompt.md`;
-4. `references/critique-rubric.md`.
+**Overview.** 1-2 paragraphs. What it is, what it does, why it exists. Enough to decide whether to keep reading.
 
-When independent helpers are unavailable, run distinct rubric-led parent passes
-sequentially and label the result as non-independent.
+**Key Concepts.** The important types, services, or abstractions. Brief definition of each. Not exhaustive, just the ones needed to understand the rest.
 
-### 3. Apply lead judgment
+**How It Works.** The core of the explanation. Walk through the flow: what triggers it, what happens step by step, where data goes, the decision points. Prose, not pseudocode. Reference specific files and functions so the reader can go look, but don't dump code blocks unless a snippet is genuinely necessary.
 
-The parent reads the relevant code, deduplicates findings, and classifies them:
+**Where Things Live.** A brief map of the relevant files/directories. Not every file, just the ones needed to start working in this area.
 
-- **Act on:** a correctness, operability, or maintainability problem worth
-  fixing now.
-- **Consider:** a real trade-off whose benefit may not justify current cost.
-- **Noted:** valid context with low immediate impact.
-- **Dismissed:** incorrect, mitigated, unsupported, or merely stylistic.
+**Gotchas.** Non-obvious or surprising things that would trip someone up. Historical context that explains why something looks weird. Known sharp edges.
 
-Agreement is stronger evidence, not proof. Present the explanation first and
-the critique second so the architecture model remains useful by itself.
+## Critique Mode
+
+Triggered when the user asks for architectural issues, problems, or improvements, not just understanding.
+
+### Step 1. Explain First
+
+Run the full explain flow above (Steps 1-4). You must understand the architecture before critiquing it.
+
+### Step 2. Spawn Critics
+
+After the explanation is complete, spawn two or more architectural critics at once, using as many distinct model bindings as your profile provides.
+
+For each critic:
+- helper: a general-purpose subagent, read-only
+- model: your configured `skeptical-reviewer` role. Bindings are minimum reasoning levels. The lead should escalate when the architecture warrants deeper analysis.
+
+Read `references/critic-prompt.md` for the prompt template. Each critic gets:
+1. The explanation from Step 1 (so they don't re-explore)
+2. The relevant file paths (so they can read the actual code)
+3. The architectural critique rubric from `references/critique-rubric.md`
+
+### Step 3. Lead Judgment
+
+Same framework as the interrogate skill. You're a pragmatic lead, not an aggregator.
+
+Categorize findings:
+- **Act on.** Architectural problems worth fixing now
+- **Consider.** Real concerns, but the cost/benefit is unclear
+- **Noted.** Valid observations, low priority
+- **Dismissed.** Wrong, missing context, or style preference
+
+Present the explanation first (from Step 1), then the critique verdict below it. The explanation should stand on its own; someone who just wants to understand the system shouldn't wade through critique.

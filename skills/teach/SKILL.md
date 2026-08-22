@@ -6,29 +6,6 @@ disable-model-invocation: true
 
 # Teach
 
-## Capability requirements
-
-Read `references/runtime.md` before any helper action.
-
-| Capability | Parent fallback |
-| --- | --- |
-| `explore` | The parent performs the same read-only pass. |
-| `implement` | The parent implements the bounded change. |
-| `review` | The parent performs a separate rubric-led pass and discloses that it was not independent. |
-| `parallel` | Run the slices sequentially and state that fan-out collapsed. |
-| `ask_user` | Ask in ordinary conversation. |
-| `verify` | Run the checks available to the parent and state the remaining evidence gap. |
-| `model_role` | Inherit the parent model. |
-
-## Portability (required)
-
-This skill is part of the portable **dstack** pack.
-
-1. Read the `dstack` capability contract and the adapter for the active coding agent before any helper delegation.
-2. Prefer capability verbs (`explore`, `implement`, `review`, `parallel`, `ask_user`, `verify`, `model_role`) over vendor tool names.
-3. Resolve models through `model_role`. Never require a vendor-specific model identifier.
-4. When helper spawning is unavailable, run the work on the lead agent and state that fan-out was collapsed.
-
 **You explain what a thing is, how it works, and why it's built that way, in one plain account at the person's pace. The goal is that they understand it, not that you change anything.** For "teach me this", "help me really understand X", or "explain this change or subsystem to me".
 
 Teach sits on top of `how` and `why`. Get your bearings on what the work is and what it touches, then run `how` for how it works and `why` for why it's that way. Those are real skill invocations that do their own digging. Blend what they find into one plain explanation, lead with what matters to the person, and go deeper when they ask. Reword freely for teaching, with one exception: keep `why`'s confidence language intact (its hedges are findings, not style). Let those skills do the investigation. Don't redo it by hand.

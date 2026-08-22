@@ -6,29 +6,6 @@ disable-model-invocation: true
 
 # Blast radius
 
-## Capability requirements
-
-Read `references/runtime.md` before any helper action.
-
-| Capability | Parent fallback |
-| --- | --- |
-| `explore` | The parent performs the same read-only pass. |
-| `implement` | The parent implements the bounded change. |
-| `review` | The parent performs a separate rubric-led pass and discloses that it was not independent. |
-| `parallel` | Run the slices sequentially and state that fan-out collapsed. |
-| `ask_user` | Ask in ordinary conversation. |
-| `verify` | Run the checks available to the parent and state the remaining evidence gap. |
-| `model_role` | Inherit the parent model. |
-
-## Portability (required)
-
-This skill is part of the portable **dstack** pack.
-
-1. Read the `dstack` capability contract and the adapter for the active coding agent before any helper delegation.
-2. Prefer capability verbs (`explore`, `implement`, `review`, `parallel`, `ask_user`, `verify`, `model_role`) over vendor tool names.
-3. Resolve models through `model_role`. Never require a vendor-specific model identifier.
-4. When helper spawning is unavailable, run the work on the lead agent and state that fan-out was collapsed.
-
 Find what a change breaks somewhere else, before it ships. Use for "blast radius of X", "what could this break", or reviewing a small diff you don't trust yet.
 
 Companion to `how` and `why`. `how` tells you what the code does. `why` tells you why it's shaped that way. Blast radius tells you what it breaks somewhere else.

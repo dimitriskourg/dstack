@@ -1,7 +1,7 @@
 # Explorer prompt template
 
-Fill in the placeholders and send this packet through `explore`, or execute it
-as a parent pass when helpers are unavailable.
+Fill in the placeholders and send this packet to a read-only helper, or work
+through it yourself when helpers are unavailable.
 
 ---
 

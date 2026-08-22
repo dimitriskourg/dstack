@@ -6,29 +6,6 @@ disable-model-invocation: true
 
 # No comments
 
-## Capability requirements
-
-Read `references/runtime.md` before any helper action.
-
-| Capability | Parent fallback |
-| --- | --- |
-| `explore` | The parent performs the same read-only pass. |
-| `implement` | The parent implements the bounded change. |
-| `review` | The parent performs a separate rubric-led pass and discloses that it was not independent. |
-| `parallel` | Run the slices sequentially and state that fan-out collapsed. |
-| `ask_user` | Ask in ordinary conversation. |
-| `verify` | Run the checks available to the parent and state the remaining evidence gap. |
-| `model_role` | Inherit the parent model. |
-
-## Portability (required)
-
-This skill is part of the portable **dstack** pack.
-
-1. Read the `dstack` capability contract and the adapter for the active coding agent before any helper delegation.
-2. Prefer capability verbs (`explore`, `implement`, `review`, `parallel`, `ask_user`, `verify`, `model_role`) over vendor tool names.
-3. Resolve models through `model_role`. Never require a vendor-specific model identifier.
-4. When helper spawning is unavailable, run the work on the lead agent and state that fan-out was collapsed.
-
 Spawn Comment Sicko. Act on accepted findings.
 
 Authoring agents defend comments. Defer to Comment Sicko's fresh perspective.
@@ -39,7 +16,7 @@ Use the caller's files or diff. Otherwise use the current diff against the base 
 
 ## Steps
 
-1. Use a `review` helper with the sibling `comment-sicko` skill and pass the scope. When helpers are unavailable, apply `../comment-sicko/SKILL.md` as a distinct parent review pass. Do not restate or fork its rubric.
+1. Spawn a subagent running the **comment-sicko** skill. Pass the scope. Do not restate its rules.
 2. Inspect its report and diff. Reject application-code edits, scope escapes, exception-protected deletions, misstated `MUST KILL` reasons, and flags that treat kept intentional code as guilty. Reshape flags on our-code surprises stay actionable. Do not restore those comments. A keep survives only with proof it is about something we cannot change. Audit missed scoped lint and TypeScript suppressions. Correctness or safety suppressions stay actionable `MUST KILL`s. Restore deletions only with exact exceptions and scoped proof. Before accepting thin `IMPORTANT` or `do not remove` kills or keeps, run `/how` or `/why` on their symbol. If a kill is ambiguous, do not restore. If a keep is refuted or still ambiguous, delete it. Revert and rerun one rejected report with the failure named. Reject a second, report it open, and fail `/no-comments`.
 3. Fix trivial accepted flags directly by deleting a dead path, dropping a parameter, or using the real API. If any fix needs a shape, run `/architect` once for the accepted set and surrounding code. Stop at the sketch. Architect shapes. Step 4 implements.
 4. Implement the smallest root-cause fix in scope. Remove every named workaround. If the root cause is out of scope, land the smallest in-scope fix and report the rest open. The **principle-fix-root-causes** and **principle-redesign-from-first-principles** skills guide intent only: fix real causes, redesign as if requirements always existed, never bolt on symptom guards. Neither authorizes widening the fence nor fixing instances outside it.

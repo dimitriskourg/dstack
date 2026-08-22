@@ -6,38 +6,13 @@ disable-model-invocation: true
 
 # Figure it out
 
-## Capability requirements
-
-Read `references/runtime.md` before any helper action.
-
-| Capability | Parent fallback |
-| --- | --- |
-| `explore` | The parent performs the same read-only pass. |
-| `implement` | The parent implements the bounded change. |
-| `review` | The parent performs a separate rubric-led pass and discloses that it was not independent. |
-| `parallel` | Run the slices sequentially and state that fan-out collapsed. |
-| `ask_user` | Ask in ordinary conversation. |
-| `verify` | Run the checks available to the parent and state the remaining evidence gap. |
-| `model_role` | Inherit the parent model. |
-
-## Portability (required)
-
-This skill is part of the portable **dstack** pack.
-
-1. Read the `dstack` capability contract and the adapter for the active coding agent before any helper delegation.
-2. Prefer capability verbs (`explore`, `implement`, `review`, `parallel`, `ask_user`, `verify`, `model_role`) over vendor tool names.
-3. Resolve models through `model_role`. Never require a vendor-specific model identifier.
-4. When helper spawning is unavailable, run the work on the lead agent and state that fan-out was collapsed.
-
 When the task matches no playbook, design one. The deliverable before any code is the workflow itself: a sequence of phases that scales rigor to the task, runs the scientific method, and leaves a decision trail a human can audit after stepping away. Bias toward more rigor. The cost of building the wrong thing dwarfs the cost of being careful.
 
 Don't reinvent a playbook you already have. A focused single-unit task that matches Bug fix, Perf, Feature, Visual parity, Eval, or Multi-phase plan routes there. But a large or cross-cutting version of one (a migration across many call sites, an ambitious multi-part change), or work the user reviews after stepping away, belongs here even though a single-unit version would be a Feature. The rigor and the audit trail are the point.
 
 ## Start
 
-Create a checklist whose first item is to read the Principles section of
-**dstack-mode**. Use a host plan or todo surface when available; otherwise keep
-it in working notes. Then add the phases below.
+Open a todolist whose first item is to read the Principles section of the **dstack-mode** skill. Then add the phases below as todos.
 
 ## Phase A: Frame
 
@@ -58,9 +33,7 @@ Decompose into atomic, independently-landable units. Sequence riskiest-unknown-f
 - Decide what fans out. Parallelize only across genuine seams, and give each worker its own worktree or branch (the **separate-before-serializing-shared-state** principle skill). Don't over-fan.
 - Write the designed phase list down. That list is what the human reviews.
 
-Then put the design into motion. Add its steps to the checklist as concrete
-items, after Phase C and before Phase D. Run each under the Phase C loop
-discipline, and weave the Phase D log through them as each step lands.
+Then put the design into motion. Add its steps to the todolist as concrete items, after the Phase C entry and before Phase D. Run each under the Phase C loop discipline, and weave the Phase D log through them, a row as each step lands, rather than saving the whole trail for the end.
 
 ## Phase C: Run the loop
 
