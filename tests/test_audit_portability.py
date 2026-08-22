@@ -57,6 +57,16 @@ class PortabilityAuditTests(unittest.TestCase):
             self.assertIn("provider name", messages)
             self.assertIn("provider helper schema", messages)
 
+    def test_backticked_provider_helper_schema_fails(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(Path(temp), "- `subagent_type`: `generalPurpose`\n- `readonly`: `true`\n")
+            self.assertIn("provider helper schema", self.messages(skill))
+
+    def test_typescript_readonly_modifier_passes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(Path(temp), "```ts\ntype UserId = string & { readonly __brand: \"UserId\" }\n```\n")
+            self.assertEqual([], self.messages(skill))
+
     def test_user_invoked_skill_with_matching_sidecar_passes(self):
         with tempfile.TemporaryDirectory() as temp:
             skill = self.make_skill(

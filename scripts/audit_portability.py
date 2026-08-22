@@ -65,7 +65,7 @@ REQUIRED_SKILLS = {
 
 LEAKAGE_PATTERNS: Tuple[Tuple[str, re.Pattern], ...] = (
     ("provider name", re.compile(r"\b(?:Cursor|Codex|Claude Code)\b", re.I)),
-    ("provider helper schema", re.compile(r"\b(?:subagent_type|run_in_background|readonly)\s*[:=]", re.I)),
+    ("provider helper schema", re.compile(r"\b(?:subagent_type|run_in_background|readonly)`?\s*[:=]", re.I)),
     ("provider skill path", re.compile(r"(?:~|\$HOME)/\.(?:cursor|codex|claude)/", re.I)),
     ("concrete model slug", re.compile(r"\b(?:gpt-\d|grok-|claude-(?:opus|sonnet|haiku|fable))", re.I)),
     ("private transcript layout", re.compile(r"\bagent-transcripts\b|Application Support/Cursor", re.I)),
