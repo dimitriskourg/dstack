@@ -1,173 +1,109 @@
 ---
 name: automate-me
-description: "Use for \"automate me\", \"create or update my mode skill\", \"capture my working style\", or wanting future coding agents to follow the user's recurring conventions. Mines authorized recent evidence, asks for confirmation, and drafts or revises one personal -mode skill through the active host's skill-authoring workflow."
+description: "Use for \"automate me\", \"create/update/refresh my -mode skill\", \"turn/capture my preferences or working style into a skill\", or wanting agents to follow how the user works. Drafts or revises a personal -mode skill via your host's skill-authoring skill + unslop, optionally pulling fresh evidence from recent transcripts."
 disable-model-invocation: true
 ---
 
 # Automate me
 
-## Capability requirements
+A guided flow for turning the user's working conventions into a skill agents will follow. The output is one `-mode` skill tailored to them (e.g. `jay-mode`, `priya-mode`).
 
-Read `references/runtime.md` before any helper action.
-
-| Capability | Parent fallback |
-| --- | --- |
-| `explore` | The parent performs the same read-only pass. |
-| `review` | The parent performs a separate rubric-led pass and discloses that it was not independent. |
-| `parallel` | Run the slices sequentially and state that fan-out collapsed. |
-| `ask_user` | Ask in ordinary conversation. |
-| `model_role` | Inherit the parent model. |
-| `session.history` | Use user-confirmed preferences and visible evidence; state the history gap. |
-
-## Portability (required)
-
-1. Read the `dstack` capability contract and the active host adapter before delegation.
-2. Discover skill locations, `session.history`, authoring tools, and invocation controls through the active host. Do not assume one vendor directory or frontmatter flag.
-3. Use `parallel` with read-only `explore` helpers for authorized history slices. Use the host's skill-authoring and validation workflow for the draft.
-4. Resolve mining through `model_role:fast-explorer`, drafting through `model_role:deep-judgment`, and independent review through `model_role:skeptical-reviewer` when available.
-5. When history is unavailable, rely on user-confirmed preferences and current evidence rather than inventing habits.
-
-## Purpose
-
-Turn the user's recurring working conventions into one concise `-mode` skill that future agents can invoke. Examples include response style, autonomy, delegation, verification, code discipline, Git workflow, and skill-maintenance habits.
-
-The output is a mode skill tailored to the user, not a copy of `dstack-mode` and not a general manual.
+This skill orchestrates three others: an inline mining pass (see step 1), your host's skill-authoring skill (authoring), and the **unslop** skill (prose discipline). It sequences them; it doesn't replace them.
 
 ## Flow
 
-### 0. Find an existing mode skill
+### 0. Check for an existing skill
 
-Search canonical user skills under `~/.agents/skills/` and any project-local
-`.agents/skills/` directory explicitly selected for this project. Preserve the
-existing canonical location when updating. Do not treat compatibility links as
-independent skills.
+Look recursively for `.agents/skills/**/*-mode/SKILL.md` and `~/.agents/skills/*-mode/SKILL.md` matching the user's handle. Mode skills can live in a personal category directory (`.agents/skills/<handle>/`), not only at the top level. If one exists, confirm intent with a structured multi-choice question (unless they already said "update my skill" or similar):
 
-When one exists, default to updating it unless the user explicitly asks to start over. Determine the last meaningful edit through repository history or file metadata when available, then mine only newer evidence.
+- Update the existing skill (default for repeat runs)
+- Start fresh (rare; ask why before doing it)
 
-When several candidates exist, show their paths and recommend the one already active for the current host. Do not merge personal mode skills silently.
+Update mode changes the rest of the flow:
+- Step 1 mines only history since the skill was last edited (`git log -1 --format=%cI <path>`).
+- Step 2 asks what's changed or missing, not what to capture from zero.
+- Step 4 edits the existing file in place. Preserve sections the user hasn't contradicted; revise ones with new evidence; add new sections only for genuinely new rules.
 
-### 1. Gather authorized evidence
+### 1. Mine their history
 
-Use the best available sources:
+Locate the active workspace's transcripts before fanning out. Use only the transcript directory your host scopes to this workspace. Don't glob across the host's whole transcript store. That crosses workspace boundaries and reads private chats from unrelated projects. When your host exposes no transcript access, skip mining and rely on step 2.
 
-1. user-provided examples, corrections, or an existing mode skill;
-2. first-class conversation-history resources scoped to the current user and workspace;
-3. explicitly supplied handoffs, exports, or transcript references;
-4. the visible current conversation;
-5. repository conventions that the user repeatedly enforced.
+Survey recent agent conversations within that scope for recurring patterns. Run multiple parallel subagents across slices of history (e.g. last 2-4 weeks, split into 3 slices so each has enough material). Each slice mining subagent reads transcripts from the workspace-scoped path the parent provides, looks for the signals below, and returns a short structured list of patterns it saw with evidence pointers. Default signals worth hunting:
 
-Never scan broad history directories to guess which conversations belong to this task. Do not read unrelated workspaces.
+- Response preferences (length, tone, format, "dumb it down" corrections)
+- Delegation habits (subagents, models, specialized workflows, parallelism)
+- Verification posture (what "done" means; unit tests vs live repro; reviewers)
+- Code and prose discipline (style, principles cited, lint/format tools)
+- Process conventions (worktrees, commits, PRs, review/merge tooling)
+- Meta preferences (fixing skills mid-task, proposing new ones)
 
-For a broad history window, use `parallel` with several read-only `explore` helpers split by time or topic. Each returns patterns with evidence pointers and counterexamples.
+Cross-check across slices before elevating a signal. Patterns seen in 2+ slices are high-confidence; lone signals are weak and usually get dropped.
 
-Look for:
+### 2. Ask the user directly
 
-- response length, tone, structure, and corrections;
-- when the user wants autonomy versus checkpoints;
-- delegation, parallelism, and model-role preferences;
-- what counts as verification and completion;
-- code, type, comment, and prose discipline;
-- worktree, commit, pull-request, review, and merge conventions;
-- repeated skill or tooling improvements;
-- explicit dislike of particular behaviors.
+Mining misses intent that hasn't come up yet. Use a structured multi-choice question rather than asking the user to type from scratch. Lower cognitive load, higher hit rate.
 
-Require repeated evidence before promoting a pattern. A preference seen in two or more independent contexts is stronger than one isolated correction. Contradictory evidence stays unresolved until the user decides.
+Shape: one or two questions with 4-6 options each, allowing multiple selections for category questions. Start broad ("Which areas matter most?"), then follow up on selected areas with specific options. After the structured rounds, one free-form chat question catches anything the options missed.
 
-### 2. Ask the user to confirm intent
+Don't dump 20 questions. Two structured rounds plus one open question is usually enough.
 
-Mining reveals behavior, not necessarily enduring preference.
+### 3. Cluster findings
 
-Use `ask_user` for one or two structured rounds with a recommended selection and several concrete options. Allow multiple selections for categories such as autonomy, verification, or response style. End with one free-form question for anything the options missed.
+Group the combined signals into sections. Common ones (use only what applies):
 
-For an update, ask what changed, what the existing skill gets wrong, and whether any old rule should be removed. Do not restart the onboarding interview from zero.
+- **Response style**: length, tone, format.
+- **Autonomy**: how much to do without asking; MCP tool use.
+- **Understand first**: which skills to reach for when scoping or investigating a change.
+- **Subagents**: default, parallelism, model-to-task, specialized workflows.
+- **Prose / code discipline**: principles, lint tools, style guides.
+- **Review and verify**: repro posture, verification skills, live-testing tools.
+- **Process**: git worktrees, commits, PRs, review/merge tooling.
+- **Skills**: skill-authoring habits, fix-the-skill-first, proposing new skills.
 
-### 3. Cluster the confirmed rules
+The **dstack-mode** skill shows the shape. Read it for granularity. Don't copy its content; the user's rules are not the same as dstack-mode's.
 
-Use only sections the evidence supports. Common sections include:
+### 4. Draft the skill
 
-- **Response style**
-- **Autonomy and checkpoints**
-- **Understand before changing**
-- **Delegation and parallelism**
-- **Code and prose discipline**
-- **Review and verification**
-- **Git and delivery process**
-- **Skill and tooling maintenance**
+Use your host's skill-authoring skill to author the skill. Placement:
 
-Each rule must be operational and distinguish the user from reasonable defaults. “Communicate clearly” does not earn a line. “Use short paragraphs; use tables for comparisons; avoid long bullet walls” does.
+- Path: preserve an existing mode skill's category. For a new mode, use `.agents/skills/<handle>/<handle>-mode/SKILL.md` when the repo has an established personal category for that handle; otherwise default to `.agents/skills/<handle>-mode/SKILL.md` in the project (or `~/.agents/skills/<handle>-mode/` if the user prefers a personal skill).
+- Handle: the user's first name or chosen identifier.
+- Frontmatter `description`: trigger on their name + `/<handle>-mode` + "work in their style", not on generic keywords like "write code" or "review PR".
+- Frontmatter formatting: follow that skill's YAML rules. Keep `description` as one YAML scalar; quote it or use `description: >-` with indented continuation lines when punctuation or wrapping requires it.
+- Frontmatter `disable-model-invocation: true` by default. Mode skills are heavy and opinionated; they should only apply when the user explicitly invokes them (by name or slash command), not auto-trigger on description matching. Opt out only if the user explicitly wants their mode to apply on every turn.
 
-Read `dstack-mode` for granularity and structure, not content. The user's rules may be much smaller.
+### 5. Iterate on prose
 
-### 4. Draft or update the skill
+Apply the **unslop** skill and the authoring skill's writing guidelines to every line. Both apply to any agent-read prose, not just skills.
 
-Use an available skill-authoring workflow. Preserve portable validation rules
-and the existing category layout; keep provider configuration out of the skill
-package.
+Show the draft to the user and take feedback. Expect multiple iterations. Cut ruthlessly; a mode skill is not a manual.
 
-For a new skill:
+### 6. Land it
 
-- choose the user's handle or requested identifier;
-- name it `<handle>-mode`;
-- place it under `~/.agents/skills/` by default, or under project-local `.agents/skills/` only when the user explicitly requests repository ownership;
-- make the description trigger on the handle, slash command, and “work in this person's style,” not generic coding words;
-- prefer explicit human invocation for heavy personal modes when the host supports invocation policy;
-- document mode lifetime honestly when the host cannot persist it across sessions or compaction.
-
-For an update:
-
-- preserve sections not contradicted by new evidence;
-- revise stale rules in place;
-- remove disproven or unwanted rules;
-- add a section only for a genuinely new cluster;
-- keep the diff focused and reviewable.
-
-Do not copy other skills inline. Reference them by name and let them own their detailed workflows.
-
-### 5. Tighten and review
-
-Apply **unslop** to every line. Keep instructions concise, declarative, and testable.
-
-Show the draft and the evidence-to-rule mapping to the user. Expect iterations. Cut rules that are generic, ambiguous, contradictory, or supported by only one weak example.
-
-When helpers are available, use one read-only `review` pass with `model_role:skeptical-reviewer` to look for overfitting, dangerous autonomy, conflicting rules, and trigger overreach.
-
-### 6. Validate trigger and behavior
-
-Run the host's Skill validator when one exists.
-
-Check:
-
-- the description triggers on the user's explicit mode request;
-- unrelated coding requests do not activate it unexpectedly;
-- every referenced skill is available or has a fallback;
-- host-specific metadata appears only where supported;
-- the mode works after the expected session lifecycle event;
-- the generated prose matches the user's confirmed style.
-
-A full benchmark may be unnecessary for a subjective personal mode, but trigger accuracy and dangerous autonomy rules still need explicit checks.
-
-### 7. Land it
-
-Use a clean branch or worktree according to the repository workflow. Commit the focused mode-skill change and open a pull request when the project uses review. Do not push directly to a protected main branch.
-
-Report the path, invocation, evidence window, key rules added or changed, validation performed, and any host-lifecycle limitation.
+Work in a worktree off main. Commit and open a PR so the user can review it. Don't push to main directly.
 
 ## Guardrails
 
-- Do not overfit one conversation.
-- Do not codify inferred sensitive traits or private information.
-- Do not grant irreversible autonomy by default.
-- Do not write poetic or motivational prose for an agent reader.
-- Do not force every possible section into the skill.
-- Use “the user” or “the human” in operational instructions rather than repeatedly naming the author.
-- A narrow workflow such as commit-message style may deserve a normal skill rather than a global mode.
+- **Don't overfit to one conversation.** A preference stated once and contradicted another time is noise. Require multiple instances before codifying it.
+- **Don't be clever.** Restating other skills' contents, inventing metaphors, or writing "poetic" prose for an agent reader is cost without benefit. Keep it operational.
+- **Reference, don't inline.** Other skills the user relies on should appear as path references, not pasted excerpts. Same for any principle docs they maintain elsewhere.
+- **Keep sections minimal.** Only add a section if the user has a specific, non-default rule there. "Communicate clearly" is not a section. "Short paragraphs. Tables when comparing options. Bullets only when items are genuinely parallel." is.
+- **Name conventions generic.** Use "the user" or "the human" in imperatives, not the author's first name. Others may read or adopt the skill.
+- **Don't force symmetry.** If a user has no process rules worth writing down, skip the Process section entirely. Sparse is fine; bloated is not.
 
-## Model roles
+## Evaluation
 
-| Role | Use |
-| --- | --- |
-| `fast-explorer` | scoped history mining |
-| `deep-judgment` | clustering, drafting, and user-intent synthesis |
-| `skeptical-reviewer` | overfitting and trigger-safety review |
+A `-mode` skill is subjective output. An authoring-skill-style test/iterate benchmark loop isn't useful here. Vibe-check with the user: does it read like them? Did it miss anything? Then ship.
 
-If no role override is available, inherit the parent session model.
+Run a description-optimization loop only if the skill's trigger accuracy turns out to be a problem in practice.
+
+## When not to use
+
+- User wants a task-specific skill (not working conventions): the authoring skill alone, no mining required.
+- User wants to capture one narrow workflow (e.g. "how I write commit messages"): that's a regular skill, not a mode skill.
+
+## Reference files
+
+- The **dstack-mode** skill: example of the output shape.
+- The **unslop** skill: prose discipline for every line.
+- Your host's skill-authoring skill: skill authoring process and writing guidelines.
