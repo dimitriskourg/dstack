@@ -179,7 +179,13 @@ def check_skill(skill_dir: Path) -> List[Finding]:
         findings.append(Finding(relative(skill_file), "capability {!r} has no explicit fallback row".format(capability)))
 
     for path, text in package_texts:
+        in_fence = False
         for line_number, line in enumerate(text.splitlines(), 1):
+            if line.lstrip().startswith("```"):
+                in_fence = not in_fence
+                continue
+            if in_fence:
+                continue
             for reference in ASSET_REF.findall(line):
                 reference = reference.rstrip(".,:;)")
                 target = skill_dir / reference

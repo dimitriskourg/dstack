@@ -1,163 +1,77 @@
 ---
 name: reflect
-description: "Review a completed or difficult working session from three independent lenses, identify durable lessons, and route accepted lessons into concrete skill or tooling changes. Use when the user says reflect or when a repeatable workflow should be captured."
+description: Spawn three parallel review subagents over the active transcript, surface learnings, and route each to a concrete edit on an existing skill. Use when the user says reflect.
 disable-model-invocation: true
 ---
 
 # Reflect
 
-## Capability requirements
+Mine the current conversation for durable learnings, then route them into skill edits.
 
-Read `references/runtime.md` before any helper action.
+## When to invoke
 
-| Capability | Parent fallback |
-| --- | --- |
-| `review` | The parent performs a separate rubric-led pass and discloses that it was not independent. |
-| `parallel` | Run the slices sequentially and state that fan-out collapsed. |
-| `model_role` | Inherit the parent model. |
-| `session.transcript` | Use the visible conversation or a compact parent digest and state the gap. |
+- The user said "reflect" or "/reflect".
+- A complex task (5+ tool calls) just landed cleanly and the recipe is worth keeping.
+- The agent hit dead ends, found the working path, and the path generalizes.
+- The user corrected the agent's approach mid-task.
+- A non-trivial workflow emerged that isn't captured anywhere.
 
-## Portability (required)
-
-This skill is part of the portable **dstack** pack.
-
-1. Read the `dstack` capability contract and the adapter for the active coding agent before delegation.
-2. Use `parallel` with read-only `review` helpers for the independent lenses. Use `review` or the lead agent for synthesis.
-3. Obtain session evidence through `session.transcript` only when the active host exposes an authorized current-session resource. Never assume a transcript filesystem, project-history directory, or JSONL schema.
-4. Resolve models through `model_role`; never require a vendor-specific model identifier.
-5. When transcript export or helper spawning is unavailable, use a bounded session digest and run the lenses sequentially on the lead agent. State the degraded path.
-
-## Purpose
-
-Mine a session for lessons that should improve future work. A lesson is durable when it applies beyond the exact task and can be encoded in a skill, adapter, script, lint, metadata rule, test, or operating convention.
-
-Reflect when:
-
-- the user says `reflect` or `/reflect`;
-- a complex task landed and the successful recipe is worth preserving;
-- the agent hit dead ends before finding a reusable path;
-- the user corrected the working method rather than only the final answer;
-- a workflow repeated enough to justify automation;
-- an existing skill failed to trigger, routed poorly, or contained stale runtime assumptions.
-
-Skip reflection for trivial conversations, one-off facts, or work already handled correctly by an existing skill. Do not turn every preference into global policy.
+Skip when the conversation is trivial, off-topic, or already covered by an existing skill the parent followed correctly. One-offs are not learnings.
 
 ## Process
 
-### 1. Build the session evidence package
+### 1. Locate the active transcript
 
-Use the best source the active host exposes, in this order:
+The parent finds its own transcript file before fanning out. Use only your host's transcript directory for the active workspace. Do not glob across the host's whole transcript store. That crosses workspace boundaries and reads private chats from unrelated projects. When your host exposes no readable transcript, skip to the digest fallback below.
 
-1. a first-class current-conversation or transcript resource;
-2. a runtime-provided session export or transcript path explicitly associated with the current conversation;
-3. the visible conversation context plus tool results;
-4. a compact digest written by the lead agent.
+```bash
+ls -t <transcript-dir>/*.jsonl <transcript-dir>/*/*.jsonl <transcript-dir>/*/subagents/*.jsonl 2>/dev/null | head -10
+```
 
-Never search broad user-history or project-history directories to guess which conversation is active. Do not read unrelated sessions.
+Hosts differ in layout. Flat (`<id>.jsonl`), nested (`<id>/<id>.jsonl`), and subagent transcripts under the parent's directory are all common. Match whatever your host writes.
 
-The evidence package contains:
+For each candidate, read the first line and check that its message text contains the conversation's opening user prompt. Take the matching path. If no path resolves, write a tight digest of the session and pass that instead.
 
-- the user's original goal;
-- important constraints and corrections;
-- the approach taken and major decisions;
-- failed paths and why they failed;
-- verification evidence;
-- the resulting diff, artifact, or answer;
-- unresolved concerns;
-- existing skills that were invoked, skipped, or misrouted.
+### 2. Spawn three reviewers in parallel
 
-Prefer a file or runtime resource pointer when helpers can read it. Otherwise pass a compact digest. Do not inline a massive transcript into every helper prompt.
+Spawn three general-purpose subagents at once, each on its own model binding, with full tool access. **Don't use a restricted read-only mode.** Reviewers need MCP access for context lookups (tickets, chat threads, observability traces referenced in the transcript), and where a host strips MCP access in that mode it disables those lookups entirely. The prompt forbids file writes; the parent applies edits.
 
-### 2. Run three independent reviews
+| Lens | Model role | Prompt template |
+|---|---|---|
+| Judgment | `deep-judgment` | `references/judgment-reviewer.md` |
+| Tooling | `skeptical-reviewer` | `references/tooling-reviewer.md` |
+| Divergent | `deep-judgment`, on a binding distinct from Judgment where your profile provides one | `references/divergent-reviewer.md` |
 
-Use one `parallel` fan-out with three read-only `review` helpers. The prompts explicitly forbid file edits and external writes.
-
-| Lens | Model role | Prompt template | Question |
-| --- | --- | --- | --- |
-| Judgment | `deep-judgment` | `references/judgment-reviewer.md` | Which decisions, trade-offs, and corrections generalize? |
-| Tooling | `feature-worker` or `bug-worker` | `references/tooling-reviewer.md` | What should become a script, check, adapter rule, or workflow change? |
-| Divergent | `skeptical-reviewer` | `references/divergent-reviewer.md` | What did the other lenses overlook, and which apparent lesson is actually noise? |
-
-Each reviewer receives the same evidence package and the relevant prompt template. Each returns:
-
-- proposed lesson;
-- supporting session evidence;
-- scope and counterexamples;
-- recommended enforcement mechanism;
-- target skill, adapter, script, or backlog item;
-- confidence and risk of overgeneralization.
-
-When `parallel` is unavailable, run the three lenses sequentially and keep their notes separate until synthesis.
+Pass each template verbatim, substituting the transcript path or digest where marked. Reviewers return findings in their response body.
 
 ### 3. Synthesize
 
-Synthesize on the lead agent or with one read-only `review` helper using `model_role:deep-judgment` and `references/synthesizer.md`.
+One general-purpose subagent on your configured `deep-judgment` role, with full tool access. The synthesizer's quality check includes spot-verifying citations, which can require MCP access; a restricted read-only mode strips that on some hosts. Use `references/synthesizer.md` verbatim, with each reviewer's full output inlined where marked. The synthesizer returns a structured Accepted / Rejected / Backlog list.
 
-Return three groups:
+### 4. Structural enforcement check
 
-- **Accepted.** Durable, supported, correctly scoped, and routed to a concrete change.
-- **Rejected.** Unsupported, already encoded, too specific, contradictory, or likely to create bad global behavior.
-- **Backlog.** Valuable, but better implemented as tooling, evaluation, metadata, or a broader design change rather than an immediate skill edit.
+Sanity-check the synthesizer's Accepted list. For any item that would be enforced more reliably by a lint rule, script, metadata flag, or runtime check, move it from Accepted to Backlog. The synthesizer already applies this criterion; this is a final pass before edits land. See the **encode-lessons-in-structure** principle skill.
 
-The synthesizer must deduplicate equivalent lessons, surface disagreements, and preserve counterexamples. A repeated sentence is not automatically a rule; a rule earns its place by preventing a demonstrated failure.
+### 5. Apply
 
-### 4. Prefer structural enforcement
+Before applying any Accepted edit, present the synthesizer's full Accepted/Rejected/Backlog output to the user and wait for explicit approval. The user picks which subset to apply and may redirect routings. Skill changes affect every future agent in the org; do not auto-apply.
 
-Review every Accepted item before proposing edits.
+Backlog items file to whatever devex / backlog tracker your team uses automatically. Those are tracker submissions, not skill edits. Only the Accepted list waits for approval.
 
-Move an item to Backlog when it would be enforced more reliably by:
+For each approved Accepted item, follow the Routing field exactly:
 
-- a lint or static check;
-- a CI workflow;
-- metadata or frontmatter;
-- a runtime guard;
-- an adapter capability rule;
-- an automated migration or generator;
-- an evaluation fixture.
+- Trivial existing-skill edit (a one-line bullet, a tightened sentence, a stale fact corrected): parent does directly.
+- Substantive existing-skill edit (a new section, a new pattern table, more than ~10 lines): hand to your host's skill-authoring skill and run its draft / test / iterate loop.
+- `tune description: <skill path>` (the skill exists but didn't trigger when it should have): hand to the authoring skill and run its description-optimization loop.
+- `new skill: <kebab-name>`: hand creation to the authoring skill. Do not invent the shape ad hoc.
 
-Follow the **encode-lessons-in-structure** principle. Do not keep adding prose when a machine-checkable constraint is available.
+If your environment ships a SKILL.md validator, run it on every touched skill before declaring done. Skip this step if it doesn't.
 
-### 5. Obtain approval for durable changes
+### 6. Summarize for the user
 
-Present the full Accepted, Rejected, and Backlog result before editing skills. Wait for explicit user approval of the subset to apply.
+Short list, no preamble:
 
-This checkpoint is mandatory because skill changes affect future sessions and possibly multiple coding agents. It does not apply to a read-only reflection report.
-
-Do not create tickets, modify shared trackers, or change external systems unless the user has authorized that workflow and the active adapter exposes the required tools. Otherwise include a ready-to-file backlog description in the report.
-
-### 6. Apply approved changes
-
-For each approved item:
-
-- **Small correction.** The lead edits an existing skill, adapter, or maintenance document directly.
-- **Substantive skill change.** Use the active coding agent's skill-authoring workflow, including its validation or evaluation loop.
-- **Trigger problem.** Tune the skill description and test that the intended request selects it without causing unrelated activation.
-- **New skill.** Create one only when no existing skill owns the reusable discipline.
-- **Structural rule.** Implement the script, lint, CI check, metadata flag, or adapter change instead of adding another instruction paragraph.
-
-Run any available skill validator on touched skills. For portable dstack changes,
-also run the repository's dstack portability audit. When a capability contract
-or adapter changes, validate every adapter against the updated contract before
-declaring completion.
-
-### 7. Report
-
-Return a compact record:
-
-- **Applied.** Path and one-line change for every accepted edit.
-- **Structural changes.** Scripts, checks, metadata, or evaluations added.
-- **Backlog.** Ready-to-file items and why they were deferred.
-- **Rejected.** One line per dropped lesson with the synthesizer's reason.
-- **Verification.** Validators, audits, and behavior checks that passed.
-- **Evidence source.** Transcript resource, exported session, visible context, or lead-written digest.
-
-## Model roles
-
-| Role | Use |
-| --- | --- |
-| `deep-judgment` | session interpretation and synthesis |
-| `feature-worker` | workflow and tooling improvement analysis |
-| `bug-worker` | failure-path and debugging-process analysis |
-| `skeptical-reviewer` | divergent review and overgeneralization pressure |
-
-If no role override is available, inherit the parent session model.
+- Edits applied: `<skill path>`. What changed, one line each.
+- New skills created: `<skill path>`. One line each (rare).
+- Backlog filed to the devex tracker: `<issue title>` (`<tags>`). One line each.
+- Dropped: one line per rejected finding + reason from the synthesizer.
