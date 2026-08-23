@@ -1,22 +1,29 @@
 ### Opening a PR
 
-Run this at the end of an implementation playbook when the user asked for a reviewable pull request or the repository workflow clearly requires one.
+Invoked at the end of every other playbook.
 
-1. **Protect unrelated work.** Use a clean branch or worktree based on the intended base. Do not overwrite dirty changes that belong to another task. When several helpers contribute, keep their write scopes or worktrees separate and integrate deliberately on the owning branch.
-2. **Verify the final head.** Run focused tests, the broader regression gate, and the matching real-surface verification. Re-run checks after the final rebase or conflict resolution so evidence refers to the head that will be reviewed.
-3. **Review the diff.** Run **interrogate** when risk or ambiguity warrants it. Apply **no-comments** to comment quality and **unslop** to prose. Perform a simplicity pass before commit; do not depend on an optional cleanup tool being installed.
-4. **Shape the commits.** Use small, ordered commits that tell the implementation story. Amend when a correction belongs to the commit just created; add a new commit when the change is independently reviewable. Do not hide unrelated work in the branch.
-5. **Refresh the base safely.** Rebase or merge according to the repository's documented policy. Never rewrite shared history or a published stack without the required owner checkpoint.
-6. **Open the pull request through the active forge interface.** Use the connected repository tool, hosting API, or available CLI. Include:
-   - user-visible outcome;
-   - design choice and trade-off;
-   - verification commands and results;
-   - runtime evidence or known verification gap;
-   - migration, rollout, or compatibility notes;
-   - follow-up work explicitly out of scope.
-7. **Confirm the created artifact.** Read back the pull request metadata and exact head SHA before reporting it. Do not fabricate or infer a URL.
-8. **Route follow-up correctly.** Return the pull-request reference to the lead agent. Start the dstack **Babysit** playbook only when the user asks to monitor, get it green, address threads, or make it merge-ready. Opening a pull request alone does not authorize merging or long-running monitoring.
+**Worktree.** Work from a git worktree off main; subagents inherit it. Multiple `Task` calls on the same branch each get their own worktree, or `git fetch && git reset --hard origin/<branch>` between them. Dirty branch with unrelated work: patch out, fresh worktree, apply. Snarled worktree: reset from main, redo minimally.
 
-For stacked work, use the team's existing stack workflow. Keep slices small, ordered, and visible to reviewers; do not require one specific stacking product.
+**Commits.** Commit liberally; rebase into small, ordered commits before opening PRs. Each commit is a future PR: landable, ordered to tell the story. Amend when the fix belongs in a just-made commit; new commit when separable.
 
-**Reply:** pull-request reference, base and exact head, commit sequence, verification performed, known gaps, and whether Babysit was requested.
+**PRs.** Run `/unslop` over the diff before commit. Run `/no-comments` before review. Write every PR title, PR description, and commit body with `/technical-writing`, then apply `/unslop`. Apply every technical-writing layer except Diátaxis. Use one word for each action, keep articles, and avoid `-ing` when a plain verb works.
+
+**Titles.** Use Conventional Commits in the form `type(scope): subject`. Use `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, or `perf` as the type. Use the changed area, such as `dstack` or `dstack-mode`, as the scope. Keep the subject short and imperative. Apply the same `/technical-writing` and `/unslop` pass as the body. Name a real symbol when one carries the change. For example, `fix(dstack): retarget opening-a-pr babysit trigger`. Do not add a trailing period.
+
+**Descriptions.** Use these sections in order. Drop a section when it is empty.
+
+- `## Why`. State the intent and why this approach fits.
+- `## Scope`. State facts from the diff. Name real symbols and paths. Name both sides of a rename or retarget. State what is in and out when the boundary matters.
+- `## Tradeoffs`. State real choices only. Skip this section when there are none.
+- `## Blast Radius`. State who and what the change touches. Explain why the change is safe or risky. If main is red without the fix, name the continuing cost.
+- `## Verification`. State how you ran each check and its rigor. Name the real path, such as the control skill for the surface or the targeted tests. State the outcome of each check, not only the command name.
+
+After these sections, attach videos or screenshots when they prove a claim. Do not use `## Summary` or `## Test plan` boilerplate. A commit body does not restate its subject.
+
+**Size and stacks.** Prefer five narrow PRs to one large PR. Stack follow-ups with Graphite (`gt`), and keep the ordered stack visible to reviewers. Branch from main only for independent work. Rebase on `main` before substantial stack work.
+
+**Readiness.** Open every PR ready, never as a draft. Cloud-agent PR tools default to draft, so set `draft: false` on every PR creation call. If a PR still opens as a draft, run the host's ready command, such as `gh pr ready <number>`. Run `gh pr view <number>` before you refer to PR status.
+
+**Babysit.** Opening a PR does not start a babysit. Post the URL and keep building. Finish the phase or stack first. Run a separate babysit pass only when the user asks for one after the whole stack exists. A babysit for each new PR stalls the build and spends checks on commits that later waves restart. Push back when feedback drifts from intent.
+
+A subagent that opens a PR runs `interrogate`, `/unslop`, and `/no-comments`. It returns the URL and does not babysit. Return to the parent.
