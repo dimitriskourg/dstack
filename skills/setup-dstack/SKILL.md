@@ -9,13 +9,6 @@ disable-model-invocation: true
 Manage personal dstack configuration without changing installed skills,
 adapters, runtime files, or compatibility links.
 
-## Capability requirements
-
-| Capability | Parent fallback |
-| --- | --- |
-| `explore` | Inspect configuration and the available host catalog directly. |
-| `ask_user` | Present the proposed bindings in ordinary conversation and wait for confirmation. |
-
 ## Files
 
 Use `DSTACK_HOME` when set; otherwise use `~/.dstack`.
@@ -87,7 +80,7 @@ do not claim pair validation in that case.
 ### 4. Propose, then confirm
 
 Show the current and proposed model and effort for every role, invalid bindings, catalog
-status, and the persistent host override. Use `ask_user` only for actual
+status, and the persistent host override. Ask only about actual
 preferences. Recommend retaining valid bindings and using `inherit-parent` for
 unknowns.
 
@@ -147,3 +140,7 @@ Return:
 - whether catalog validation was available;
 - schema-validation result;
 - capabilities still inheriting or unavailable.
+
+### 7. Offer a verification skill (optional)
+
+Check whether the project has a way to drive the real app for proof (a `verify-*` skill, or an existing harness). If not, offer once: "want a project-local verification skill, so agents can drive the app the way a user does and prove changes work? I can generate one with /create-verification-skill." On yes, invoke `/create-verification-skill`. On no, move on without pushing.

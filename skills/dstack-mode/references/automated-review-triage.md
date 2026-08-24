@@ -1,10 +1,10 @@
 # Automated review triage
 
-Use this reference when the Babysit playbook (`../playbooks/babysit.md`) handles Automated reviewer or review-automation comments. The goal is not to ignore Automated reviewer by default. The goal is to stop treating every comment as a required code change.
+Use this reference when the Babysit playbook (`../playbooks/babysit.md`) handles automated review or review-automation comments. The goal is not to ignore automated review by default. The goal is to stop treating every comment as a required code change.
 
 ## Decision rubric
 
-Classify each Automated reviewer thread before acting:
+Classify each automated-review thread before acting:
 
 - `fix`: The comment identifies a plausible correctness, security, privacy, data loss, auth, billing, migration, idempotency, race, or shipped-behavior issue. Fix it in the lowest owning PR, then reply with the commit SHA and resolve the thread.
 - `dismiss`: The comment matches a documented low-risk noisy pattern, and the current code/context proves the concern does not need a code change. Reply with a short reason and resolve the thread.
@@ -33,11 +33,11 @@ Use `candidate` for one or two examples. Use `recurring` after multiple real dis
 ### Intentional UI or design-system visual changes
 
 - Confidence: candidate
-- Skip when: The PR description, screenshots, design review, or nearby code makes the visual change explicit, and the Automated reviewer comment is only restating that a shared visual default changed.
+- Skip when: The PR description, screenshots, design review, or nearby code makes the visual change explicit, and the automated-review comment is only restating that a shared visual default changed.
 - Do not skip when: The comment points to accessibility, focus visibility, keyboard navigation, color contrast, or a component API contract that the PR did not intentionally change.
 - Example signal: Comments about focus outlines, button sizes, spacing, or shared component visual defaults where the owner replies "intentional" or "intended".
 
-### Upstack or stack-local usage Automated reviewer cannot see
+### Upstack or stack-local usage automated review cannot see
 
 - Confidence: candidate
 - Skip when: automated review flags an export, component, helper, or file as unused, and the repository's stack tool, upper-stack diffs, or pull-request context proves a later change uses it.
@@ -68,7 +68,7 @@ Use `candidate` for one or two examples. Use `recurring` after multiple real dis
 ### Self-withdrawn or explicit false-positive rule comments
 
 - Confidence: recurring
-- Skip when: The comment body or a later Automated reviewer reply explicitly says the finding is withdrawn, compliant, or a false positive, and the agent can verify the relevant rule locally.
+- Skip when: The comment body or a later automated review reply explicitly says the finding is withdrawn, compliant, or a false positive, and the agent can verify the relevant rule locally.
 - Do not skip when: The only evidence is a human saying "false positive" on a high-risk issue without explanation.
 - Example signal: A file-naming rule comment whose body says the file is already compliant.
 
@@ -90,17 +90,17 @@ Append new candidate learnings here during or after babysitting when they look t
 ### Manual reimplementations of native browser behavior
 
 - Confidence: candidate
-- Skip when: Practically never. When a diff replaces native browser behavior with a manual equivalent (native sticky → JS-positioned clones, native scroll targeting → forwarded wheel/touch events, paint-order occlusion → masks/clip-path), Automated reviewer's logic-bug findings against that code have been consistently legitimate.
+- Skip when: Practically never. When a diff replaces native browser behavior with a manual equivalent (native sticky → JS-positioned clones, native scroll targeting → forwarded wheel/touch events, paint-order occlusion → masks/clip-path), automated review's logic-bug findings against that code have been consistently legitimate.
 - Do not skip when: The finding concerns event-forwarding gaps (wheel deltaMode, touch pans, scroll-chaining at edges, tap slop), mask/clip hit-testing divergence, or observer-vs-React state timing races in such code. Default to fix.
 - Example signal: "masks do not affect hit-testing", "overlay blocks wheel scroll", "ignores deltaMode", "runs in the IntersectionObserver callback before React applies state".
-- Source: one sticky-occlusion PR: six Automated reviewer passes, roughly eighteen findings, every one fixed rather than dismissed.
+- Source: one sticky-occlusion PR: six automated review passes, roughly eighteen findings, every one fixed rather than dismissed.
 
 ### Contract-test drift claims are cheaply verifiable — run the test first
 
 - Confidence: candidate
 - Skip when: Never skip the verification itself; it costs one command. When a PR
   ships a contract test that pins protocol or documentation prose (regexes over
-  a SKILL.md, snapshot of doc wording), and Automated reviewer claims "the test no longer
+  a SKILL.md, snapshot of doc wording), and automated review claims "the test no longer
   matches the doc" (or vice versa), run that test on the PR tip before
   classifying. A red run confirms the claim empirically; a green run is a
   concrete disproof for the dismissal reply.
@@ -110,7 +110,7 @@ Append new candidate learnings here during or after babysitting when they look t
 - Example signal: "Contract test omits the pre-fix wait" on a PR whose earlier
   fix commits reworded the pinned passage; the test run on the tip failed on
   exactly the cited assertion.
-- Source: one prose-pinning PR with eight Automated reviewer passes; the claim was real on
+- Source: one prose-pinning PR with eight automated review passes; the claim was real on
   pass 7 despite every earlier pass being fixed-and-resolved.
 
 ### Stale security-review finding already fixed later in the same PR

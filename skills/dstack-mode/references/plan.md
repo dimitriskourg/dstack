@@ -1,57 +1,41 @@
 # Plan
 
-Produce a phased implementation plan grounded in the **Principles** section of the `dstack-mode` skill. The plan is the deliverable. Do not implement it.
+Produce a phased implementation plan grounded in the **Principles** section of the `dstack-mode` skill. The plan is the deliverable. Do not implement.
 
-Before delegation, read the portable dstack capability contract and the adapter for the active coding agent. Use capability verbs rather than vendor tool names.
-
-Track the steps through a host plan or todo surface when available, otherwise in
-numbered working notes.
+Open a todolist with one item per step below.
 
 ## 0. Triage
 
-Skip a formal plan when the change is limited to one or two files, the approach is obvious, and no design decision is being introduced. State why a separate plan would add no value and stop.
+Skip the plan when the change is one or two files with an obvious approach. Say so and stop.
 
-Write a plan when the change spans three or more files, introduces architecture, has competing approaches, contains unclear scope, or the user explicitly asks for one.
+Plan when the change spans three or more files, introduces architecture, has competing approaches or unclear scope, or the user asked for one.
 
 ## 1. Re-read principles
 
-Read the **Principles** section of the `dstack-mode` skill end to end. Open every leaf `principle-*` skill that materially shapes the plan. Name the principle beside the decision it changes; a decorative citation is not evidence that the rule was applied.
+Read the **Principles** section of the `dstack-mode` skill end to end, and the leaf `principle-*` skills it indexes. The principles govern every plan decision; cross-link them.
 
 ## 2. Scope and constraints
 
-State the scope and constraints in one paragraph.
+State your read of scope and constraints in one paragraph. Stop to ask only for genuinely ambiguous intent (the **never-block-on-the-human** principle skill); give concrete options with each open question.
 
-Use `ask_user` only for a genuine product or preference decision that cannot be settled by inspecting the repository or running a probe. Give a recommended answer and concrete options for every open decision.
+Resolve what is in scope vs explicitly out, technical or platform constraints, patterns to preserve, and the definition of done.
 
-Resolve:
+## 3. Explore in subagents
 
-- what is included and explicitly excluded;
-- technical, platform, dependency, and compatibility constraints;
-- existing patterns that should remain stable;
-- the observable definition of done;
-- which actions are reversible and which require a human checkpoint.
+Delegate codebase exploration (the **guard-the-context-window** principle skill).
 
-## 3. Explore the repository
+- Spawn general-purpose helpers and brief each to read the `dstack-mode` skill first. Never route them through a host's built-in planning agent; it ignores this skill.
+- Name the model explicitly per your configured roles: fast-explorer for breadth, deep-judgment where the read needs judgment.
 
-Use `parallel` with bounded `explore` helpers when the host supports agent fan-out. Split by independent questions such as data flow, public interfaces, test infrastructure, and deployment or runtime constraints. Use `model_role:fast-explorer` unless the slice requires architectural judgment.
-
-Each helper returns only:
-
-- file and symbol pointers;
-- relevant conventions and constraints;
-- dependency and ownership boundaries;
-- test and verification entry points;
-- unresolved facts that require another observable check.
-
-Do not inline large source dumps. Keep helpers read-only. When the active adapter cannot spawn helpers, perform the same exploration on the lead agent and record that parallel exploration was collapsed.
+Each explorer returns file pointers, conventions, dependencies, test infrastructure, and entry points. No inlined dumps.
 
 ## 4. Write the plan
 
-The user controls where the plan is stored. When no location is specified, use the repository's existing planning convention.
+The user specifies where the plan lives.
 
-Use one file such as `NN-slug.md` for a small plan. For three or more phases, use a directory:
+Single file `NN-slug.md` for small plans. For three or more phases, a directory with `overview.md` plus phase files:
 
-```text
+```
 NN-slug/
 ├── overview.md
 ├── phase-1-scaffold.md
@@ -61,87 +45,61 @@ NN-slug/
 
 ### Phase sizing
 
-- A phase is one independently verifiable behavior, type, migration step, or bug fix—not simply one file.
-- Prefer two or three files per phase.
-- Prefer several small phases over a few broad phases when doing so preserves rollback and review options.
-- Split a phase when it contains more than five distinct test cases, more than three new functions, or more than one unrelated reason to reject it.
+- One function or type plus tests, or one bug fix. Not "one file".
+- Two to three files touched, max.
+- Prefer eight to ten small phases over three to four large ones to preserve option value (the **foundational-thinking** principle skill).
+- Split if a phase has more than five test cases or three functions.
 
 ### Overview file
 
-Include:
-
-- **Context.** The problem and why it matters now.
-- **Scope.** Included work and explicit exclusions.
-- **Constraints.** Technical, platform, dependency, compatibility, and process limits.
-- **Alternatives.** Two or three credible approaches, the selected one, and its rationale. Skip only when a hard constraint leaves one valid design.
-- **Applicable skills.** The dstack or domain skills the implementer should invoke.
-- **Phases.** Ordered links to phase files.
-- **Verification.** Project-level static and runtime checks.
-- **Implementation guidance.** The non-negotiables from section 6.
+- **Context.** Problem and why now.
+- **Scope.** Included; explicitly excluded.
+- **Constraints.** Technical, platform, dependency, pattern.
+- **Alternatives.** Two or three approaches sketched, choice and rationale (the **exhaust-the-design-space** principle skill). Skip when constraints dictate one.
+- **Applicable skills.** Domain skills the implementer should invoke, by name.
+- **Phases.** Ordered standard-markdown links to phase files.
+- **Verification.** Project-level commands.
+- **Implementation guidance.** Per section 6.
 
 ### Phase files
 
-Each phase includes:
+- Back-link to overview.
+- **Goal.** What the phase accomplishes.
+- **Changes.** Files affected and the change at a high level. What and why, not how. No code snippets.
+- **Data structures.** Name the key types or schemas. One-line sketch only (the **foundational-thinking** principle skill).
+- **Verification.** Per section 6.
 
-- a back-link to the overview;
-- **Goal.** The independently observable outcome;
-- **Changes.** Files and interfaces affected, described as what and why rather than implementation code;
-- **Data structures.** The key type, schema, state machine, registry, table, or boundary that organizes the work;
-- **Dependencies.** Earlier phases or external facts that must be true;
-- **Verification.** Static checks and a real-surface check where one exists;
-- **Rollback.** How to remove or disable the phase without damaging later work.
+Order phases so infrastructure and shared types land first (the **foundational-thinking** principle skill). Each phase should be independently shippable.
 
-Order shared types, scaffolding, and irreversible migrations before dependants. Every phase should leave the repository in a reviewable state.
+For changes touching existing code, apply the **redesign-from-first-principles** principle skill: if we'd built this with the new requirement on day one, what would it look like? Redesign holistically; deliver incrementally.
 
-For existing code, apply **redesign-from-first-principles**: describe the target shape as though the new requirement had existed from day one, then deliver that target incrementally. Do not preserve temporary compatibility layers without a named removal phase.
-
-When a phase creates or edits a skill, direct the implementer to use the active coding agent's skill-authoring and validation workflow.
+If a phase creates or edits a skill, the phase instructs the implementer to use your host's skill-authoring skill.
 
 ## 5. Verification per phase
 
-Each phase needs both categories:
+Each phase needs both:
 
-**Static verification**
+**Static.** Type check, lint, project tests pass.
 
-- type checking, linting, formatting, and focused tests;
-- the broader regression suite at an appropriate boundary;
-- generated-file or mirror checks when the phase touches portable dstack assets.
+**Runtime.** Exercise the feature on the matching surface via the relevant control skill:
 
-**Runtime verification**
+- Browser, Electron, and web UIs: the control skill your team publishes for browser surfaces.
+- CLIs and TUIs: the control skill your team publishes for terminal surfaces.
+- Native mobile: whatever simulator-driving skill your team has.
+- No control skill for the touched surface: flag it in the plan.
 
-Use `verify` on the narrowest meaningful real surface:
-
-- browser, Electron, or web UI through an available browser/runtime driver;
-- CLI or TUI through real process execution;
-- native mobile through an available simulator or device harness;
-- services through a realistic request path and observable state;
-- no accessible surface: state the gap and the strongest available proxy.
-
-For a bug fix, reproduce on the original surface, apply the fix, and repeat the same reproduction. Unit tests prove a code path; they do not by themselves prove the reported symptom is gone.
+For bug fixes, the loop is reproduce on the surface, fix, verify on the same surface. Unit tests show a branch behaves a certain way; they do not prove the bug is gone (the **prove-it-works** principle skill).
 
 ## 6. Implementation guidance
 
-The overview names the relevant `dstack-mode` non-negotiables:
+In the overview, name which dstack-mode non-negotiables the implementer must apply, by name:
 
-- run **how** over every unfamiliar subsystem before changing it;
-- use **architect** when the change crosses a meaningful interface boundary;
-- use **interrogate** for contested or high-risk designs before shipping;
-- apply **unslop** to prose and a local simplicity review to each diff before commit;
-- use **no-comments** before review when comment quality is in scope;
-- use **show-me-your-work** when the plan is long enough to require an auditable decision trail;
-- use the dstack **Babysit** playbook after opening a pull request when CI, conflicts, or review threads must be driven to completion.
-
-Implementation helpers use `model_role:feature-worker` or `model_role:bug-worker` according to the phase. Review helpers use `model_role:skeptical-reviewer`; synthesis and final judgment use `model_role:deep-judgment`. The active adapter resolves real models and falls back to the parent model when no override exists.
+- the **how** skill over each unfamiliar subsystem before changing it.
+- the **interrogate** skill for adversarial review on contested designs before shipping.
+- the **unslop** skill (`/unslop`) over each diff before commit, and over any prose surface.
+- the **show-me-your-work** skill to keep a decision trail when the plan is large enough to need an auditable record.
+- the **Babysit** playbook (`../playbooks/babysit.md`) after opening the PR.
 
 ## 7. Hand back
 
-Summarize:
-
-- the phase sequence;
-- scope boundaries;
-- selected design and rejected alternatives;
-- applicable skills;
-- verification surfaces and known gaps;
-- irreversible actions or human checkpoints.
-
-Stop. The user decides when implementation starts.
+Summarize phases, scope boundaries, applicable skills, and verification. Stop. The user decides when implementation starts.

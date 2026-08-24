@@ -54,7 +54,8 @@ new ideas or code.
 - `setup-pstack` is renamed `setup-dstack`.
 - `comment-sicko` is an additional normal skill, bringing the total to 45.
 - `dstack-mode` contains 22 portable playbooks.
-- The only missing pstack playbook is `orchestrate.md`, intentionally deferred.
+- The only pstack playbook dstack does not ship is `orchestrate.md`, excluded by
+  product decision (see "Deliberate exclusions").
 - No legacy `pstack`, `poteto-mode`, or `setup-pstack` aliases are planned.
 - Invocation parity is restored. 40 skills are user-invoked; `comment-sicko`,
   `how`, `typescript-best-practices`, `unslop`, and `why` are model-invoked.
@@ -100,7 +101,7 @@ python3 scripts/audit_portability.py
 dstack portability audit: 0 error(s)
 
 python3 -m unittest discover -s tests -v
-Ran 20 tests
+Ran 51 tests
 OK
 
 Skill Creator validation
@@ -110,85 +111,97 @@ Skill Creator validation
 JSON syntax and Python compilation also passed. These are static results, not
 live host proof.
 
-## Exact differences still missing from pstack
+## Deliberate exclusions
 
-### 1. Orchestrate runtime and playbook — deferred TODO
+These are product decisions, not deferred work. Reopen one only with a new
+explicit decision; do not port any of them for file parity.
 
-Pstack ships a project-scale coordination playbook and a tested TypeScript
-plain-file store. dstack does not currently ship either.
+### 1. Orchestrate playbook and `orch` runtime — excluded
 
-Relevant pstack source files at the recorded baseline:
+Pstack ships a project-scale coordination playbook plus a tested TypeScript
+plain-file store:
 
 ```text
 pstack/skills/poteto-mode/playbooks/orchestrate.md
-pstack/skills/poteto-mode/scripts/bootstrap.ts
-pstack/skills/poteto-mode/scripts/package.json
-pstack/skills/poteto-mode/scripts/bun.lock
 pstack/skills/poteto-mode/scripts/orch/orch.ts
 pstack/skills/poteto-mode/scripts/orch/store.ts
 pstack/skills/poteto-mode/scripts/orch/orch.test.ts
 ```
 
-The runtime manages durable bookkeeping only: units, standing orders, an inbox,
-human gates, verification verdicts keyed by PR plus exact SHA, stack frontier,
-locking, recovery, and derived status. It must never pretend to spawn, wait for,
-resume, or wake agents; adapters own those operations.
+The runtime is durable bookkeeping only: units, tracks, standing orders, an
+inbox, human gates, verification verdicts keyed by PR plus exact head SHA,
+stack frontier, locking, and derived status.
 
-If ported later:
+Excluded because the workflow it serves is out of scope for dstack. It targets
+multi-day, many-PR programs, and it is the heaviest thing in the upstream
+corpus by a wide margin. `orchestrate.md` is the runtime's only consumer, so
+the two stand or fall together.
 
-1. Put runtime source under `runtime/orchestrate/` and installed runtime under
-   `DSTACK_HOME/runtime/orchestrate/`.
-2. Put program state under
-   `DSTACK_HOME/orchestrate/<workspace-id>/<program-id>/`.
-3. Replace Cursor store paths, Task schemas, cloud-only assumptions, private
-   transcript paths, and mandatory Graphite behavior with capabilities and
-   explicit fallbacks.
-4. Require Bun explicitly if TypeScript remains. Never install Bun silently.
-5. Prefer removing the `commander` dependency; otherwise require an explicit
-   dependency installation instead of pstack's silent first-use bootstrap.
-6. Keep the CLI deterministic and compact; the coordinator retains judgment.
-7. Port and extend the source tests before adding `orchestrate.md` to
-   `dstack-mode`.
-8. Add live scenarios for initialization, lock recovery, inbox draining, gates,
-   SHA invalidation, frontier updates, and restart recovery.
+### 2. PR watcher (`watch-pr`) — excluded
 
-Do not route normal single-session work through Orchestrate. It is intended only
-for multi-day programs with many units and PRs.
+```text
+pstack/skills/poteto-mode/scripts/watch-pr/
+```
 
-### 2. PR watcher — deferred, not required
+The watcher answers one question — can this PR actually merge — by taking
+GitHub's own `mergeStateStatus` as the verdict and classifying the blocker as
+merge conflicts, review threads, failing checks, or a merge gate. It also
+models stacks and merge queues, and polls until a terminal verdict so it can
+serve as the event wake.
 
-Pstack's `watch-pr/` runtime is not present. The portable Babysit playbook uses
-an existing repository watcher when one exists, otherwise bounded forge
-polling.
+The Babysit playbook keeps the part that mattered: one authoritative query for
+the PR's own merge verdict rather than a picture assembled from per-check
+calls. Blocker classification and stack/queue handling stay in the playbook
+prose as agent instructions. Review-pass counting was always an agent
+instruction upstream too, not watcher output, and it survives unchanged.
 
-Before porting, make these configurable:
+### 3. Bun toolchain — excluded
 
-- forge and authentication behavior;
-- automated-review bot identities;
-- stack discovery and Graphite assumptions;
-- polling interval, timeout, and wake behavior;
-- policy for comments, CI, conflicts, and stale heads.
+```text
+pstack/skills/poteto-mode/scripts/bootstrap.ts
+pstack/skills/poteto-mode/scripts/package.json
+pstack/skills/poteto-mode/scripts/bun.lock
+```
 
-Do not port it merely to claim file parity. Port it only when live use shows the
-fallback is insufficient.
+These exist only to install `commander` for `orch` and `watch-pr`, via a silent
+first-use bootstrap. With both consumers excluded they have no purpose, and the
+bootstrap contradicts the standing rule against installing a runtime silently.
 
-### 3. Worktree audit helper — intentionally excluded
+dstack therefore ships exactly one script, `dstack-mode/scripts/worktree-audit.sh`,
+and depends on no language runtime beyond the host's own.
 
-Pstack's helper inspects a private Cursor transcript layout. dstack's Worktree
-cleanup playbook instead derives candidates from
-`git worktree list --porcelain` and permits only authorized first-class session
-evidence.
+### 4. `poteto-agent` wrapper — excluded
 
-A future deterministic helper may inventory worktrees, disk use, merge state,
-and uncommitted files. It must not infer ownership by scanning private history.
+Pstack registers a second agent whose only job is to force a full read of the
+mode skill before any work begins. dstack ships no counterpart.
 
-### 4. Benny automation — intentionally excluded
+It is a provider-registered agent wrapper, the same shape already absorbed into
+portable skill behavior elsewhere, and it encodes a routing concern that
+belongs to the host rather than to portable content.
+
+### 5. Benny automation — excluded
 
 `pstack/automations/benny/` depends on Cursor Automations, provider UI, Slack
 actions, cloud checkouts, and provider configuration. It is not part of dstack's
 portable skill scope.
 
-### 6. Skill descriptions are not yet typed by invocation mode — open
+## Differences that are transformations, not gaps
+
+### Worktree audit helper — ported with the transcript path made configurable
+
+`dstack-mode/scripts/worktree-audit.sh` is ported from pstack. It classifies
+every git worktree by size, merge state, uncommitted work, remote and PR state,
+and the most recent chat that operated in it, then emits a table sorted by size
+with a suggested bucket. It never deletes; deletion stays human-gated in the
+playbook.
+
+The one change from upstream: the hardcoded Cursor transcript directory became
+the `AGENT_TRANSCRIPTS_DIR` environment variable. Set it to the host's
+directory for the active workspace and the `LAST_CHAT` column populates; leave
+it unset and that column reports `-` while every other column still works. The
+helper never scans private history to infer ownership.
+
+### Skill descriptions are not yet typed by invocation mode — open
 
 A user-invoked skill's description is read by a human browsing slash commands,
 so it should be a one-line summary. A model-invoked skill's description is read
@@ -203,7 +216,7 @@ This is cosmetic while the declarations hold: the host, not the description,
 enforces invocation. Fix it by rewriting descriptions, never by relaxing a
 `disable-model-invocation` setting to match the prose.
 
-### 5. Provider wrappers and defaults — intentionally transformed
+### Provider wrappers and defaults — transformed
 
 These are differences, not missing work:
 
