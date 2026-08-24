@@ -12,7 +12,7 @@ Agent Skills fallback.
 
 > **Current status:** the portable skills, minimal installer, adapters, and
 > per-host model configuration are implemented and statically validated. Live
-> host conformance is still unrecorded. Pstack's project-scale Orchestrate
+> host behavior is verified by whoever runs it. Pstack's project-scale Orchestrate
 > playbook and its TypeScript runtime are deliberately out of scope; see
 > [REMAINING.md](REMAINING.md) for that decision and the others like it.
 
@@ -189,8 +189,8 @@ python3 -m json.tool schemas/config.schema.json >/dev/null
 ```
 
 These checks prove repository structure and deterministic helpers. They are not
-live Codex, Cursor, Claude, browser, simulator, or multi-agent proof. Live
-results belong in [`conformance/HOST_MATRIX.md`](./conformance/HOST_MATRIX.md).
+live Codex, Cursor, Claude, browser, simulator, or multi-agent proof. Only
+running a skill on a real host proves that.
 
 ## Provenance
 

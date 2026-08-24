@@ -24,7 +24,7 @@ Apply each criterion to every finding:
 Drop (implementation details that drift):
 - "linter at SHA `bd91aa7` uses chars/4 heuristic"
 - "`<specific-skill-name>` has 175 tokens at limit 80"
-- "Bugbot flagged regex backtracking on May 2"
+- "automated review flagged regex backtracking on May 2"
 - "we renamed `parseDate` to `parseTimestamp` in `formatEvent`"
 
 Keep (durable patterns):

@@ -34,8 +34,8 @@ python3 -m unittest discover -s tests -v
 python3 -m json.tool schemas/config.schema.json >/dev/null
 ```
 
-Validate every changed skill with Skill Creator's `quick_validate.py`. Record
-live exercise separately in `conformance/HOST_MATRIX.md`.
+Validate every changed skill with Skill Creator's `quick_validate.py`. Static
+checks are not live host proof; keep the two kinds of evidence separate.
 
 ## Upstream sync
 

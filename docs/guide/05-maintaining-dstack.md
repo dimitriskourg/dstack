@@ -23,7 +23,6 @@ checks establish a baseline; they do not prove live host behavior.
 | Stable semantic capability | `contracts/` |
 | Strict persisted shape | `schemas/` |
 | Deterministic repeated operation | bundled or root script |
-| Live observed behavior | `conformance/HOST_MATRIX.md` |
 | Upstream delta and deferred scope | `REMAINING.md` |
 
 Do not solve an adapter problem by placing provider syntax in every skill.
@@ -54,18 +53,13 @@ Reject these from portable skills:
   `docs/agents/invocation.md`);
 - references to missing assets, scripts, or sibling skills.
 
-## Record live conformance honestly
+## Keep static and live evidence separate
 
-Use exactly:
+The audit, the unit tests, and a successful install prove repository structure
+and deterministic helpers. They do not prove a skill behaves correctly on Codex,
+Cursor, or Claude Code. Only running it there does.
 
-```text
-pass
-pass-degraded:<reason>
-fail:<reason>
-```
-
-Record a cell only after exercising the installed skill on that named host.
-Successful tests, installs, and builds remain separate evidence.
+Never describe a host as conformant on the strength of a static check.
 
 ## What dstack does not ship
 

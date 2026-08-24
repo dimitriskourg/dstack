@@ -234,8 +234,8 @@ Do not reintroduce these source shapes for superficial parity.
 
 ### Live conformance
 
-`conformance/HOST_MATRIX.md` is intentionally empty until scenarios are
-actually exercised. At minimum test Codex and Cursor:
+Live behavior is verified by whoever runs dstack, not recorded in this
+repository. At minimum exercise these on Codex and Cursor:
 
 - simple `how` avoids unnecessary fan-out;
 - complex `how` uses bounded explorers when supported;
@@ -248,9 +248,8 @@ actually exercised. At minimum test Codex and Cursor:
 - session/history and wake gaps degrade exactly as documented;
 - installer dry run and first installation work on the real target paths.
 
-Record `pass`, `pass-degraded:<reason>`, or `fail:<reason>` only from live
-exercise. Tests, builds, successful copies, and static audits are separate
-evidence.
+Tests, builds, successful copies, and static audits are separate evidence and
+never substitute for one of these.
 
 ### Minimal installer limitations
 
