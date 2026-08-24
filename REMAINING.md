@@ -342,5 +342,11 @@ dstack deliberately changes its architecture.
 ## Immediate project state
 
 The next required work is live installation, per-host configuration, and
-Codex/Cursor conformance. Orchestrate, the PR watcher, lifecycle management, and
-the worktree helper are later TODOs, not blockers for normal dstack use.
+Codex/Cursor conformance. Orchestrate, the PR watcher, and the Bun toolchain are
+excluded by decision, not pending work. Lifecycle management remains a later
+TODO and is not a blocker for normal dstack use.
+
+Two known wiring gaps are open. `panels` is stored and validated but no panel
+workflow reads it, so `arena`, `architect`, and `interrogate` currently have no
+way to fan out across distinct models. Configured effort is dropped on direct
+subagent spawns; see `docs/todo/role-agent-definitions.md`.

@@ -13,7 +13,8 @@ Agent Skills fallback.
 > **Current status:** the portable skills, minimal installer, adapters, and
 > per-host model configuration are implemented and statically validated. Live
 > host conformance is still unrecorded. Pstack's project-scale Orchestrate
-> runtime is a deferred TODO and is not required for normal dstack workflows.
+> playbook and its TypeScript runtime are deliberately out of scope; see
+> [REMAINING.md](REMAINING.md) for that decision and the others like it.
 
 ## How dstack works
 
@@ -21,22 +22,22 @@ Agent Skills fallback.
 flowchart TD
     U["User request"] --> M["dstack-mode or a focused skill"]
     M --> P["Portable playbook"]
-    P --> C["Capability request<br/>explore, implement, review, parallel"]
-    P --> R["Semantic model role<br/>feature-worker, bug-worker, reviewer"]
+    P --> R["Semantic model role<br/>fast-explorer, feature-worker, deep-judgment"]
     F["DSTACK_HOME/config.json"] --> R
-    C --> A["Selected host adapter"]
-    R --> A
-    A --> Q{"Native capability available?"}
-    Q -- "Yes" --> N["Use the host's native operation<br/>and configured model"]
-    Q -- "No or denied" --> B["Use the documented parent-agent fallback"]
+    R --> A["Selected host adapter"]
+    A --> Q{"Host supports it?"}
+    Q -- "Yes" --> N["Spawn on the configured model"]
+    Q -- "No or denied" --> B["Run it on the parent and say so"]
     N --> V["Verify the real result"]
     B --> V
     V --> O["Evidence-backed report"]
 ```
 
-Skills express intent. The active adapter translates that intent into mechanics
-that the current host actually supports. Missing capabilities degrade
-explicitly instead of borrowing another provider's tool parameters.
+Skills are written in plain engineering language and name the semantic role a
+piece of work needs, never a concrete model or a provider's tool parameters.
+`config.json` binds each role per host. Where a host cannot spawn helpers or
+cannot choose their model, the work runs on the parent agent and the report says
+the fan-out collapsed, rather than borrowing another provider's mechanics.
 
 ## dstack compared with pstack
 
@@ -75,7 +76,7 @@ flowchart LR
 | Canonical skill location | Cursor plugin installation | `~/.agents/skills` |
 | Missing capability | Usually assumes Cursor support | Declared parent-agent fallback |
 | Private transcripts | Some source workflows inspect Cursor storage | Only authorized history or explicit inputs |
-| Orchestrate | Playbook and TypeScript store included | Deferred TODO |
+| Orchestrate | Playbook and TypeScript store included | Out of scope by decision |
 
 ## Install
 

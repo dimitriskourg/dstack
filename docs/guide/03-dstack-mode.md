@@ -36,7 +36,7 @@ The current mode contains 22 playbooks:
 - session pickup, pause safely, multi-phase plan;
 - opening a PR and worktree cleanup.
 
-Pstack's Orchestrate playbook is deliberately deferred. `figure-it-out` and
+Pstack's Orchestrate playbook is out of scope for dstack. `figure-it-out` and
 Autonomous run cover ambitious work that still fits a bounded agent run.
 
 ## Prompt with outcomes
@@ -87,13 +87,26 @@ The lead agent owns decomposition, synthesis, final judgment, and verification.
 Helper summaries are evidence pointers; recheck load-bearing claims against the
 source or real artifact.
 
-## Long-running work without Orchestrate
+## Bundled scripts
+
+`dstack-mode` ships one script, `scripts/worktree-audit.sh`. It classifies every
+git worktree by size, merge state, uncommitted work, remote and PR state, and
+the most recent chat that touched it, then prints a table sorted by size with a
+suggested bucket. It never deletes; the Worktree cleanup playbook keeps deletion
+human-gated.
+
+Set `AGENT_TRANSCRIPTS_DIR` to your host's transcript directory for the active
+workspace to populate the `LAST_CHAT` column. Unset, that column reports `-` and
+every other column still works.
+
+## Long-running work
 
 Use Autonomous run when one standing agent can drive a task to a predicate. Use
 `figure-it-out` when an ambitious run needs a bespoke auditable playbook. Leave
 a durable handoff when the host cannot wake or persist the session.
 
-Orchestrate remains a later TODO for multi-day programs involving many tracks,
-PRs, and coordinator restarts. Normal work must not depend on it.
+Multi-day programs spanning many tracks, PRs, and coordinator restarts are out
+of scope. Say so and scope the work down to runs these playbooks can carry,
+rather than improvising a coordinator.
 
 Next: [Choose focused workflows](./04-workflows.md).

@@ -2,82 +2,72 @@
 
 dstack separates portable workflow intent from host mechanics.
 
-## The four layers
+## The layers
 
 ```mermaid
 flowchart TD
-    S["Skill or playbook"] --> I["Portable intent"]
-    I --> C["Capability contract"]
-    I --> R["Semantic model role"]
+    S["Skill or playbook"] --> R["Semantic model role"]
     R --> F["Active host mapping in config.json"]
-    C --> A["Host adapter"]
-    F --> A
-    A --> N["Native operation"]
-    A --> B["Documented fallback"]
+    F --> A["Host adapter"]
+    A --> N["Spawn on the configured model"]
+    A --> B["Run on the parent and disclose it"]
+    C["Capability contract"] -.-> A
 ```
 
 ### Skills and playbooks
 
 Skills describe the engineering workflow: investigate, design, implement,
-review, verify, and report. They do not contain a provider's agent-call schema
-or concrete model identifier.
+review, verify, and report. They are written in plain engineering language.
+They never contain a provider's agent-call schema, a concrete model identifier,
+or a private transcript path.
 
 `dstack-mode` is the main router. Focused skills such as `how`, `why`, `arena`,
 and `interrogate` may also be invoked directly.
 
-### Capability contract
+### Semantic model roles
 
-[`contracts/capabilities.md`](../../contracts/capabilities.md) names stable
-intent such as:
+A skill names the kind of thinking a piece of work needs, not a model:
 
-```text
-explore
-implement
-review
-parallel
-ask_user
-verify
-model_role
-agents.spawn
-agents.wait
-session.history
-runtime.wake
-```
+- `fast-explorer` for broad, inexpensive tracing;
+- `feature-worker` for bounded, spec-driven implementation;
+- `bug-worker` for evidence-backed fixes;
+- `deep-judgment` for architecture and synthesis;
+- `skeptical-reviewer` for independent criticism;
+- `independent-judge` for a verdict that must not come from the author.
 
-Every optional capability used by a portable skill has a parent-agent fallback.
-For example, if helper creation is unavailable, the parent executes the packet
-itself and reports that fan-out collapsed.
-
-### Host adapter
-
-The selected adapter classifies each capability as:
-
-- `enforced`
-- `native`
-- `advisory`
-- `approval-required`
-- `unavailable`
-
-An adapter is a normal expectation, not proof that a tool is present in the
-current session. Before the first helper operation, reconcile it with the tools
-and permissions actually visible.
+Where a host cannot choose a child model, the role inherits the parent's, which
+is a valid configuration rather than a failure.
 
 ### Personal configuration
 
-`DSTACK_HOME/config.json` maps semantic roles to exact model-and-effort bindings for
-each host. Skills and panels refer to roles, so the same portable workflow can
-resolve differently in Codex and Cursor.
+`DSTACK_HOME/config.json` binds each role to an exact model-and-effort pair per
+host, so the same portable workflow resolves differently in Codex and Cursor. A
+binding is never copied between hosts automatically. Adapters validate model and
+effort together when the current host exposes both values; otherwise effort
+inherits and validation availability is reported honestly.
 
-Panels contain semantic roles rather than model identifiers:
+The file also holds `panels`: named lists of roles for the workflows that fan
+out across several models at once.
 
 ```text
 arena-runners -> skeptical-reviewer, deep-judgment
 ```
 
-On Codex, those roles use the Codex host table. On Cursor, they use the Cursor
-host table. A binding is never copied between hosts automatically. Adapters
-validate model and effort together when the current host exposes both values;
-otherwise effort inherits and validation availability is reported honestly.
+Those lists are stored and validated but not yet read by the panel workflows.
+See [REMAINING.md](../../REMAINING.md).
+
+### Capability contract and host adapter
+
+[`contracts/capabilities.md`](../../contracts/capabilities.md) is the reference
+for what a host can be expected to do, and each adapter classifies every entry
+as `enforced`, `native`, `advisory`, `approval-required`, or `unavailable`. It
+describes hosts; portable skills do not call capabilities by name.
+
+An adapter is a normal expectation, not proof that a tool is present in the
+current session. Before the first helper operation, reconcile it with the tools
+and permissions actually visible. Every optional capability has a parent-agent
+fallback: if helper creation is unavailable, the parent does the work itself and
+the report says fan-out collapsed.
 
 ## Host selection
 
