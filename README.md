@@ -75,7 +75,7 @@ flowchart LR
 | Agent mechanics | Embedded Cursor assumptions | Adapter capability contract |
 | Canonical skill location | Cursor plugin installation | `~/.agents/skills` |
 | Missing capability | Usually assumes Cursor support | Declared parent-agent fallback |
-| Private transcripts | Some source workflows inspect Cursor storage | Only authorized history or explicit inputs |
+| Chat transcripts | Workflows read Cursor's storage directly | Read the active workspace's transcripts only, by a host-named path |
 | Orchestrate | Playbook and TypeScript store included | Out of scope by decision |
 
 ## Install

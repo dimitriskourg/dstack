@@ -8,8 +8,9 @@ configuration, or upstream parity.
 - Treat pstack and ystack as immutable upstream inputs. Port behavior into this
   repository; do not edit an upstream checkout as part of a dstack change.
 - Keep portable skills free of provider tool schemas, concrete model slugs,
-  provider configuration paths, private transcript layouts, and unsupported
-  frontmatter. `disable-model-invocation` is supported and deliberate; read
+  provider configuration paths, hardcoded transcript paths, and unsupported
+  frontmatter. A skill may read the active workspace's transcripts through a
+  host-named path; it must never read another workspace's. `disable-model-invocation` is supported and deliberate; read
   `docs/agents/invocation.md` before touching it or the `agents/openai.yaml`
   sidecar that must agree with it.
 - Put host mechanics in `adapters/`, shared semantics in `contracts/`, strict

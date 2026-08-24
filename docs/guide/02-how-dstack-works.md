@@ -19,7 +19,7 @@ flowchart TD
 Skills describe the engineering workflow: investigate, design, implement,
 review, verify, and report. They are written in plain engineering language.
 They never contain a provider's agent-call schema, a concrete model identifier,
-or a private transcript path.
+or a hardcoded provider path.
 
 `dstack-mode` is the main router. Focused skills such as `how`, `why`, `arena`,
 and `interrogate` may also be invoked directly.
@@ -102,15 +102,20 @@ isolation or concurrency that the host did not provide.
 
 ## Privacy boundary
 
-dstack does not scan private provider transcript directories. Session-oriented
-skills may use:
+Some skills read your chat transcripts. `reflect`, `recall`, `automate-me`, and
+`show-me-your-work` do, because they cannot do their job otherwise.
 
-- first-class authorized history resources;
-- an explicit transcript, export, URL, or path supplied for the task;
-- visible conversation and repository evidence;
-- a compact handoff from the parent.
+The rule they follow is scope, not abstinence:
 
-Unavailable history becomes an evidence gap, not a reason to guess a private
-filesystem layout.
+- read only the transcript directory for the workspace you are working in;
+- never read another workspace's, and never glob across all projects;
+- take the path from the system prompt or host documentation, never from a
+  guessed filesystem layout;
+- when nothing is readable, say so and work from what remains.
+
+Session-oriented skills may also use first-class authorized history resources,
+an explicit transcript or export supplied for the task, visible conversation and
+repository evidence, or a compact handoff from the parent. Unavailable history
+is an evidence gap to disclose, not a reason to go looking somewhere else.
 
 Next: [Route work through dstack-mode](./03-dstack-mode.md).

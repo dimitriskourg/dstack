@@ -75,9 +75,10 @@ new ideas or code.
 - `contracts/host-selection.md` defines host-selection precedence.
 - `adapters/` contains Codex, Cursor, Claude Code, and generic classifications.
 - Skills request semantic roles rather than concrete provider model slugs.
-- Session workflows use authorized first-class history, explicit transcript
-  inputs, visible conversation, and repository evidence. They do not scan
-  private provider history directories.
+- Session workflows read the active workspace's transcripts through a
+  host-named path, plus authorized first-class history, explicit transcript
+  inputs, visible conversation, and repository evidence. They never read another
+  workspace's transcripts and never guess a provider's filesystem layout.
 
 ### Installation and configuration
 

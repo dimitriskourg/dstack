@@ -29,8 +29,9 @@ a specific reader.
 
 ### `recall`
 
-Reconstruct prior work from authorized session history, explicit handoffs, and
-repository state. It never scans private provider transcript storage.
+Reconstruct prior work from your recent chats in this workspace, explicit
+handoffs, and repository state. It reads only this workspace's transcripts, and
+says so when none are readable.
 
 ## Design before committing
 
@@ -46,8 +47,9 @@ one-way design decisions or changes with several credible shapes.
 
 ### `interrogate`
 
-Stress-test a plan with reviewers using different semantic roles. The lead owns
-the final synthesis rather than counting votes.
+Stress-test a plan with several skeptical reviewers at once, on distinct models
+where your configuration provides them. The lead owns the final synthesis rather
+than counting votes.
 
 ### `swarm`
 

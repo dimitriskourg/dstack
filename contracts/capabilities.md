@@ -55,7 +55,7 @@ must not claim to implement them.
 | Capability | Intent | Required | Parent-agent fallback |
 | --- | --- | --- | --- |
 | `session.history` | Search first-class conversation history within an authorized user and workspace scope. | no | Use user-supplied handoffs, visible conversation, and repository state; state the gap. |
-| `session.transcript` | Read an explicit current-session transcript or export without scanning private history directories. | no | Use the visible conversation or a compact parent digest; state the gap. |
+| `session.transcript` | Read chat transcripts from the host's transcript directory for the active workspace, or an explicit transcript or export supplied for the task. Never read another workspace's. | no | Use the visible conversation or a compact parent digest; state the gap. |
 | `runtime.wake` | Resume or notify a long-running workflow after an event or bounded interval. | no | Continue only while the parent session remains active; leave a durable handoff instead of claiming persistence. |
 
 ## Semantic model roles

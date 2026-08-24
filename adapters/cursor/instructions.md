@@ -28,5 +28,6 @@ and verification. A denied or absent helper operation falls back to the parent
 without borrowing another provider's call schema.
 
 Use `runtime.wake` only through the current documented long-running mechanism.
-Treat conversation history and transcript access as unavailable unless a
-first-class scoped resource is visible; never read private history layouts.
+Treat conversation history as unavailable unless a first-class scoped resource
+is visible. Transcripts for the active workspace may be readable on disk; read
+only that workspace's directory and never another's.

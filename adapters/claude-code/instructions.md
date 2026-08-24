@@ -24,5 +24,9 @@ technical enforcement. The lead owns synthesis, final judgment, artifact
 inspection, and verification. Missing lifecycle operations fall back to parent
 execution and are disclosed.
 
-Treat session history, transcript access, and wake behavior as unavailable
-unless the current tool surface explicitly provides a scoped operation.
+Treat session history and wake behavior as unavailable unless the current tool
+surface explicitly provides a scoped operation.
+
+Transcripts for the active workspace may be readable on disk. Read only that
+workspace's directory, never another's, and confirm the path from the system
+prompt or host documentation rather than guessing it.

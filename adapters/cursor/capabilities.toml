@@ -47,8 +47,9 @@ status = "unavailable"
 fallback = "Use user-supplied handoffs, visible conversation, and repository state; state the gap."
 
 [capabilities."session.transcript"]
-status = "unavailable"
+status = "advisory"
 fallback = "Use the visible conversation or a compact parent digest; state the gap."
+notes = "A per-workspace transcript directory normally exists. Scoping to the active workspace is instruction, not enforcement. Confirm the directory in this session before relying on it."
 
 [capabilities."runtime.wake"]
 status = "native"

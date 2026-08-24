@@ -47,7 +47,7 @@ Reject these from portable skills:
 - provider-specific skill and configuration paths;
 - provider tool-call schemas;
 - concrete model slugs;
-- private transcript directory assumptions;
+- hardcoded provider transcript paths, or reads outside the active workspace;
 - cloud, wake, or persistent-mode assumptions without fallbacks;
 - unsupported frontmatter (`disable-model-invocation` is supported; see
   `docs/agents/invocation.md`);
