@@ -1,186 +1,62 @@
 # dstack
 
-dstack is a provider-neutral adaptation of
-[pstack](https://github.com/cursor/plugins/tree/main/pstack). It keeps pstack's
-engineering skills and playbook discipline while moving host-specific model
-selection and agent mechanics behind explicit adapters.
+dstack is a harness-neutral adaptation of [pstack](https://github.com/cursor/plugins/tree/main/pstack). It keeps pstack's skills and playbooks close to their source while replacing provider-specific calls with portable skill and subagent instructions.
 
-The current repository contains 45 portable skills: counterparts for all 44
-pstack skills at the recorded upstream baseline, plus `comment-sicko` as a
-normal reusable skill. It supports Codex, Cursor, Claude Code, and a generic
-Agent Skills fallback.
+The project is under active development. Configuration schema version 2 is intentionally stable while the pre-release shape changes.
 
-> **Current status:** the portable skills, minimal installer, adapters, and
-> per-host model configuration are implemented and statically validated. Live
-> host behavior is verified by whoever runs it. Pstack's project-scale Orchestrate
-> playbook and its TypeScript runtime are deliberately out of scope; see
-> [REMAINING.md](REMAINING.md) for that decision and the others like it.
+## What ships
 
-## How dstack works
+- All pstack skills, renamed only where required: `poteto-mode` becomes `dstack-mode` and `setup-pstack` becomes `setup-dstack`.
+- The external `control-cli`, `control-ui`, and `deslop` skills referenced by pstack.
+- Host-neutral subagent instructions for harnesses that provide native subagent spawning.
+- Four configurable profiles: `fast-explorer`, `feature-worker`, `bug-worker`, and `skeptical-reviewer`.
+- One workspace-scoped transcript directory per configured harness.
+- A collision-safe installer and an atomic setup helper.
 
-```mermaid
-flowchart TD
-    U["User request"] --> M["dstack-mode or a focused skill"]
-    M --> P["Portable playbook"]
-    P --> R["Semantic model role<br/>fast-explorer, feature-worker, deep-judgment"]
-    F["DSTACK_HOME/config.json"] --> R
-    R --> A["Selected host adapter"]
-    A --> Q{"Host supports it?"}
-    Q -- "Yes" --> N["Spawn on the configured model"]
-    Q -- "No or denied" --> B["Run it on the parent and say so"]
-    N --> V["Verify the real result"]
-    B --> V
-    V --> O["Evidence-backed report"]
+dstack has no capability matrix or provider adapter layer. Skills call other skills with this instruction:
+
+```text
+Call the Skill tool with `skill-name`.
 ```
 
-Skills are written in plain engineering language and name the semantic role a
-piece of work needs, never a concrete model or a provider's tool parameters.
-`config.json` binds each role per host. Where a host cannot spawn helpers or
-cannot choose their model, the work runs on the parent agent and the report says
-the fan-out collapsed, rather than borrowing another provider's mechanics.
+Skills spawn helpers through the active harness's native subagent tool. If a nested spawn is denied, the current agent owns that work directly and reports the loss of independence or parallelism.
 
-## dstack compared with pstack
+## Layout
 
-```mermaid
-flowchart LR
-    subgraph P["pstack"]
-        direction TB
-        P1["Cursor plugin installation"] --> P2["setup-pstack"]
-        P2 --> P3["Cursor model rule"]
-        P4["poteto-mode"] --> P5["Pstack playbook"]
-        P3 --> P6["Concrete Cursor model IDs"]
-        P5 --> P6
-        P6 --> P7["Cursor Task and cloud-agent mechanics"]
-        P7 --> P8["Verify and report"]
-    end
-
-    subgraph D["dstack"]
-        direction TB
-        D1["Canonical skills in ~/.agents/skills"] --> D2["setup-dstack"]
-        D2 --> D3["Host mappings in ~/.dstack/config.json"]
-        D4["dstack-mode"] --> D5["Portable playbook"]
-        D3 --> D6["Semantic model role"]
-        D5 --> D6
-        D6 --> D7["Codex, Cursor, Claude, or generic adapter"]
-        D7 --> D8["Native operation or explicit fallback"]
-        D8 --> D9["Verify and report"]
-    end
+```text
+skills/                 Portable skill packages
+schemas/config.schema.json
+install.py              Installer and managed update path
+scripts/audit_portability.py
+tests/
+DIFFERENCES.md          Exact differences from pstack
 ```
 
-| Concern | pstack | dstack |
-| --- | --- | --- |
-| Primary host | Cursor | Codex, Cursor, Claude Code, generic |
-| Main entry point | `poteto-mode` | `dstack-mode` |
-| Model configuration | Cursor rule with concrete models | Per-host semantic model-and-effort bindings in `config.json` |
-| Agent mechanics | Embedded Cursor assumptions | Adapter capability contract |
-| Canonical skill location | Cursor plugin installation | `~/.agents/skills` |
-| Missing capability | Usually assumes Cursor support | Declared parent-agent fallback |
-| Chat transcripts | Workflows read Cursor's storage directly | Read the active workspace's transcripts only, by a host-named path |
-| Orchestrate | Playbook and TypeScript store included | Out of scope by decision |
+Personal configuration lives at `DSTACK_HOME/config.json`, defaulting to `~/.dstack/config.json`. Skills install canonically under `~/.agents/skills`. Optional compatibility links can be created under `~/.claude/skills`.
 
 ## Install
 
-From this repository, preview every operation first:
+Preview first:
 
 ```bash
 python3 install.py --dry-run
 ```
 
-Install canonical skills and dstack support files:
+Install:
 
 ```bash
 python3 install.py
 ```
 
-This copies skills to `~/.agents/skills/` and copies adapters, contracts,
-schemas, licensing files, and any shipped runtime into `DSTACK_HOME` (default
-`~/.dstack/`).
-
-Claude Code compatibility links are opt-in:
+Add managed Claude-compatible links when wanted:
 
 ```bash
-python3 install.py --dry-run --with-claude-links
 python3 install.py --with-claude-links
 ```
 
-The default installer is intentionally first-install-only. Any existing destination
-file, directory, valid link, or broken link stops the entire installation
-before writes begin. It does not repair, uninstall, or install Bun.
+Then Call the Skill tool with `setup-dstack` in the harness where you will use dstack. Setup discovers the current model catalog when possible, asks you to confirm the four profiles, finds the active workspace's transcript directory, and writes one host entry to `config.json`.
 
-To refresh a verified dstack installation from a trusted checkout, preview and
-then run the explicit update mode:
-
-```bash
-python3 install.py --update --dry-run
-python3 install.py --update
-```
-
-Update mode requires the canonical skill and support roots to exist and every
-existing managed destination to have the expected topology and skill identity.
-It creates missing managed artifacts inside those roots, stages
-replacements, rolls back on failure, preserves `DSTACK_HOME/config.json`, and leaves existing Claude
-compatibility links pointing at the canonical skill paths.
-
-## Configure models
-
-Run `setup-dstack` once in each host where you want custom model assignments.
-It discovers only exact model-effort pairs the active host can verify, shows the
-proposed mapping, waits for confirmation, and atomically updates
-`~/.dstack/config.json`.
-
-Codex and Cursor settings coexist in the same file. Configuring one host
-preserves the other. Without a configuration file, every role inherits the
-parent model.
-
-The six version-2 roles are:
-
-- `fast-explorer`
-- `feature-worker`
-- `bug-worker`
-- `deep-judgment`
-- `skeptical-reviewer`
-- `independent-judge`
-
-Schema version 1 remains accepted as migration input. Run the installed
-configurator's `migrate` command to write version 2 without guessing effort;
-every migrated effort initially inherits from the parent.
-
-## Use
-
-Use `dstack-mode` as the normal front door:
-
-```text
-dstack-mode: users receive two notifications after a retry. Reproduce it,
-fix the cause, and verify the real flow.
-```
-
-Use focused skills directly when you want a narrower operation:
-
-```text
-how does authentication state reach this route?
-```
-
-```text
-arena these two API designs before we commit to one.
-```
-
-```text
-interrogate this plan for correctness and unnecessary complexity.
-```
-
-## Guide
-
-1. [Install and configure dstack](./docs/guide/01-install-and-configure.md)
-2. [Understand the runtime flow](./docs/guide/02-how-dstack-works.md)
-3. [Route work through dstack-mode](./docs/guide/03-dstack-mode.md)
-4. [Choose focused workflows](./docs/guide/04-workflows.md)
-5. [Maintain dstack and sync pstack](./docs/guide/05-maintaining-dstack.md)
-
-Start with the [guide index](./docs/guide/README.md). Future maintainers should
-also read [REMAINING.md](./REMAINING.md) before changing portability contracts
-or syncing a new pstack release.
-
-## Validate the repository
+## Validate
 
 ```bash
 python3 scripts/audit_portability.py
@@ -188,13 +64,6 @@ python3 -m unittest discover -s tests -v
 python3 -m json.tool schemas/config.schema.json >/dev/null
 ```
 
-These checks prove repository structure and deterministic helpers. They are not
-live Codex, Cursor, Claude, browser, simulator, or multi-agent proof. Only
-running a skill on a real host proves that.
+Validate every changed skill with Skill Creator's `quick_validate.py`. These are static checks. They do not prove browser, native, live-host, or multi-agent behavior.
 
-## Provenance
-
-dstack adapts pstack by Lauren Tan and portability concepts from
-[ystack](https://github.com/Go7hic/ystack). See [NOTICE.md](./NOTICE.md) and
-[LICENSE](./LICENSE). ystack is a useful reference, not a compatibility target;
-reinspect its current revision before borrowing new implementation ideas.
+See [the guide](docs/guide/README.md) for usage and [DIFFERENCES.md](DIFFERENCES.md) for upstream alignment.

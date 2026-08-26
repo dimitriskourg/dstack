@@ -8,8 +8,8 @@ portability concepts developed by the ystack contributors.
 - ystack reference: <https://github.com/Go7hic/ystack>, Copyright (c) 2026
   ystack contributors.
 
-ystack informed dstack's capability vocabulary, adapter separation, semantic
-model roles, privacy treatment, and portability checks. dstack does not claim
+ystack informed dstack's earlier portability work, semantic model profiles,
+privacy treatment, and portability checks. dstack does not claim
 ystack compatibility and should re-evaluate current ystack behavior before
 adapting future changes.
 

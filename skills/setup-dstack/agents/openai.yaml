@@ -1,5 +1,5 @@
 interface:
   display_name: "Set Up dstack"
-  short_description: "Configure hosts and model roles"
+  short_description: "Configure profiles and transcript discovery"
 policy:
   allow_implicit_invocation: false

@@ -1,46 +1,16 @@
-# dstack repository instructions
+# dstack maintainer instructions
 
-Read `REMAINING.md` before changing skills, adapters, installation, model
-configuration, or upstream parity.
+Read `DIFFERENCES.md` before changing skills, installation, model profiles, transcript handling, or upstream parity.
 
-## Boundaries
+This project is under development. Keep schema version 2 unless the user explicitly asks for a compatibility boundary.
 
-- Treat pstack and ystack as immutable upstream inputs. Port behavior into this
-  repository; do not edit an upstream checkout as part of a dstack change.
-- Keep portable skills free of provider tool schemas, concrete model slugs,
-  provider configuration paths, hardcoded transcript paths, and unsupported
-  frontmatter. A skill may read the active workspace's transcripts through a
-  host-named path; it must never read another workspace's. `disable-model-invocation` is supported and deliberate; read
-  `docs/agents/invocation.md` before touching it or the `agents/openai.yaml`
-  sidecar that must agree with it.
-- Put host mechanics in `adapters/`, shared semantics in `contracts/`, strict
-  data shapes in `schemas/`, and deterministic repeated behavior in scripts.
-- Every optional capability used by a skill needs an explicit parent-agent
-  fallback.
-- Preserve `poteto-mode` -> `dstack-mode` and `setup-pstack` -> `setup-dstack`.
-  Do not add legacy aliases without an explicit product decision.
-- Never install Bun or another runtime silently.
-- Do not add updater, doctor, uninstall, ownership manifests, or configuration
-  migrations speculatively. The current product is intentionally minimal.
-- Do not claim Codex, Cursor, Claude, wake, history, browser, native, or
-  multi-agent conformance from static checks.
+- Treat `/Users/kourgia/projects/plugins/pstack` and sibling plugin folders as immutable inputs.
+- Keep skills harness-neutral and close to pstack with the smallest justified edits.
+- Use this exact instruction whenever one skill invokes another: Call the Skill tool with `skill-name`.
+- Spawn subagents with the active harness's native subagent tool. If a nested spawn is denied, complete the pass in the current agent and disclose the degradation.
+- Keep only the four profiles documented in `DIFFERENCES.md`.
+- Use the configured workspace-scoped transcript directory from `DSTACK_HOME/config.json`; do not search again from each skill.
+- Do not recreate adapters, capability files, or provider-specific rules.
+- Do not infer live-host proof from static validation.
 
-## Required validation
-
-Run after relevant changes:
-
-```bash
-python3 scripts/audit_portability.py
-python3 -m unittest discover -s tests -v
-python3 -m json.tool schemas/config.schema.json >/dev/null
-```
-
-Validate every changed skill with Skill Creator's `quick_validate.py`. Static
-checks are not live host proof; keep the two kinds of evidence separate.
-
-## Upstream sync
-
-For a new pstack version, record the exact old and new revisions, inspect the
-diff, inventory skills and playbooks, classify each change, and update
-`REMAINING.md`. Zero unexplained source differences is the goal; mechanical
-provider-name replacement is not a port.
+Run the validation commands in `AGENTS.md` and validate every changed skill with Skill Creator's `quick_validate.py`.

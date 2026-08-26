@@ -1,0 +1,3 @@
+interface:
+  display_name: "Control CLI"
+  short_description: "Drive and inspect a local CLI or TUI"

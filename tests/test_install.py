@@ -32,7 +32,7 @@ class InstallerTests(unittest.TestCase):
         bundled_script = source / "skills" / "alpha" / "scripts" / "configure.py"
         bundled_script.parent.mkdir()
         bundled_script.write_text("print('configured')\n", encoding="utf-8")
-        for name in ("adapters", "contracts", "schemas"):
+        for name in ("schemas",):
             directory = source / name
             directory.mkdir(parents=True)
             (directory / "content.txt").write_text(name, encoding="utf-8")
@@ -87,7 +87,7 @@ class InstallerTests(unittest.TestCase):
 
             self.assertEqual(0, status)
             self.assertEqual("", stderr)
-            self.assertIn("Installed dstack: 9 operations completed.", stdout)
+            self.assertIn("Installed dstack: 7 operations completed.", stdout)
             self.assertTrue((root / "agents" / "skills" / "alpha" / "SKILL.md").is_file())
             self.assertTrue(
                 (
@@ -99,7 +99,7 @@ class InstallerTests(unittest.TestCase):
                     / "configure.py"
                 ).is_file()
             )
-            self.assertTrue((root / "dstack-home" / "adapters" / "content.txt").is_file())
+            self.assertTrue((root / "dstack-home" / "schemas" / "content.txt").is_file())
             self.assertTrue((root / "dstack-home" / "LICENSE").is_file())
             link = root / "claude" / "skills" / "alpha"
             self.assertTrue(link.is_symlink())
@@ -139,7 +139,7 @@ class InstallerTests(unittest.TestCase):
             )
 
             self.assertEqual(2, status)
-            self.assertEqual(7, stdout.count("Would copy:"))
+            self.assertEqual(5, stdout.count("Would copy:"))
             self.assertIn(str(collision), stderr)
             self.assertIn("a real installation would stop", stderr)
             self.assertFalse((root / "agents" / "skills" / "alpha").exists())
@@ -236,11 +236,11 @@ class InstallerTests(unittest.TestCase):
             unrelated = skills / "personal-skill.txt"
             unrelated.write_text("keep\n", encoding="utf-8")
             dstack_home = root / "dstack-home"
-            (dstack_home / "adapters").mkdir(parents=True)
-            (dstack_home / "adapters" / "content.txt").write_text(
+            (dstack_home / "unmanaged-support").mkdir(parents=True)
+            (dstack_home / "unmanaged-support" / "content.txt").write_text(
                 "old", encoding="utf-8"
             )
-            for name in ("contracts", "schemas"):
+            for name in ("schemas",):
                 destination = dstack_home / name
                 destination.mkdir()
                 (destination / "content.txt").write_text("old", encoding="utf-8")

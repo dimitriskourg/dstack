@@ -33,7 +33,7 @@ Write one clear paragraph. Reviewers challenge whether the work achieves the int
 
 ## Step 3, Spawn Reviewers
 
-Launch all reviewers at once. Use your configured `skeptical-reviewer` role, one reviewer per distinct model binding your profile provides, extending or shrinking the Reviewer A/B/C/D labels to that count.
+Launch reviewers at once across `skeptical-reviewer`, `bug-worker`, `feature-worker`, and `fast-explorer`. Use only the profiles whose angle fits the rubric, but keep at least two independent reviewers.
 
 For each reviewer:
 - helper: a general-purpose subagent, read-only

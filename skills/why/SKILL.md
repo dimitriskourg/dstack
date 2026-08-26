@@ -163,7 +163,7 @@ If your scope assessment suggests a single-commit trivial target where the PR de
 Spawn one synthesizer subagent:
 
 - helper: a general-purpose subagent
-- model: your configured `deep-judgment` role
+- model: your configured `skeptical-reviewer` role
 - tool access: full. The synthesizer's quality check spot-verifies citations, which can require MCP access; a restricted read-only mode strips MCPs and defeats that.
 
 The synthesizer gets:

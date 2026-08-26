@@ -26,7 +26,7 @@ Update mode changes the rest of the flow:
 
 ### 1. Mine their history
 
-Locate the active workspace's transcripts before fanning out. Use only the transcript directory your host scopes to this workspace. Don't glob across the host's whole transcript store. That crosses workspace boundaries and reads private chats from unrelated projects. When your host exposes no transcript access, skip mining and rely on step 2.
+Read the active host's `transcripts_directory` from `DSTACK_HOME/config.json`, defaulting `DSTACK_HOME` to `~/.dstack`. Do not search again or cross workspace boundaries. When it is `null`, missing, or unreadable, skip mining and rely on step 2.
 
 Survey recent agent conversations within that scope for recurring patterns. Run multiple parallel subagents across slices of history (e.g. last 2-4 weeks, split into 3 slices so each has enough material). Each slice mining subagent reads transcripts from the workspace-scoped path the parent provides, looks for the signals below, and returns a short structured list of patterns it saw with evidence pointers. Default signals worth hunting:
 
@@ -74,7 +74,7 @@ Use your host's skill-authoring skill to author the skill. Placement:
 
 ### 5. Iterate on prose
 
-Apply the **unslop** skill and the authoring skill's writing guidelines to every line. Both apply to any agent-read prose, not just skills.
+Call the Skill tool with `unslop`. Apply it and the authoring skill's writing guidelines to every line. Both apply to any agent-read prose, not just skills.
 
 Show the draft to the user and take feedback. Expect multiple iterations. Cut ruthlessly; a mode skill is not a manual.
 

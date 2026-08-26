@@ -8,6 +8,8 @@ disable-model-invocation: true
 
 Fan out N parallel workers. They may cover separate slices, race the same brief, or mix both. The parent waits, aggregates, and returns one report.
 
+Spawn workers with the active harness's native subagent tool. Every supported harness can spawn subagents. If a nested spawn is denied, run the affected slice in the current agent and report that it was serialized.
+
 ## Start
 
 Open a todolist with one entry per phase before launching anything.

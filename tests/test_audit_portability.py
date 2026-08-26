@@ -67,6 +67,16 @@ class PortabilityAuditTests(unittest.TestCase):
             skill = self.make_skill(Path(temp), "```ts\ntype UserId = string & { readonly __brand: \"UserId\" }\n```\n")
             self.assertEqual([], self.messages(skill))
 
+    def test_exact_skill_call_phrase_passes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(Path(temp), "Call the Skill tool with `how`.\n")
+            self.assertEqual([], self.messages(skill))
+
+    def test_legacy_skill_directive_fails(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(Path(temp), "Run the **how** skill over the code.\n")
+            self.assertIn("skill directive must use the Skill tool phrase", self.messages(skill))
+
     def test_user_invoked_skill_with_matching_sidecar_passes(self):
         with tempfile.TemporaryDirectory() as temp:
             skill = self.make_skill(
@@ -82,30 +92,21 @@ class PortabilityAuditTests(unittest.TestCase):
             skill = self.make_skill(
                 Path(temp), "Do the thing.\n", frontmatter="disable-model-invocation: true\n"
             )
-            self.assertIn(
-                "user-invoked skill needs policy.allow_implicit_invocation: false",
-                self.messages(skill),
-            )
+            self.assertIn("sidecar invocation policy disagrees with SKILL.md", self.messages(skill))
 
     def test_sidecar_policy_without_frontmatter_fails(self):
         with tempfile.TemporaryDirectory() as temp:
             skill = self.make_skill(
                 Path(temp), "Do the thing.\n", sidecar=self.SIDECAR_USER_INVOKED
             )
-            self.assertIn(
-                "sidecar denies implicit invocation but SKILL.md omits disable-model-invocation",
-                self.messages(skill),
-            )
+            self.assertIn("sidecar invocation policy disagrees with SKILL.md", self.messages(skill))
 
     def test_disable_model_invocation_must_be_true(self):
         with tempfile.TemporaryDirectory() as temp:
             skill = self.make_skill(
                 Path(temp), "Do the thing.\n", frontmatter="disable-model-invocation: false\n"
             )
-            self.assertIn(
-                "disable-model-invocation must be true; omit the key to allow model invocation",
-                self.messages(skill),
-            )
+            self.assertIn("disable-model-invocation must be true or omitted", self.messages(skill))
 
     def test_unsupported_frontmatter_key_fails(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -124,25 +125,15 @@ class PortabilityAuditTests(unittest.TestCase):
             self.assertIn("sidecar interface.display_name is required", messages)
             self.assertIn("sidecar interface.short_description is required", messages)
 
-    def test_missing_fallback_fails(self):
-        with tempfile.TemporaryDirectory() as temp:
-            skill = self.make_skill(Path(temp), "Use `parallel` for two passes.\n")
-            self.assertIn("capability 'parallel' has no explicit fallback row", self.messages(skill))
-
     def test_missing_asset_fails(self):
         with tempfile.TemporaryDirectory() as temp:
             skill = self.make_skill(Path(temp), "Read `references/missing.md`.\n")
             self.assertIn("missing referenced asset 'references/missing.md'", self.messages(skill))
 
-    def test_model_role_binding_requires_capability_fallback(self):
-        with tempfile.TemporaryDirectory() as temp:
-            skill = self.make_skill(Path(temp), "Use `model_role:deep-judgment`.\n")
-            self.assertIn("capability 'model_role' has no explicit fallback row", self.messages(skill))
-
     def test_legacy_brand_fails(self):
         with tempfile.TemporaryDirectory() as temp:
             skill = self.make_skill(Path(temp), "Load the old pstack router.\n")
-            self.assertIn("legacy dstack brand", self.messages(skill))
+            self.assertIn("legacy brand", self.messages(skill))
 
     def test_missing_markdown_link_fails(self):
         with tempfile.TemporaryDirectory() as temp:

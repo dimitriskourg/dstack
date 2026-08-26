@@ -11,13 +11,7 @@ from pathlib import Path
 from unittest import mock
 
 
-SCRIPT = (
-    Path(__file__).resolve().parents[1]
-    / "skills"
-    / "setup-dstack"
-    / "scripts"
-    / "configure.py"
-)
+SCRIPT = Path(__file__).resolve().parents[1] / "skills" / "setup-dstack" / "scripts" / "configure.py"
 SPEC = importlib.util.spec_from_file_location("dstack_configure", SCRIPT)
 assert SPEC and SPEC.loader
 CONFIGURE = importlib.util.module_from_spec(SPEC)
@@ -26,20 +20,18 @@ SPEC.loader.exec_module(CONFIGURE)
 
 
 class ConfiguratorTests(unittest.TestCase):
-    def roles(self, prefix: str):
+    def profiles(self, prefix: str):
         return {
-            role: {
-                "model": "{}-{}".format(prefix, role),
-                "effort": "medium",
-            }
-            for role in CONFIGURE.ROLES
+            profile: {"model": "{}-{}".format(prefix, profile), "effort": "medium"}
+            for profile in CONFIGURE.PROFILES
         }
 
-    def proposal(self, host: str, prefix: str):
+    def proposal(self, host: str, prefix: str, transcripts: str = "/tmp/transcripts"):
         return {
             "host": host,
-            "roles": self.roles(prefix),
+            "profiles": self.profiles(prefix),
             "invalid_bindings": [],
+            "transcripts_directory": transcripts,
         }
 
     def write_json(self, path: Path, value):
@@ -53,74 +45,52 @@ class ConfiguratorTests(unittest.TestCase):
         return status, stdout.getvalue(), stderr.getvalue()
 
     def apply(self, config: Path, proposal: Path):
-        return self.run_configurator(
-            ["--config", str(config), "apply", "--proposal", str(proposal)]
-        )
+        return self.run_configurator(["--config", str(config), "apply", "--proposal", str(proposal)])
 
     def test_show_uses_implicit_defaults_without_writing(self):
         with tempfile.TemporaryDirectory() as temporary:
             config = Path(temporary) / "config.json"
-
-            status, stdout, stderr = self.run_configurator(
-                ["--config", str(config), "show"]
-            )
-
+            status, stdout, stderr = self.run_configurator(["--config", str(config), "show"])
             self.assertEqual(0, status)
             self.assertEqual("", stderr)
             self.assertEqual(CONFIGURE.default_config(), json.loads(stdout))
             self.assertFalse(config.exists())
 
-    def test_codex_and_cursor_settings_coexist(self):
+    def test_host_settings_and_transcript_paths_coexist(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             config = root / "config.json"
-            codex = root / "codex.json"
-            cursor = root / "cursor.json"
-            self.write_json(codex, self.proposal("codex", "codex-model"))
-            self.write_json(cursor, self.proposal("cursor", "cursor-model"))
-
-            first_status, _, first_error = self.apply(config, codex)
-            second_status, _, second_error = self.apply(config, cursor)
-
-            self.assertEqual(0, first_status)
-            self.assertEqual(0, second_status)
-            self.assertEqual("", first_error + second_error)
+            first = root / "first.json"
+            second = root / "second.json"
+            self.write_json(first, self.proposal("host-a", "alpha", "/tmp/a-transcripts"))
+            self.write_json(second, self.proposal("host-b", "beta", "/tmp/b-transcripts"))
+            self.assertEqual(0, self.apply(config, first)[0])
+            self.assertEqual(0, self.apply(config, second)[0])
             saved = json.loads(config.read_text(encoding="utf-8"))
-            self.assertEqual(self.roles("codex-model"), saved["hosts"]["codex"]["roles"])
-            self.assertEqual(self.roles("cursor-model"), saved["hosts"]["cursor"]["roles"])
-            self.assertEqual(CONFIGURE.DEFAULT_PANELS, saved["panels"])
+            self.assertEqual(self.profiles("alpha"), saved["hosts"]["host-a"]["profiles"])
+            self.assertEqual("/tmp/b-transcripts", saved["hosts"]["host-b"]["transcripts_directory"])
 
-    def test_updating_one_host_and_panels_preserves_the_other_host(self):
+    def test_update_preserves_other_host_and_sets_override(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             config = root / "config.json"
             first = root / "first.json"
             second = root / "second.json"
             update = root / "update.json"
-            self.write_json(first, self.proposal("codex", "codex-old"))
-            self.write_json(second, self.proposal("cursor", "cursor-stays"))
+            self.write_json(first, self.proposal("host-a", "old"))
+            self.write_json(second, self.proposal("host-b", "stable"))
             self.apply(config, first)
             self.apply(config, second)
-            changed = self.proposal("codex", "codex-new")
-            changed["panels"] = {
-                **CONFIGURE.DEFAULT_PANELS,
-                "arena-runners": ["independent-judge", "skeptical-reviewer"],
-            }
-            changed["host_override"] = "codex"
+            changed = self.proposal("host-a", "new", None)
+            changed["host_override"] = "host-a"
             self.write_json(update, changed)
-
             status, _, stderr = self.apply(config, update)
-
             self.assertEqual(0, status)
             self.assertEqual("", stderr)
             saved = json.loads(config.read_text(encoding="utf-8"))
-            self.assertEqual(self.roles("codex-new"), saved["hosts"]["codex"]["roles"])
-            self.assertEqual(self.roles("cursor-stays"), saved["hosts"]["cursor"]["roles"])
-            self.assertEqual("codex", saved["host_override"])
-            self.assertEqual(
-                ["independent-judge", "skeptical-reviewer"],
-                saved["panels"]["arena-runners"],
-            )
+            self.assertEqual(self.profiles("stable"), saved["hosts"]["host-b"]["profiles"])
+            self.assertIsNone(saved["hosts"]["host-a"]["transcripts_directory"])
+            self.assertEqual("host-a", saved["host_override"])
 
     def test_invalid_proposal_leaves_existing_config_unchanged(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -128,122 +98,54 @@ class ConfiguratorTests(unittest.TestCase):
             config = root / "config.json"
             good = root / "good.json"
             bad = root / "bad.json"
-            self.write_json(good, self.proposal("codex", "stable"))
+            self.write_json(good, self.proposal("host-a", "stable"))
             self.apply(config, good)
             original = config.read_bytes()
-            invalid = self.proposal("cursor", "candidate")
-            del invalid["roles"]["bug-worker"]
+            invalid = self.proposal("host-b", "candidate")
+            del invalid["profiles"]["bug-worker"]
             self.write_json(bad, invalid)
-
             status, _, stderr = self.apply(config, bad)
-
             self.assertEqual(2, status)
-            self.assertIn("proposal.roles is missing: bug-worker", stderr)
+            self.assertIn("proposal.profiles is missing: bug-worker", stderr)
             self.assertEqual(original, config.read_bytes())
 
-    def test_apply_migrates_v1_and_preserves_other_host(self):
+    def test_relative_transcript_directory_is_rejected(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             config = root / "config.json"
             proposal = root / "proposal.json"
-            legacy_roles = {
-                role: "legacy-{}".format(role) for role in CONFIGURE.ROLES
-            }
-            legacy = {
-                "schema_version": 1,
-                "host_override": "auto",
-                "hosts": {
-                    "cursor": {
-                        "roles": legacy_roles,
-                        "stale_models": ["legacy-fast-explorer"],
-                    }
-                },
-                "panels": CONFIGURE.DEFAULT_PANELS,
-            }
-            self.write_json(config, legacy)
-            self.write_json(proposal, self.proposal("codex", "candidate"))
-
+            self.write_json(proposal, self.proposal("host-a", "candidate", "relative/transcripts"))
             status, _, stderr = self.apply(config, proposal)
-
-            self.assertEqual(0, status)
-            self.assertEqual("", stderr)
-            saved = json.loads(config.read_text(encoding="utf-8"))
-            self.assertEqual(2, saved["schema_version"])
-            self.assertEqual(
-                {"model": "legacy-fast-explorer", "effort": "inherit-parent"},
-                saved["hosts"]["cursor"]["roles"]["fast-explorer"],
-            )
-            self.assertEqual(
-                [{"model": "legacy-fast-explorer", "effort": "inherit-parent"}],
-                saved["hosts"]["cursor"]["invalid_bindings"],
-            )
-
-    def test_migrate_command_writes_v2_without_changing_bindings(self):
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            config = root / "config.json"
-            legacy = {
-                "schema_version": 1,
-                "host_override": "auto",
-                "hosts": {
-                    "codex": {
-                        "roles": {
-                            role: "old-{}".format(role) for role in CONFIGURE.ROLES
-                        },
-                        "stale_models": [],
-                    }
-                },
-                "panels": CONFIGURE.DEFAULT_PANELS,
-            }
-            self.write_json(config, legacy)
-
-            status, stdout, stderr = self.run_configurator(
-                ["--config", str(config), "migrate"]
-            )
-
-            self.assertEqual(0, status)
-            self.assertEqual("", stderr)
-            self.assertIn("schema version 2", stdout)
-            saved = json.loads(config.read_text(encoding="utf-8"))
-            self.assertEqual(2, saved["schema_version"])
-            self.assertEqual(
-                "inherit-parent",
-                saved["hosts"]["codex"]["roles"]["bug-worker"]["effort"],
-            )
+            self.assertEqual(2, status)
+            self.assertIn("must be an absolute path or null", stderr)
+            self.assertFalse(config.exists())
 
     def test_inherit_parent_model_rejects_concrete_effort(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             config = root / "config.json"
             proposal = root / "proposal.json"
-            invalid = self.proposal("codex", "candidate")
-            invalid["roles"]["fast-explorer"] = {
-                "model": "inherit-parent",
-                "effort": "xhigh",
-            }
+            invalid = self.proposal("host-a", "candidate")
+            invalid["profiles"]["fast-explorer"] = {"model": "inherit-parent", "effort": "xhigh"}
             self.write_json(proposal, invalid)
-
             status, _, stderr = self.apply(config, proposal)
-
             self.assertEqual(2, status)
             self.assertIn("effort must be inherit-parent", stderr)
             self.assertFalse(config.exists())
 
-    def test_unsupported_existing_schema_version_is_not_replaced(self):
+    def test_schema_version_stays_two_and_unsupported_version_is_preserved(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             config = root / "config.json"
             proposal = root / "proposal.json"
             existing = CONFIGURE.default_config()
             existing["schema_version"] = 3
-            config.write_text(json.dumps(existing), encoding="utf-8")
+            self.write_json(config, existing)
             original = config.read_bytes()
-            self.write_json(proposal, self.proposal("codex", "candidate"))
-
+            self.write_json(proposal, self.proposal("host-a", "candidate"))
             status, _, stderr = self.apply(config, proposal)
-
             self.assertEqual(2, status)
-            self.assertIn("config.schema_version must be 1 or 2; found 3", stderr)
+            self.assertIn("config.schema_version must be 2; found 3", stderr)
             self.assertEqual(original, config.read_bytes())
 
     def test_replace_failure_preserves_previous_file_and_removes_temporary_file(self):
@@ -251,14 +153,12 @@ class ConfiguratorTests(unittest.TestCase):
             root = Path(temporary)
             config = root / "config.json"
             original = CONFIGURE.default_config()
-            config.write_text(json.dumps(original), encoding="utf-8")
+            self.write_json(config, original)
             changed = CONFIGURE.default_config()
-            changed["host_override"] = "codex"
-
+            changed["host_override"] = "host-a"
             with mock.patch.object(CONFIGURE.os, "replace", side_effect=OSError("blocked")):
                 with self.assertRaisesRegex(OSError, "blocked"):
                     CONFIGURE.write_atomic(config, changed)
-
             self.assertEqual(original, json.loads(config.read_text(encoding="utf-8")))
             self.assertEqual([], list(root.glob(".config.*.tmp")))
 

@@ -8,6 +8,8 @@ disable-model-invocation: true
 
 Mine the current conversation for durable learnings, then route them into skill edits.
 
+Spawn reviewers with the active harness's native subagent tool. Every supported harness can spawn subagents. If a nested spawn is denied, run the affected review serially and disclose the loss of independence.
+
 ## When to invoke
 
 - The user said "reflect" or "/reflect".
@@ -22,7 +24,7 @@ Skip when the conversation is trivial, off-topic, or already covered by an exist
 
 ### 1. Locate the active transcript
 
-The parent finds its own transcript file before fanning out. Use only your host's transcript directory for the active workspace. Do not glob across the host's whole transcript store. That crosses workspace boundaries and reads private chats from unrelated projects. When your host exposes no readable transcript, skip to the digest fallback below.
+Read `DSTACK_HOME/config.json`, defaulting `DSTACK_HOME` to `~/.dstack`, and use the active host's `transcripts_directory`. Do not search again here. The saved directory is scoped to the active workspace. When it is `null`, missing, or unreadable, skip to the digest fallback below.
 
 ```bash
 ls -t <transcript-dir>/*.jsonl <transcript-dir>/*/*.jsonl <transcript-dir>/*/subagents/*.jsonl 2>/dev/null | head -10
@@ -34,19 +36,19 @@ For each candidate, read the first line and check that its message text contains
 
 ### 2. Spawn three reviewers in parallel
 
-Spawn three general-purpose subagents at once, each on its own model binding, with full tool access. **Don't use a restricted read-only mode.** Reviewers need MCP access for context lookups (tickets, chat threads, observability traces referenced in the transcript), and where a host strips MCP access in that mode it disables those lookups entirely. The prompt forbids file writes; the parent applies edits.
+Spawn three general-purpose subagents at once, each on a different configured profile, with full tool access. **Don't use a restricted read-only mode.** Reviewers need MCP access for context lookups. The prompt forbids file writes; the parent applies edits.
 
 | Lens | Model role | Prompt template |
 |---|---|---|
-| Judgment | `deep-judgment` | `references/judgment-reviewer.md` |
-| Tooling | `skeptical-reviewer` | `references/tooling-reviewer.md` |
-| Divergent | `deep-judgment`, on a binding distinct from Judgment where your profile provides one | `references/divergent-reviewer.md` |
+| Judgment | `skeptical-reviewer` | `references/judgment-reviewer.md` |
+| Tooling | `bug-worker` | `references/tooling-reviewer.md` |
+| Divergent | `fast-explorer` | `references/divergent-reviewer.md` |
 
 Pass each template verbatim, substituting the transcript path or digest where marked. Reviewers return findings in their response body.
 
 ### 3. Synthesize
 
-One general-purpose subagent on your configured `deep-judgment` role, with full tool access. The synthesizer's quality check includes spot-verifying citations, which can require MCP access; a restricted read-only mode strips that on some hosts. Use `references/synthesizer.md` verbatim, with each reviewer's full output inlined where marked. The synthesizer returns a structured Accepted / Rejected / Backlog list.
+One general-purpose subagent on your configured `skeptical-reviewer` role, with full tool access. The synthesizer's quality check includes spot-verifying citations, which can require MCP access; a restricted read-only mode strips that on some hosts. Use `references/synthesizer.md` verbatim, with each reviewer's full output inlined where marked. The synthesizer returns a structured Accepted / Rejected / Backlog list.
 
 ### 4. Structural enforcement check
 

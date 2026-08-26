@@ -3,73 +3,37 @@
   "$id": "https://dstack.local/schemas/config.schema.json",
   "title": "dstack personal configuration",
   "type": "object",
-  "required": ["schema_version", "host_override", "hosts", "panels"],
+  "required": ["schema_version", "host_override", "hosts"],
   "properties": {
     "schema_version": { "const": 2 },
-    "host_override": {
-      "type": "string",
-      "pattern": "^(auto|[a-z][a-z0-9-]*)$"
-    },
+    "host_override": { "type": "string", "pattern": "^(auto|[a-z][a-z0-9-]*)$" },
     "hosts": {
       "type": "object",
-      "propertyNames": {
-        "pattern": "^[a-z][a-z0-9-]*$"
-      },
+      "propertyNames": { "pattern": "^[a-z][a-z0-9-]*$" },
       "additionalProperties": {
         "type": "object",
-        "required": ["roles", "invalid_bindings"],
+        "required": ["profiles", "invalid_bindings", "transcripts_directory"],
         "properties": {
-          "roles": {
+          "profiles": {
             "type": "object",
-            "required": [
-              "fast-explorer",
-              "feature-worker",
-              "bug-worker",
-              "deep-judgment",
-              "skeptical-reviewer",
-              "independent-judge"
-            ],
+            "required": ["fast-explorer", "feature-worker", "bug-worker", "skeptical-reviewer"],
             "properties": {
               "fast-explorer": { "$ref": "#/$defs/modelBinding" },
               "feature-worker": { "$ref": "#/$defs/modelBinding" },
               "bug-worker": { "$ref": "#/$defs/modelBinding" },
-              "deep-judgment": { "$ref": "#/$defs/modelBinding" },
-              "skeptical-reviewer": { "$ref": "#/$defs/modelBinding" },
-              "independent-judge": { "$ref": "#/$defs/modelBinding" }
+              "skeptical-reviewer": { "$ref": "#/$defs/modelBinding" }
             },
             "additionalProperties": false
           },
-          "invalid_bindings": {
-            "type": "array",
-            "items": { "$ref": "#/$defs/modelBinding" },
-            "uniqueItems": true
-          }
+          "invalid_bindings": { "type": "array", "items": { "$ref": "#/$defs/modelBinding" }, "uniqueItems": true },
+          "transcripts_directory": { "type": ["string", "null"], "minLength": 1 }
         },
         "additionalProperties": false
       }
-    },
-    "panels": {
-      "type": "object",
-      "required": [
-        "arena-runners",
-        "arena-cross-judge",
-        "interrogate-reviewers",
-        "architect-runners"
-      ],
-      "properties": {
-        "arena-runners": { "$ref": "#/$defs/panel" },
-        "arena-cross-judge": { "$ref": "#/$defs/panel" },
-        "interrogate-reviewers": { "$ref": "#/$defs/panel" },
-        "architect-runners": { "$ref": "#/$defs/panel" }
-      },
-      "additionalProperties": false
     }
   },
   "$defs": {
-    "modelIdentifier": {
-      "type": "string",
-      "pattern": "^\\S+$"
-    },
+    "modelIdentifier": { "type": "string", "pattern": "^\\S+$" },
     "modelBinding": {
       "type": "object",
       "required": ["model", "effort"],
@@ -78,31 +42,10 @@
         "effort": { "$ref": "#/$defs/modelIdentifier" }
       },
       "additionalProperties": false,
-      "allOf": [
-        {
-          "if": {
-            "properties": { "model": { "const": "inherit-parent" } },
-            "required": ["model"]
-          },
-          "then": {
-            "properties": { "effort": { "const": "inherit-parent" } }
-          }
-        }
-      ]
-    },
-    "panel": {
-      "type": "array",
-      "minItems": 1,
-      "items": {
-        "enum": [
-          "fast-explorer",
-          "feature-worker",
-          "bug-worker",
-          "deep-judgment",
-          "skeptical-reviewer",
-          "independent-judge"
-        ]
-      }
+      "allOf": [{
+        "if": { "properties": { "model": { "const": "inherit-parent" } }, "required": ["model"] },
+        "then": { "properties": { "effort": { "const": "inherit-parent" } } }
+      }]
     }
   },
   "additionalProperties": false

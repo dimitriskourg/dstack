@@ -1,0 +1,3 @@
+interface:
+  display_name: "Control UI"
+  short_description: "Drive and inspect a local browser or app UI"

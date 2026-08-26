@@ -12,7 +12,9 @@ Two modes:
 1. **Explain** (default). Explore the codebase and produce a clear explanation
 2. **Critique.** Explain first, then spawn multiple models to independently identify architectural issues
 
-Helpers below are read-only. If your host cannot enforce that, instruct the helper not to write and don't describe the boundary as enforced. Model roles resolve through your configured profile; a role bound to `inherit-parent` means use the parent model.
+Helpers below are read-only. If your host cannot enforce that, instruct the helper not to write and don't describe the boundary as enforced. Profiles resolve through your configuration; a profile bound to `inherit-parent` means use the parent model.
+
+Spawn helpers with the active harness's native subagent tool. Every supported harness can spawn subagents. If a nested spawn is denied, the current agent performs that pass directly.
 
 ## Explain Mode
 
@@ -65,7 +67,7 @@ Then proceed to Step 3.
 Spawn a single subagent that explores and explains in one pass:
 
 - helper: a general-purpose subagent, read-only
-- model: your configured `deep-judgment` role
+- model: your configured `skeptical-reviewer` role
 
 The agent does its own exploration (Glob, Grep, Read) and writes the explanation directly. Read `references/explainer-prompt.md` for the communication style and output format. Same structure, just no explorer findings as input.
 
@@ -76,7 +78,7 @@ Proceed to Step 4.
 Once all explorers return, spawn a single subagent to synthesize their findings into one coherent explanation:
 
 - helper: a general-purpose subagent, read-only
-- model: your configured `deep-judgment` role
+- model: your configured `skeptical-reviewer` role
 
 The explainer gets all explorers' findings and writes the human-facing explanation (output format below). Read `references/explainer-prompt.md` for the full prompt template. The explainer reconciles overlapping findings, resolves contradictions, and weaves the slices into a unified picture.
 
@@ -108,7 +110,7 @@ Run the full explain flow above (Steps 1-4). You must understand the architectur
 
 ### Step 2. Spawn Critics
 
-After the explanation is complete, spawn two or more architectural critics at once, using as many distinct model bindings as your profile provides.
+After the explanation is complete, spawn two or more architectural critics at once. Use `skeptical-reviewer` first and `bug-worker` for an independent second angle. Repeat profiles only when more critics materially improve coverage.
 
 For each critic:
 - helper: a general-purpose subagent, read-only

@@ -1,0 +1,81 @@
+# dstack differences from pstack
+
+Updated 2026-08-26. This is the source-of-truth handoff for upstream alignment and project structure. dstack is under development, so compatible pre-release shape changes do not bump schema version 2.
+
+## Upstream baseline
+
+- Local source: `/Users/kourgia/projects/plugins/pstack`
+- Upstream repository: <https://github.com/cursor/plugins/tree/main/pstack>
+- Recorded source commit: `63d938c2e4a165a0fec1bd0f61a8e325f0cb751e`
+- Recorded plugin version: `0.14.1`
+- Recorded inventory: 44 skills and 23 `poteto-mode` playbooks
+
+Recheck the local source revision before a future sync. Treat pstack and other plugin folders as immutable inputs.
+
+## Deliberate differences
+
+### Names
+
+- `poteto-mode` is `dstack-mode`.
+- `setup-pstack` is `setup-dstack`.
+- No legacy aliases are shipped.
+
+### Referenced external skills
+
+pstack explicitly references three skills from the general plugin collection. dstack bundles them so the workflow is complete:
+
+- `control-cli`
+- `control-ui`
+- `deslop`
+
+The separate general `orchestrate` plugin is not copied. Pstack's Orchestrate route is its own bundled playbook and runtime. The external plugin is a different provider-SDK and Slack product.
+
+### Harness neutrality
+
+- Provider task schemas, cloud-agent assumptions, provider rule paths, and concrete default model slugs are removed from portable skills.
+- Skill-to-skill instructions use this exact phrase: Call the Skill tool with `skill-name`.
+- Subagent instructions say to use the active harness's native subagent tool. Supported harnesses are expected to provide spawning. A denied nested spawn collapses onto the current agent and is disclosed.
+- There is no capability contract, capability TOML, adapter matrix, or provider instruction folder.
+
+### Configuration
+
+`DSTACK_HOME/config.json` is the only personal configuration. It keeps independent entries by lowercase harness id. Each entry contains:
+
+- four model-and-effort profiles;
+- invalid model-and-effort bindings;
+- the absolute transcript directory scoped to the active workspace, or `null`.
+
+The four profiles are `fast-explorer`, `feature-worker`, `bug-worker`, and `skeptical-reviewer`. Panel configuration and the former judgment-only profiles were removed.
+
+`setup-dstack` searches for and confirms the active workspace transcript directory once. Transcript-backed skills read the saved path and do not rediscover it on every invocation.
+
+### Invocation metadata
+
+Portable `disable-model-invocation: true` is preserved for explicit-only skills. `agents/openai.yaml` mirrors that policy for hosts that read the sidecar. See [invocation metadata](docs/agents/invocation.md).
+
+The currently bundled Skill Creator validator rejects that portable frontmatter key. This is a validator mismatch, not a reason to remove invocation metadata. The dstack portability audit checks the cross-host declarations together.
+
+### Additional skill
+
+`comment-sicko` remains an additional normal skill.
+
+### Excluded pstack runtime
+
+dstack does not ship pstack's provider-specific automation, agent wrappers, silent Bun bootstrap, or PR watcher. The current `dstack-mode` also omits the heavyweight Orchestrate playbook/runtime. These are intentional scope choices, not capability gaps.
+
+## Structure
+
+Portable behavior lives inside `skills/`. Deterministic helpers live with the skill that owns them. Strict personal configuration shape lives in `schemas/config.schema.json`. The installer copies skills, the schema, license, and notice. There is no parallel adapter hierarchy to keep synchronized.
+
+## Sync procedure
+
+1. Record the exact old and new pstack revisions.
+2. Diff those revisions before copying anything.
+3. Inventory skills, playbooks, references, scripts, agents, and automations separately.
+4. Copy portable source with the smallest possible edits.
+5. Apply only the deliberate transformations above.
+6. Inventory skill names referenced outside pstack and copy matching general-plugin skills when they are real dependencies.
+7. Update this file for every explained source difference.
+8. Run static validation and then exercise affected workflows in each live harness.
+
+Zero unexplained source differences is the goal. Static checks are not live harness proof.

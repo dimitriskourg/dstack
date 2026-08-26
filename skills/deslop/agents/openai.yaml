@@ -1,0 +1,3 @@
+interface:
+  display_name: "Deslop"
+  short_description: "Remove code slop from a diff"

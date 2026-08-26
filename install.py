@@ -21,7 +21,7 @@ except ImportError:  # pragma: no cover - exercised on Windows only
 
 
 SOURCE_ROOT = Path(__file__).resolve().parent
-SUPPORT_DIRECTORIES = ("adapters", "contracts", "schemas")
+SUPPORT_DIRECTORIES = ("schemas",)
 SUPPORT_FILES = ("LICENSE", "NOTICE.md")
 # stat exposes this only on Windows builds; the tag value itself is stable.
 MOUNT_POINT_REPARSE_TAG = getattr(stat, "IO_REPARSE_TAG_MOUNT_POINT", 0xA0000003)

@@ -12,23 +12,24 @@ disable-model-invocation: true
 
 Remaining triggers:
 
-- Nontrivial change, architecture decision, or "are we sure?" → the **how** skill.
+- Nontrivial change, architecture decision, or "are we sure?" → Call the Skill tool with `how`.
 - About to stop and ask the user about a "which approach", "how should I", or "what should this do" fork → classify it before you ask. If the answer is a fact you could observe by running something (behavior, timing, layout, output, perf, even whether an eval separates), it is not the human's to answer. Sketch it via the Prototype playbook (`playbooks/prototype.md`) and let the result decide. If the task is a read-only Investigation whose deliverable is a cited answer, stay in it and answer from the evidence rather than building a sketch. Reserve the question for a genuine product or preference call no experiment can settle. The ask is the slow path. A throwaway probe usually answers faster, and it hands the human a result to react to instead of a decision to make.
 - Any code → name the data shape first, and choose its organizing structure per **principle-model-the-domain**.
-- Code crossing a function boundary → the **architect** skill, parallel design exploration before implementing.
-- Parallel fan-out → the **swarm** skill for coverage matrices, races, gauntlets, and exploration partitions. Use **arena** for design or code bakeoffs with base selection and grafting.
-- Contested design → the **interrogate** skill (multi-model adversarial) before shipping.
+- Code crossing a function boundary → Call the Skill tool with `architect`. Do so before implementing.
+- Parallel fan-out for coverage matrices, races, gauntlets, or exploration partitions → Call the Skill tool with `swarm`.
+- Design or code bakeoffs with base selection and grafting → Call the Skill tool with `arena`.
+- Contested design → Call the Skill tool with `interrogate`. Do so before shipping.
 - Nontrivial multi-step → write the throughput checkpoint (Feature step 3).
-- Any prose surface → the **unslop** skill. Your reply is a prose surface; write it per **Writing the reply**. Agent-facing prose also follows your host's skill-authoring skill.
-- Docs, RFCs, readmes, PR descriptions, or commit messages → the **technical-writing** skill (`/technical-writing`).
-- Before commit → the **unslop** skill (`/unslop`) over the diff, not just the prose.
-- Before review → the **no-comments** skill (`/no-comments`).
-- Shipping UI / IDE / CLI → the control skill that matches the surface, driving the real thing rather than a proxy. For bug fixes, reproduce first on the same surface yourself; hand to the user only under the narrow Bug fix step 1 exception.
+- Any prose surface → Call the Skill tool with `unslop`. Your reply is a prose surface; write it per **Writing the reply**. Agent-facing prose also follows the active harness's skill-authoring guidance.
+- Docs, RFCs, readmes, PR descriptions, or commit messages → Call the Skill tool with `technical-writing`.
+- Before commit → Call the Skill tool with `deslop`. Apply it to the diff.
+- Before review → Call the Skill tool with `no-comments`.
+- Shipping a CLI or TUI → Call the Skill tool with `control-cli`. Shipping a browser, IDE, or Electron UI → Call the Skill tool with `control-ui`. Drive the real thing rather than a proxy.
 - Any PR-status request → the **Babysit** playbook (`playbooks/babysit.md`), and not any similarly named host built-in whose description matches the same words. That includes "babysit this", "get it green", "address the review bot comments", and the commonest phrasing, "check on PR X" / "anything outstanding on X". Never triggered by merely opening a PR. Declare its mode before polling; the playbook's step 1 owns the request-to-mode mapping. Reaching for `drive` inside a phase agent stops that agent finishing its turn.
 - Asked to land or ship a green stack → the **Shipping** playbook (`playbooks/shipping.md`). Green is not safe. Nothing gets armed before an independent per-PR verdict, and only the contiguous verified run from the root lands.
 - Automated review or the agentic security review commented → skeptical posture. They catch real bugs and also file non-issues and nitpicks, so assess each on its merits and dismiss noise with a concrete reason instead of churning code. Triage fix / dismiss / ask per `references/automated-review-triage.md`.
 - Broken skill mid-task → fix it in its own PR. Don't block. Don't silently work around it.
-- Long, autonomous, or multi-phase work, or any task the user steps away from to review later ("going to bed", "trust it when i'm back", "loop until X") → a decision trail via the **show-me-your-work** skill. Commit it when stakes need an auditable record; keep it local otherwise.
+- Long, autonomous, or multi-phase work, or any task the user steps away from to review later → Call the Skill tool with `show-me-your-work`. Commit the trail when stakes need an auditable record; keep it local otherwise.
 
 ## Principles
 
@@ -82,11 +83,11 @@ Read the leaf skill in full for any principle you apply. Each entry names when i
 
 ## Subagents
 
-**Any subagent you spawn inside a playbook step works in this mode** (code-writing delegates, ad-hoc helpers). Its brief tells it to read this SKILL.md in full first, including the Principles index above, and to open a leaf `principle-*` skill whenever it applies that principle. A general-purpose helper that skips that read drifts. Routed workflow skills (`how`, `why`, `interrogate`, `reflect`, `swarm`) prescribe their own helpers for diverse-model review; respect what the skill prescribes rather than forcing this mode onto them.
+**Any subagent you spawn inside a playbook step works in this mode** (code-writing delegates, ad-hoc helpers). Spawn it with the active harness's native subagent tool. Every supported harness can spawn subagents. If a nested spawn is denied, the current agent owns that work directly. Its brief tells it to read this SKILL.md in full first, including the Principles index above, and to open a leaf `principle-*` skill whenever it applies that principle. Routed workflow skills prescribe their own helpers for diverse-model review; respect what the skill prescribes rather than forcing this mode onto them.
 
-**Defaults for every spawn.** Background where your host supports it, full tool access (a restricted read-only mode strips MCP), file pointers not inlined context, and an explicit model per role from your profile (configurable via `/setup-dstack`). Code delegates tier by difficulty. The hardest changes (cross-cutting design, gnarly concurrency, subtle algorithms) go to `deep-judgment` when the task needs judgment or the intent is vague, and to `feature-worker` when the work is a precisely specified sequence of steps to execute to the letter; trivial mechanical edits go to `fast-explorer`. `bug-worker` carries evidence-backed fixes, and `skeptical-reviewer` carries independent review. Role bindings in `/setup-dstack` override these defaults and the model choices in the routed skills (`how`, `why`, `arena`, `swarm`, `architect`, `interrogate`, `reflect`); a role bound to `inherit-parent` runs on the parent chat model, which is a valid configuration and not a failure. When your host cannot choose child models at all, inherit the parent throughout and say so.
+**Defaults for every spawn.** Run in the background when supported, preserve the tools the task needs, pass file pointers instead of inlining large context, and select a model from the configured profile. To change profiles, Call the Skill tool with `setup-dstack`. Use `fast-explorer` for cheap read-only breadth, `feature-worker` for implementation, `bug-worker` for evidence-backed fixes, and `skeptical-reviewer` for judgment or independent review. A profile bound to `inherit-parent` runs on the parent model. If the harness cannot select a child model, inherit the parent and say so.
 
-You own every subagent's work. Review the diff and write your own summary, don't pass through what it said. Interrupt-chained resumes silently drop directives, so fire a fresh subagent with consolidated scope rather than trusting a "done" summary. A second opinion is the same prompt against a different model. Agreement is high-signal.
+You own every subagent's work. Review the diff and write your own summary, don't pass through what it said. Interrupt-chained resumes silently drop directives, so fire a fresh subagent with consolidated scope rather than trusting a "done" summary. A second opinion is the same prompt on a different configured profile when possible. Agreement is high-signal.
 
 ## Writing the reply
 
@@ -109,7 +110,7 @@ Comments follow the same rule as the reply. Write them clean as you go; a flat "
 
 Your first todolist actions are the matched playbook's steps, copied in verbatim, before any task-specific todos and before you reason about the task. The failure mode is reading a playbook then writing a bespoke plan that drops its named steps (`architect`, the throughput checkpoint). A step you choose not to do stays in the list with a one-line `skip: <reason>`; skipping silently is not allowed. Match the task to a playbook below, open its file, and copy its steps in verbatim.
 
-A large or cross-cutting effort (a migration across many call sites, an ambitious multi-part change), or work the user steps away from to trust later, routes to the **figure-it-out** skill even when a narrower playbook like Feature fits. Use **figure-it-out** whenever no bundled playbook fits. It designs a bespoke, rigorous playbook for the task. A standing project-scale program (multi-day, many stacked PRs, a fleet of subagents under one coordinator) is out of scope for this pack: say so and scope the work down to runs figure-it-out can design.
+A large or cross-cutting effort, or work the user steps away from to trust later, routes to `figure-it-out` even when a narrower playbook fits. Call the Skill tool with `figure-it-out`. A standing project-scale program is out of scope for this pack; scope it down to runs that skill can design.
 
 - **Investigation.** Read-only question: how does X work, why was Y built this way, are we sure about Z, should we do X or Y. `playbooks/investigation.md`.
 - **Bug fix.** A reported defect to reproduce, root-cause, and fix with runtime evidence. `playbooks/bug-fix.md`.

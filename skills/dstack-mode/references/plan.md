@@ -25,7 +25,7 @@ Resolve what is in scope vs explicitly out, technical or platform constraints, p
 Delegate codebase exploration (the **guard-the-context-window** principle skill).
 
 - Spawn general-purpose helpers and brief each to read the `dstack-mode` skill first. Never route them through a host's built-in planning agent; it ignores this skill.
-- Name the model explicitly per your configured roles: fast-explorer for breadth, deep-judgment where the read needs judgment.
+- Name the model explicitly per your configured profiles: `fast-explorer` for breadth and `skeptical-reviewer` where the read needs judgment.
 
 Each explorer returns file pointers, conventions, dependencies, test infrastructure, and entry points. No inlined dumps.
 
@@ -96,7 +96,7 @@ In the overview, name which dstack-mode non-negotiables the implementer must app
 
 - the **how** skill over each unfamiliar subsystem before changing it.
 - the **interrogate** skill for adversarial review on contested designs before shipping.
-- the **unslop** skill (`/unslop`) over each diff before commit, and over any prose surface.
+- Call the Skill tool with `deslop`. Apply it to each diff before commit. Call the Skill tool with `unslop`. Apply it to every prose surface.
 - the **show-me-your-work** skill to keep a decision trail when the plan is large enough to need an auditable record.
 - the **Babysit** playbook (`../playbooks/babysit.md`) after opening the PR.
 

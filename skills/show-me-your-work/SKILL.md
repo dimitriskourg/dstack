@@ -53,7 +53,7 @@ Commit it only when the work is ambitious enough that a reviewer needs the trail
 
 ## Audit the log against the transcript
 
-At the end of the run, before handing back, check the log told the truth. Read this run's transcript from your host's transcript store, using only the directory scoped to the active workspace. Don't glob across the host's whole store; that reads unrelated private chats. When your host exposes no readable transcript, audit the log against your own record of the run and say the transcript check didn't happen. Walk the log against what actually happened:
+At the end of the run, before handing back, check the log told the truth. Read the active host's `transcripts_directory` from `DSTACK_HOME/config.json`, defaulting `DSTACK_HOME` to `~/.dstack`. Do not search again. When it is `null`, missing, or unreadable, audit the log against your own record and say the transcript check did not happen. Walk the log against what actually happened:
 
 - Every row maps to a real action. Cut invented or aspirational entries.
 - Each row's evidence resolves and shows what the row claims.
@@ -64,7 +64,7 @@ Fix the log, not the story. If the work diverged from what a row claims, the row
 
 ## Cross-model review of the trail
 
-Before handing back, you must spawn a subagent on a different model family from the one that did the work. Self-review is not a substitute; the point is fresh eyes you cannot bring yourself. The subagent reads the audit trail and the run's transcript, then flags what the user should pay attention to. Not a redo of the work, a scan for what's suboptimal or risky.
+Before handing back, spawn a subagent with the `skeptical-reviewer` profile. When that profile performed the work, use another configured profile so the pass remains independent. The subagent reads the audit trail and transcript, then flags what the user should pay attention to. It is a risk scan, not a redo.
 
 - Decisions logged with weak or absent evidence.
 - Verification steps skipped or claimed without proof in the transcript.
