@@ -1,5 +1,3 @@
 interface:
   display_name: "Swarm"
   short_description: "Fan out workers, return one report"
-policy:
-  allow_implicit_invocation: false

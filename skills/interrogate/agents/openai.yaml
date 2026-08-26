@@ -1,5 +1,3 @@
 interface:
   display_name: "Interrogate"
   short_description: "Adversarial multi-reviewer critique"
-policy:
-  allow_implicit_invocation: false

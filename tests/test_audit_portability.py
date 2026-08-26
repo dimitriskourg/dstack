@@ -71,7 +71,7 @@ class PortabilityAuditTests(unittest.TestCase):
             skill = self.make_skill(
                 Path(temp),
                 "Read `~/.dstack/config.json` and select `hosts[<active-harness>]`; on failure, stop and name the exact problem. "
-                "Call the Skill tool with `setup-dstack`. Require a concrete model and effort pair.\n",
+                "Tell the user to invoke `setup-dstack` explicitly. Require a concrete model and effort pair.\n",
                 name="arena",
             )
             self.assertEqual([], self.messages(skill))
@@ -100,6 +100,39 @@ class PortabilityAuditTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             skill = self.make_skill(Path(temp), "Call the Skill tool with `how`.\n")
             self.assertEqual([], self.messages(skill))
+
+    def test_model_disabled_internal_callee_fails(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.make_skill(root, "Call the Skill tool with `callee`.\n", name="caller")
+            self.make_skill(
+                root,
+                "Do the thing.\n",
+                frontmatter="disable-model-invocation: true\n",
+                sidecar=self.SIDECAR_USER_INVOKED,
+                name="callee",
+            )
+            messages = [
+                finding.message
+                for finding in AUDIT.run(root, include_structure=False)
+            ]
+            self.assertIn(
+                "model-disabled skill 'callee' cannot be used as an internal callee",
+                messages,
+            )
+
+    def test_user_only_guidance_does_not_create_invocation_edge(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self.make_skill(root, "Tell the user to invoke `callee` explicitly.\n", name="caller")
+            self.make_skill(
+                root,
+                "Do the thing.\n",
+                frontmatter="disable-model-invocation: true\n",
+                sidecar=self.SIDECAR_USER_INVOKED,
+                name="callee",
+            )
+            self.assertEqual([], AUDIT.run(root, include_structure=False))
 
     def test_legacy_skill_directive_fails(self):
         with tempfile.TemporaryDirectory() as temp:

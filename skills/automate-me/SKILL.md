@@ -12,7 +12,7 @@ This skill orchestrates three others: an inline mining pass (see step 1), your h
 
 ## Configuration
 
-Before mining transcripts, read `~/.dstack/config.json` and select `hosts[<active-harness>]` using the lowercase identity of the active harness. This location and host selection rule are fixed; do not use an environment override or another host entry. If the file is missing, unreadable, or invalid, the active harness cannot be identified, or its host entry is absent, stop and name the exact problem. Tell the user: Call the Skill tool with `setup-dstack`.
+Before mining transcripts, read `~/.dstack/config.json` and select `hosts[<active-harness>]` using the lowercase identity of the active harness. This location and host selection rule are fixed; do not use an environment override or another host entry. If the file is missing, unreadable, or invalid, the active harness cannot be identified, or its host entry is absent, stop and name the exact problem. Tell the user to invoke `setup-dstack` explicitly.
 
 ## Flow
 

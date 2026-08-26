@@ -1,5 +1,3 @@
 interface:
   display_name: "Arena"
   short_description: "Race parallel candidates, graft the best"
-policy:
-  allow_implicit_invocation: false

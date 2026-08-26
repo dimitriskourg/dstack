@@ -55,7 +55,9 @@ Every independently invocable skill that consumes profiles or transcripts reads 
 
 ### Invocation metadata
 
-Portable `disable-model-invocation: true` is preserved for explicit-only skills. `agents/openai.yaml` mirrors that policy for hosts that read the sidecar. See [invocation metadata](docs/agents/invocation.md).
+Invocation has two portable states. Human-only root skills keep `disable-model-invocation: true`; `agents/openai.yaml` mirrors that policy with `allow_implicit_invocation: false`. Skills called through the Skill tool omit both restrictions because a model-disabled skill cannot be an internal callee in Claude Code or Codex. A human-only prerequisite is phrased as an instruction for the user to run the skill, not as a Skill-tool call. See [invocation metadata](docs/agents/invocation.md).
+
+The portability audit treats Skill-tool calls as invocation-graph edges and rejects any edge whose target is model-disabled. This preserves explicit-only roots without pretending either host supports a third state for internal-only invocation.
 
 The currently bundled Skill Creator validator rejects that portable frontmatter key. This is a validator mismatch, not a reason to remove invocation metadata. The dstack portability audit checks the cross-host declarations together.
 

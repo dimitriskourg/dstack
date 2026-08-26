@@ -6,26 +6,16 @@ Static validation is not live-host proof. When an item changes runtime behavior,
 
 ## P0: Blocking orchestration failures
 
-### [ ] 1. Make skill-to-skill invocation compatible with Claude Code
+### [ ] 1. Prove nested skill calls in live Claude Code and Codex
 
-**Failure:** Forty skills declare `disable-model-invocation: true`. Claude Code treats that as user-only invocation and blocks the model from calling the skill, even when another loaded skill explicitly says `Call the Skill tool with \`skill-name\`.`
+**Resolved design:** Invocation has two portable states. Human-only root skills declare `disable-model-invocation: true` and mirror it with `policy.allow_implicit_invocation: false`. Any skill used as an internal callee omits both restrictions. Neither host provides a portable third state for a skill that is hidden from autonomous selection but callable by another skill.
 
-This breaks routes such as:
+**Implemented:** Internal callees such as `architect`, `arena`, `interrogate`, `swarm`, `show-me-your-work`, `figure-it-out`, `no-comments`, and `technical-writing` are model-invokable in both host declarations. `setup-dstack` remains human-only; config-dependent skills tell the user to invoke it explicitly instead of attempting a Skill-tool call. `scripts/audit_portability.py` now rejects a model-disabled target on any `Call the Skill tool with ...` edge, with unit coverage for both forbidden internal calls and valid human-only guidance.
 
-- `architect` -> `arena` and `interrogate`;
-- `dstack-mode` -> `architect`, `arena`, `swarm`, `show-me-your-work`, and other explicit-only workflows;
-- `figure-it-out` -> `architect` and `show-me-your-work`;
-- PR playbooks -> `interrogate`, `no-comments`, `show-me-your-work`, and `swarm`.
-
-**Affected areas:** Frontmatter and `agents/openai.yaml` sidecars across `skills/`, plus the invocation-policy audit in `scripts/audit_portability.py`.
-
-**Decision needed:** Distinguish skills that must be user-only entrypoints from skills that are valid internal callees. Preserve explicit-only invocation only where blocking model invocation is genuinely required.
+**Remaining risk:** These changes establish the static invocation graph only. Skill discovery and nested execution still require live-host proof.
 
 **Done when:**
 
-- every `Call the Skill tool with ...` edge targets a skill the model is permitted to invoke in Claude Code and Codex;
-- explicit-only root workflows remain protected where intended;
-- the portability audit detects a model-disabled skill used as an internal callee;
 - representative nested calls succeed in live Claude Code and Codex sessions.
 
 Reference: [Claude Code skill invocation](https://code.claude.com/docs/en/slash-commands#control-who-invokes-a-skill).
@@ -237,9 +227,9 @@ Reference: [Claude Code personal skill locations](https://code.claude.com/docs/e
 Baseline observed on 2026-08-26:
 
 - `python3 scripts/audit_portability.py`: 0 errors;
-- `python3 -m unittest discover -s tests -v`: 54 tests passed;
+- `python3 -m unittest discover -s tests -v`: 56 tests passed;
 - `python3 -m json.tool schemas/config.schema.json`: passed;
-- Skill Creator `quick_validate.py`: 8 valid, 40 rejected only because the bundled validator does not recognize `disable-model-invocation`.
+- Skill Creator `quick_validate.py`: 18 valid, 30 rejected only because the bundled validator does not recognize `disable-model-invocation`.
 
 These results prove repository structure and static contracts only. They do not prove skill discovery, cross-skill invocation, model/effort enforcement, transcript isolation, worktree isolation, bounded fan-out, wake persistence, or end-to-end behavior in Codex or Claude Code.
 
@@ -247,11 +237,10 @@ These results prove repository structure and static contracts only. They do not 
 
 Work in this order to avoid validating behavior on top of broken foundations:
 
-1. Skill-to-skill invocation policy.
+1. Live Claude Code and Codex proof for the resolved skill-to-skill invocation policy.
 2. Workspace-keyed transcript storage.
 3. Canonical harness IDs.
 4. Claude and Codex model/effort application.
 5. Bounded fan-out and explicit worktree isolation.
 6. Conditional runtime playbooks.
 7. Installation and smaller configuration/documentation inconsistencies.
-

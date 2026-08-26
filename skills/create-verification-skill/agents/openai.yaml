@@ -1,5 +1,3 @@
 interface:
   display_name: "Create Verification Skill"
   short_description: "Generate a verification skill for this app"
-policy:
-  allow_implicit_invocation: false

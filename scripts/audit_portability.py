@@ -153,7 +153,7 @@ def check_skill(skill_dir: Path) -> List[Finding]:
             findings.append(Finding(relative(skill_file), "config-dependent skill must name the fixed config path"))
         if "hosts[<active-harness>]" not in body:
             findings.append(Finding(relative(skill_file), "config-dependent skill must select the active harness entry directly"))
-        if "stop and name the exact problem" not in body or "Call the Skill tool with `setup-dstack`." not in body:
+        if "stop and name the exact problem" not in body or "Tell the user to invoke `setup-dstack` explicitly." not in body:
             findings.append(Finding(relative(skill_file), "config-dependent skill must fail closed with setup-dstack guidance"))
         if skill_dir.name not in {"automate-me", "recall"} and "concrete model and effort pair" not in body:
             findings.append(Finding(relative(skill_file), "profile-consuming skill must require a concrete model and effort pair"))
@@ -240,6 +240,36 @@ def check_structure() -> List[Finding]:
     return findings
 
 
+def check_invocation_targets(skill_dirs: Iterable[Path]) -> List[Finding]:
+    skill_dirs = list(skill_dirs)
+    model_disabled: Set[str] = set()
+    for skill_dir in skill_dirs:
+        skill_file = skill_dir / "SKILL.md"
+        if not skill_file.is_file():
+            continue
+        try:
+            fields, _ = parse_frontmatter(skill_file)
+        except ValueError:
+            continue
+        if fields.get("disable-model-invocation") == "true":
+            model_disabled.add(skill_dir.name)
+
+    findings: List[Finding] = []
+    for skill_dir in skill_dirs:
+        for path in sorted(skill_dir.rglob("*")):
+            if not path.is_file() or path.suffix.lower() not in {".md", ".txt", ".json", ".py", ".sh", ".ts", ".js"}:
+                continue
+            for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                for target in SKILL_CALL.findall(line):
+                    if target in model_disabled:
+                        findings.append(Finding(
+                            relative(path),
+                            "model-disabled skill {!r} cannot be used as an internal callee".format(target),
+                            line_number,
+                        ))
+    return findings
+
+
 def run(skills_root: Path = SKILLS, include_structure: bool = True) -> List[Finding]:
     if not skills_root.is_dir():
         return [Finding(relative(skills_root), "skills directory is missing")]
@@ -253,6 +283,7 @@ def run(skills_root: Path = SKILLS, include_structure: bool = True) -> List[Find
             findings.append(Finding("skills/{}".format(alias), "legacy alias is forbidden"))
     for skill_dir in skill_dirs:
         findings.extend(check_skill(skill_dir))
+    findings.extend(check_invocation_targets(skill_dirs))
     if include_structure:
         findings.extend(check_structure())
     return findings

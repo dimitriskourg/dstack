@@ -1,7 +1,6 @@
 ---
 name: show-me-your-work
 description: "Keep a reviewable decision trail for long-running or unattended work: a TSV log with one row per decision (what, why, evidence, result). Local by default; commit it when a reviewer needs the trail to trust the result. Use for /show-me-your-work, autonomous or multi-phase runs, or work a human reviews after stepping away."
-disable-model-invocation: true
 ---
 
 # Show me your work
@@ -10,7 +9,7 @@ For work a human reviews after the fact, a decision trail lets them reconstruct 
 
 ## Configuration
 
-Before locating the transcript or using a profile, read `~/.dstack/config.json` and select `hosts[<active-harness>]` using the lowercase identity of the active harness. This location and host selection rule are fixed; do not use an environment override or another host entry. If the file is missing, unreadable, or invalid, the active harness cannot be identified, its host entry is absent, or a required profile is missing or listed in `invalid_bindings`, stop and name the exact problem. Tell the user: Call the Skill tool with `setup-dstack`. Every profile must provide a concrete model and effort pair; do not guess, omit, or inherit a binding.
+Before locating the transcript or using a profile, read `~/.dstack/config.json` and select `hosts[<active-harness>]` using the lowercase identity of the active harness. This location and host selection rule are fixed; do not use an environment override or another host entry. If the file is missing, unreadable, or invalid, the active harness cannot be identified, its host entry is absent, or a required profile is missing or listed in `invalid_bindings`, stop and name the exact problem. Tell the user to invoke `setup-dstack` explicitly. Every profile must provide a concrete model and effort pair; do not guess, omit, or inherit a binding.
 
 ## The format
 

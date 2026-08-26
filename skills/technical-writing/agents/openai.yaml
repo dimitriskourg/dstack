@@ -1,5 +1,3 @@
 interface:
   display_name: "Technical Writing"
   short_description: "Diataxis, Google style, Global English"
-policy:
-  allow_implicit_invocation: false
