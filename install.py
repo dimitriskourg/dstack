@@ -21,6 +21,7 @@ except ImportError:  # pragma: no cover - exercised on Windows only
 
 
 SOURCE_ROOT = Path(__file__).resolve().parent
+DSTACK_DIRECTORY = Path("~/.dstack").expanduser()
 SUPPORT_DIRECTORIES = ("schemas",)
 SUPPORT_FILES = ("LICENSE", "NOTICE.md")
 # stat exposes this only on Windows builds; the tag value itself is stable.
@@ -292,7 +293,6 @@ def resolve_path(value: str) -> Path:
 
 
 def parser() -> argparse.ArgumentParser:
-    default_dstack_home = os.environ.get("DSTACK_HOME", "~/.dstack")
     result = argparse.ArgumentParser(
         description="Install dstack without overwriting existing files."
     )
@@ -318,12 +318,6 @@ def parser() -> argparse.ArgumentParser:
         help="canonical skill destination (default: ~/.agents/skills)",
     )
     result.add_argument(
-        "--dstack-home",
-        default=default_dstack_home,
-        metavar="PATH",
-        help="support-file destination (default: DSTACK_HOME or ~/.dstack)",
-    )
-    result.add_argument(
         "--claude-skills-dir",
         default="~/.claude/skills",
         metavar="PATH",
@@ -338,14 +332,14 @@ def run(arguments: Sequence[str]) -> int:
         operations = build_operations(
             source_root=SOURCE_ROOT,
             skills_directory=resolve_path(options.skills_dir),
-            dstack_home=resolve_path(options.dstack_home),
+            dstack_home=DSTACK_DIRECTORY.resolve(),
             claude_skills_directory=resolve_path(options.claude_skills_dir),
             with_claude_links=options.with_claude_links,
         )
         if options.update:
             update_roots = (
                 resolve_path(options.skills_dir),
-                resolve_path(options.dstack_home),
+                DSTACK_DIRECTORY.resolve(),
             )
             issues = [
                 "expected existing update root: {}".format(root)

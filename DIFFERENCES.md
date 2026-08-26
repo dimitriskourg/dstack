@@ -39,7 +39,7 @@ The separate general `orchestrate` plugin is not copied. Pstack's Orchestrate ro
 
 ### Configuration
 
-`DSTACK_HOME/config.json` is the only personal configuration. It keeps independent entries by lowercase harness id. Each entry contains:
+`~/.dstack/config.json` is the only personal configuration. Its location is fixed: there is no environment or command-line override. It keeps independent entries by lowercase harness id. Each entry contains:
 
 - four model-and-effort profiles;
 - invalid model-and-effort bindings;
@@ -47,7 +47,11 @@ The separate general `orchestrate` plugin is not copied. Pstack's Orchestrate ro
 
 The four profiles are `fast-explorer`, `feature-worker`, `bug-worker`, and `skeptical-reviewer`. Panel configuration and the former judgment-only profiles were removed.
 
+Every profile requires a concrete model and effort pair. Parent inheritance and automatic model aliases are invalid. If the active harness rejects a configured pair, the consuming skill stops instead of omitting the model selection.
+
 `setup-dstack` searches for and confirms the active workspace transcript directory once. Transcript-backed skills read the saved path and do not rediscover it on every invocation.
+
+Every independently invocable skill that consumes profiles or transcripts reads the fixed file itself and selects the entry keyed by the lowercase identity of the active harness. There is no host override. A missing or invalid file, unidentified harness, missing host entry, missing required profile, or invalid configured binding stops the skill with an explicit `setup-dstack` instruction.
 
 ### Invocation metadata
 

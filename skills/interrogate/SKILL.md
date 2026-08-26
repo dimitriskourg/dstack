@@ -10,6 +10,10 @@ Spawn one reviewer per configured model to adversarially review code changes. Ea
 
 The deliverable is a synthesized verdict. Do NOT auto-apply changes.
 
+## Configuration
+
+Before using a profile, read `~/.dstack/config.json` and select `hosts[<active-harness>]` using the lowercase identity of the active harness. This location and host selection rule are fixed; do not use an environment override or another host entry. If the file is missing, unreadable, or invalid, the active harness cannot be identified, its host entry is absent, or a required profile is missing or listed in `invalid_bindings`, stop and name the exact problem. Tell the user: Call the Skill tool with `setup-dstack`. Every profile must provide a concrete model and effort pair; do not guess, omit, or inherit a binding.
+
 ## Step 1, Determine Scope
 
 Identify what to review from context:
@@ -39,7 +43,7 @@ For each reviewer:
 - helper: a general-purpose subagent, read-only
 - model: a distinct `skeptical-reviewer` binding from your profile
 
-When your profile offers fewer distinct bindings than reviewers, spawn the remainder without a model override and say so. A role bound to `inherit-parent` means use the parent model; that is not a failure and does not block the review.
+When there are fewer distinct configured bindings than reviewers, reuse concrete profiles and disclose the reduced model diversity. Never spawn a reviewer without its configured model and effort pair.
 
 Read `references/reviewer-prompt.md` and fill in the template with:
 1. The stated intent

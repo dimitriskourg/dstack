@@ -3,13 +3,15 @@
   "$id": "https://dstack.local/schemas/config.schema.json",
   "title": "dstack personal configuration",
   "type": "object",
-  "required": ["schema_version", "host_override", "hosts"],
+  "required": ["schema_version", "hosts"],
   "properties": {
     "schema_version": { "const": 2 },
-    "host_override": { "type": "string", "pattern": "^(auto|[a-z][a-z0-9-]*)$" },
     "hosts": {
       "type": "object",
-      "propertyNames": { "pattern": "^[a-z][a-z0-9-]*$" },
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9-]*$",
+        "not": { "const": "auto" }
+      },
       "additionalProperties": {
         "type": "object",
         "required": ["profiles", "invalid_bindings", "transcripts_directory"],
@@ -33,7 +35,11 @@
     }
   },
   "$defs": {
-    "modelIdentifier": { "type": "string", "pattern": "^\\S+$" },
+    "modelIdentifier": {
+      "type": "string",
+      "pattern": "^\\S+$",
+      "not": { "enum": ["inherit-parent", "auto"] }
+    },
     "modelBinding": {
       "type": "object",
       "required": ["model", "effort"],
@@ -41,11 +47,7 @@
         "model": { "$ref": "#/$defs/modelIdentifier" },
         "effort": { "$ref": "#/$defs/modelIdentifier" }
       },
-      "additionalProperties": false,
-      "allOf": [{
-        "if": { "properties": { "model": { "const": "inherit-parent" } }, "required": ["model"] },
-        "then": { "properties": { "effort": { "const": "inherit-parent" } } }
-      }]
+      "additionalProperties": false
     }
   },
   "additionalProperties": false

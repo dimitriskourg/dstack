@@ -15,8 +15,10 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 
 SCHEMA_VERSION = 2
+CONFIG_PATH = Path("~/.dstack/config.json").expanduser()
 PROFILES = ("fast-explorer", "feature-worker", "bug-worker", "skeptical-reviewer")
-HOST_PATTERN = re.compile(r"^(?:auto|[a-z][a-z0-9-]*)$")
+RESERVED_BINDING_VALUES = {"auto", "inherit-parent"}
+HOST_PATTERN = re.compile(r"^[a-z][a-z0-9-]*$")
 
 
 class ConfigError(Exception):
@@ -24,7 +26,7 @@ class ConfigError(Exception):
 
 
 def default_config() -> Dict[str, Any]:
-    return {"schema_version": SCHEMA_VERSION, "host_override": "auto", "hosts": {}}
+    return {"schema_version": SCHEMA_VERSION, "hosts": {}}
 
 
 def require_object(value: Any, location: str) -> Mapping[str, Any]:
@@ -50,23 +52,27 @@ def require_identifier(value: Any, location: str) -> str:
     return value
 
 
-def validate_host(value: Any, location: str, allow_auto: bool = False) -> str:
+def validate_host(value: Any, location: str) -> str:
     host = require_identifier(value, location)
-    if not HOST_PATTERN.fullmatch(host) or (host == "auto" and not allow_auto):
-        expected = "auto or a lowercase host id" if allow_auto else "a lowercase host id"
-        raise ConfigError("{} must be {}".format(location, expected))
+    if not HOST_PATTERN.fullmatch(host) or host == "auto":
+        raise ConfigError("{} must be a lowercase host id".format(location))
     return host
 
 
 def validate_binding(value: Any, location: str) -> Dict[str, str]:
     binding = require_object(value, location)
     require_exact_keys(binding, ("model", "effort"), (), location)
-    checked = {
+    checked: Dict[str, str] = {
         "model": require_identifier(binding["model"], "{}.model".format(location)),
         "effort": require_identifier(binding["effort"], "{}.effort".format(location)),
     }
-    if checked["model"] == "inherit-parent" and checked["effort"] != "inherit-parent":
-        raise ConfigError("{}.effort must be inherit-parent when model is inherit-parent".format(location))
+    for field in ("model", "effort"):
+        if checked[field] in RESERVED_BINDING_VALUES:
+            raise ConfigError(
+                "{}.{} must be a concrete value; auto and inherit-parent are not supported".format(
+                    location, field
+                )
+            )
     return checked
 
 
@@ -99,7 +105,7 @@ def validate_transcripts_directory(value: Any, location: str) -> Optional[str]:
 
 def validate_config(value: Any) -> Dict[str, Any]:
     config = require_object(value, "config")
-    require_exact_keys(config, ("schema_version", "host_override", "hosts"), (), "config")
+    require_exact_keys(config, ("schema_version", "hosts"), (), "config")
     if config["schema_version"] != SCHEMA_VERSION or isinstance(config["schema_version"], bool):
         raise ConfigError("config.schema_version must be {}; found {}".format(SCHEMA_VERSION, config["schema_version"]))
     hosts = require_object(config["hosts"], "config.hosts")
@@ -116,7 +122,6 @@ def validate_config(value: Any) -> Dict[str, Any]:
         }
     return {
         "schema_version": SCHEMA_VERSION,
-        "host_override": validate_host(config["host_override"], "config.host_override", allow_auto=True),
         "hosts": checked_hosts,
     }
 
@@ -126,7 +131,7 @@ def validate_proposal(value: Any) -> Dict[str, Any]:
     require_exact_keys(
         proposal,
         ("host", "profiles", "invalid_bindings", "transcripts_directory"),
-        ("host_override",),
+        (),
         "proposal",
     )
     checked = {
@@ -135,8 +140,6 @@ def validate_proposal(value: Any) -> Dict[str, Any]:
         "invalid_bindings": validate_invalid_bindings(proposal["invalid_bindings"], "proposal.invalid_bindings"),
         "transcripts_directory": validate_transcripts_directory(proposal["transcripts_directory"], "proposal.transcripts_directory"),
     }
-    if "host_override" in proposal:
-        checked["host_override"] = validate_host(proposal["host_override"], "proposal.host_override", allow_auto=True)
     return checked
 
 
@@ -165,8 +168,6 @@ def merge_proposal(config: Mapping[str, Any], proposal: Mapping[str, Any]) -> Di
         "invalid_bindings": copy.deepcopy(proposal["invalid_bindings"]),
         "transcripts_directory": proposal["transcripts_directory"],
     }
-    if "host_override" in proposal:
-        merged["host_override"] = proposal["host_override"]
     return validate_config(merged)
 
 
@@ -189,15 +190,8 @@ def write_atomic(path: Path, config: Mapping[str, Any]) -> None:
         raise
 
 
-def config_path(value: Optional[str]) -> Path:
-    if value:
-        return Path(value).expanduser().resolve()
-    return (Path(os.environ.get("DSTACK_HOME", "~/.dstack")).expanduser() / "config.json").resolve()
-
-
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(description="Manage dstack configuration.")
-    result.add_argument("--config", metavar="PATH")
     commands = result.add_subparsers(dest="command", required=True)
     commands.add_parser("show")
     commands.add_parser("validate")
@@ -208,7 +202,7 @@ def parser() -> argparse.ArgumentParser:
 
 def run(arguments: Sequence[str]) -> int:
     options = parser().parse_args(arguments)
-    path = config_path(options.config)
+    path = CONFIG_PATH.resolve()
     try:
         config = default_config() if not path.exists() else validate_config(read_json(path, str(path)))
         if options.command == "show":

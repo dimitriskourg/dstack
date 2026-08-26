@@ -37,20 +37,21 @@ class ConfiguratorTests(unittest.TestCase):
     def write_json(self, path: Path, value):
         path.write_text(json.dumps(value), encoding="utf-8")
 
-    def run_configurator(self, arguments):
+    def run_configurator(self, arguments, config: Path):
         stdout = io.StringIO()
         stderr = io.StringIO()
-        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
-            status = CONFIGURE.run(arguments)
+        with mock.patch.object(CONFIGURE, "CONFIG_PATH", config):
+            with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                status = CONFIGURE.run(arguments)
         return status, stdout.getvalue(), stderr.getvalue()
 
     def apply(self, config: Path, proposal: Path):
-        return self.run_configurator(["--config", str(config), "apply", "--proposal", str(proposal)])
+        return self.run_configurator(["apply", "--proposal", str(proposal)], config)
 
     def test_show_uses_implicit_defaults_without_writing(self):
         with tempfile.TemporaryDirectory() as temporary:
             config = Path(temporary) / "config.json"
-            status, stdout, stderr = self.run_configurator(["--config", str(config), "show"])
+            status, stdout, stderr = self.run_configurator(["show"], config)
             self.assertEqual(0, status)
             self.assertEqual("", stderr)
             self.assertEqual(CONFIGURE.default_config(), json.loads(stdout))
@@ -70,7 +71,7 @@ class ConfiguratorTests(unittest.TestCase):
             self.assertEqual(self.profiles("alpha"), saved["hosts"]["host-a"]["profiles"])
             self.assertEqual("/tmp/b-transcripts", saved["hosts"]["host-b"]["transcripts_directory"])
 
-    def test_update_preserves_other_host_and_sets_override(self):
+    def test_update_preserves_other_host(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             config = root / "config.json"
@@ -82,7 +83,6 @@ class ConfiguratorTests(unittest.TestCase):
             self.apply(config, first)
             self.apply(config, second)
             changed = self.proposal("host-a", "new", None)
-            changed["host_override"] = "host-a"
             self.write_json(update, changed)
             status, _, stderr = self.apply(config, update)
             self.assertEqual(0, status)
@@ -90,7 +90,31 @@ class ConfiguratorTests(unittest.TestCase):
             saved = json.loads(config.read_text(encoding="utf-8"))
             self.assertEqual(self.profiles("stable"), saved["hosts"]["host-b"]["profiles"])
             self.assertIsNone(saved["hosts"]["host-a"]["transcripts_directory"])
-            self.assertEqual("host-a", saved["host_override"])
+            self.assertNotIn("host_override", saved)
+
+    def test_host_override_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = root / "config.json"
+            proposal = root / "proposal.json"
+            invalid = self.proposal("host-a", "candidate")
+            invalid["host_override"] = "host-b"
+            self.write_json(proposal, invalid)
+            status, _, stderr = self.apply(config, proposal)
+            self.assertEqual(2, status)
+            self.assertIn("proposal has unknown keys: host_override", stderr)
+            self.assertFalse(config.exists())
+
+    def test_auto_is_not_a_host_id(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = root / "config.json"
+            proposal = root / "proposal.json"
+            self.write_json(proposal, self.proposal("auto", "candidate"))
+            status, _, stderr = self.apply(config, proposal)
+            self.assertEqual(2, status)
+            self.assertIn("proposal.host must be a lowercase host id", stderr)
+            self.assertFalse(config.exists())
 
     def test_invalid_proposal_leaves_existing_config_unchanged(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -120,18 +144,20 @@ class ConfiguratorTests(unittest.TestCase):
             self.assertIn("must be an absolute path or null", stderr)
             self.assertFalse(config.exists())
 
-    def test_inherit_parent_model_rejects_concrete_effort(self):
+    def test_reserved_binding_aliases_are_rejected(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            config = root / "config.json"
-            proposal = root / "proposal.json"
-            invalid = self.proposal("host-a", "candidate")
-            invalid["profiles"]["fast-explorer"] = {"model": "inherit-parent", "effort": "xhigh"}
-            self.write_json(proposal, invalid)
-            status, _, stderr = self.apply(config, proposal)
-            self.assertEqual(2, status)
-            self.assertIn("effort must be inherit-parent", stderr)
-            self.assertFalse(config.exists())
+            for field, value in (("model", "inherit-parent"), ("model", "auto"), ("effort", "inherit-parent"), ("effort", "auto")):
+                with self.subTest(field=field, value=value):
+                    config = root / "{}.{}.config.json".format(field, value)
+                    proposal = root / "{}.{}.proposal.json".format(field, value)
+                    invalid = self.proposal("host-a", "candidate")
+                    invalid["profiles"]["fast-explorer"][field] = value
+                    self.write_json(proposal, invalid)
+                    status, _, stderr = self.apply(config, proposal)
+                    self.assertEqual(2, status)
+                    self.assertIn("must be a concrete value", stderr)
+                    self.assertFalse(config.exists())
 
     def test_schema_version_stays_two_and_unsupported_version_is_preserved(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -155,7 +181,9 @@ class ConfiguratorTests(unittest.TestCase):
             original = CONFIGURE.default_config()
             self.write_json(config, original)
             changed = CONFIGURE.default_config()
-            changed["host_override"] = "host-a"
+            entry = self.proposal("host-a", "changed")
+            entry.pop("host")
+            changed["hosts"]["host-a"] = entry
             with mock.patch.object(CONFIGURE.os, "replace", side_effect=OSError("blocked")):
                 with self.assertRaisesRegex(OSError, "blocked"):
                     CONFIGURE.write_atomic(config, changed)

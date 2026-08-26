@@ -6,17 +6,17 @@ disable-model-invocation: true
 
 # Setup dstack
 
-Read and write only `DSTACK_HOME/config.json`, defaulting `DSTACK_HOME` to `~/.dstack`. Use `scripts/configure.py` for validation and atomic writes. Do not create host rule files or edit installed skills.
+Read and write only `~/.dstack/config.json`. This location is fixed; do not honor an environment override or accept another path. Use `scripts/configure.py` for validation and atomic writes. Do not create host rule files or edit installed skills.
 
 ## 1. Identify the host
 
-Use the current system identity and tool surface to choose a lowercase host id. Set a persistent `host_override` only when the user asks. Otherwise retain `auto`.
+Use the current system identity and tool surface to choose the lowercase id of the active harness. This id is always the configuration key; there is no override. If the active harness cannot be identified, stop and report that setup cannot safely choose a host entry.
 
 ## 2. Discover models
 
 Use a trustworthy catalog exposed by the active host. Preserve exact model identifiers and the effort levels reported for each model. Never infer a slug or supported effort from a display name, example, another host, or memory.
 
-When no catalog is available, preserve existing bindings, accept exact values supplied by the user without claiming validation, and use `inherit-parent` for unknowns.
+When no catalog is available, preserve existing concrete bindings. For any unconfigured profile, ask the user for an exact model and effort pair without claiming validation. Do not write until all four profiles have concrete values.
 
 The four profiles are:
 
@@ -25,7 +25,7 @@ The four profiles are:
 - `bug-worker`
 - `skeptical-reviewer`
 
-`{"model": "inherit-parent", "effort": "inherit-parent"}` is always valid.
+`auto`, `inherit-parent`, an omitted model, and an omitted effort are invalid profile values.
 
 ## 3. Find the transcript directory
 
@@ -35,9 +35,9 @@ If no scoped directory can be confirmed, store `null` and say transcript-backed 
 
 ## 4. Reconcile and confirm
 
-Run the configurator's `show` command. Preserve other hosts. For the active host, preserve model-effort pairs still present in the catalog, list unavailable pairs in `invalid_bindings`, and remove pairs that become valid again.
+Run the configurator's `show` command. Preserve other hosts. For the active host, preserve model-effort pairs still present in the catalog. Put unavailable former pairs in `invalid_bindings`, require a concrete replacement for every affected profile, and remove pairs that become valid again. Never write a profile binding rejected by the available catalog.
 
-Show the current and proposed value for all four profiles, the transcript directory, invalid bindings, catalog status, and host override. Ask only about actual preferences. Do not write before the user confirms.
+Show the current and proposed value for all four profiles, the transcript directory, invalid bindings, catalog status, and active harness id. Ask only about actual preferences. Do not write before the user confirms.
 
 ## 5. Apply
 
@@ -47,17 +47,15 @@ Create a temporary proposal with this exact shape:
 {
   "host": "<active-host>",
   "profiles": {
-    "fast-explorer": {"model": "inherit-parent", "effort": "inherit-parent"},
-    "feature-worker": {"model": "inherit-parent", "effort": "inherit-parent"},
-    "bug-worker": {"model": "inherit-parent", "effort": "inherit-parent"},
-    "skeptical-reviewer": {"model": "inherit-parent", "effort": "inherit-parent"}
+    "fast-explorer": {"model": "<model-id>", "effort": "<effort>"},
+    "feature-worker": {"model": "<model-id>", "effort": "<effort>"},
+    "bug-worker": {"model": "<model-id>", "effort": "<effort>"},
+    "skeptical-reviewer": {"model": "<model-id>", "effort": "<effort>"}
   },
   "invalid_bindings": [],
   "transcripts_directory": null
 }
 ```
-
-Include `host_override` only when the user explicitly changes it. Run:
 
 ```text
 python3 <setup-dstack-dir>/scripts/configure.py apply --proposal <temporary-json>

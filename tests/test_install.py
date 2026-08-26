@@ -43,7 +43,9 @@ class InstallerTests(unittest.TestCase):
     def run_installer(self, source: Path, arguments):
         stdout = io.StringIO()
         stderr = io.StringIO()
-        with mock.patch.object(INSTALL, "SOURCE_ROOT", source):
+        with mock.patch.object(INSTALL, "SOURCE_ROOT", source), mock.patch.object(
+            INSTALL, "DSTACK_DIRECTORY", source.parent / "dstack-home"
+        ):
             with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
                 status = INSTALL.run(arguments)
         return status, stdout.getvalue(), stderr.getvalue()
@@ -52,8 +54,6 @@ class InstallerTests(unittest.TestCase):
         return [
             "--skills-dir",
             str(root / "agents" / "skills"),
-            "--dstack-home",
-            str(root / "dstack-home"),
             "--claude-skills-dir",
             str(root / "claude" / "skills"),
         ]
@@ -75,6 +75,14 @@ class InstallerTests(unittest.TestCase):
             self.assertFalse((root / "agents").exists())
             self.assertFalse((root / "dstack-home").exists())
             self.assertFalse((root / "claude").exists())
+
+    def test_dstack_home_override_is_not_accepted(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = self.make_source(root)
+            with self.assertRaises(SystemExit) as raised:
+                self.run_installer(source, ["--dstack-home", str(root / "elsewhere")])
+            self.assertEqual(2, raised.exception.code)
 
     def test_install_copies_skills_and_support_files_and_creates_requested_links(self):
         with tempfile.TemporaryDirectory() as temporary:

@@ -12,7 +12,11 @@ Two modes:
 1. **Explain** (default). Explore the codebase and produce a clear explanation
 2. **Critique.** Explain first, then spawn multiple models to independently identify architectural issues
 
-Helpers below are read-only. If your host cannot enforce that, instruct the helper not to write and don't describe the boundary as enforced. Profiles resolve through your configuration; a profile bound to `inherit-parent` means use the parent model.
+## Configuration
+
+Before using a profile, read `~/.dstack/config.json` and select `hosts[<active-harness>]` using the lowercase identity of the active harness. This location and host selection rule are fixed; do not use an environment override or another host entry. If the file is missing, unreadable, or invalid, the active harness cannot be identified, its host entry is absent, or a required profile is missing or listed in `invalid_bindings`, stop and name the exact problem. Tell the user: Call the Skill tool with `setup-dstack`. Every profile must provide a concrete model and effort pair; do not guess, omit, or inherit a binding.
+
+Helpers below are read-only. If your host cannot enforce that, instruct the helper not to write and don't describe the boundary as enforced. Profiles resolve through your configuration and always name a concrete model and effort pair.
 
 Spawn helpers with the active harness's native subagent tool. Every supported harness can spawn subagents. If a nested spawn is denied, the current agent performs that pass directly.
 

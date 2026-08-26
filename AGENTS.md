@@ -9,7 +9,8 @@ This project is under development. Keep schema version 2 unless the user explici
 - Use this exact instruction whenever one skill invokes another: Call the Skill tool with `skill-name`.
 - Spawn subagents with the active harness's native subagent tool. If a nested spawn is denied, complete the pass in the current agent and disclose the degradation.
 - Keep only the four profiles documented in `DIFFERENCES.md`.
-- Use the configured workspace-scoped transcript directory from `DSTACK_HOME/config.json`; do not search again from each skill.
+- Every profile must contain a concrete model and effort pair. Parent-model inheritance and automatic model aliases are not configuration options.
+- Read profiles and the workspace-scoped transcript directory only from `~/.dstack/config.json`. The location is fixed. Config-dependent skills stop when it or the active host entry is unavailable.
 - Do not recreate adapters, capability files, or provider-specific rules.
 - Do not infer live-host proof from static validation.
 

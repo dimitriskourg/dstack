@@ -15,6 +15,10 @@ from typing import Dict, Iterable, List, Optional, Set, Tuple
 ROOT = Path(__file__).resolve().parents[1]
 SKILLS = ROOT / "skills"
 PROFILES = {"fast-explorer", "feature-worker", "bug-worker", "skeptical-reviewer"}
+CONFIG_DEPENDENT_SKILLS = {
+    "architect", "arena", "automate-me", "dstack-mode", "how", "interrogate",
+    "recall", "reflect", "show-me-your-work", "swarm", "why",
+}
 REQUIRED_SKILLS = {
     "architect", "arena", "automate-me", "blast-radius", "bro", "comment-sicko",
     "control-cli", "control-ui", "create-verification-skill", "deslop", "dstack-mode",
@@ -41,6 +45,8 @@ LEAKAGE_PATTERNS: Tuple[Tuple[str, re.Pattern[str]], ...] = (
     ("concrete model slug", re.compile(r"\b(?:gpt-\d|grok-|claude-(?:opus|sonnet|haiku|fable))", re.I)),
     ("private transcript layout", re.compile(r"\bagent-transcripts\b|Application Support/Cursor", re.I)),
     ("legacy brand", re.compile(r"\b(?:pstack|ystack|poteto(?:-mode)?)\b", re.I)),
+    ("config path override", re.compile(r"\bDSTACK_HOME\b|--dstack-home")),
+    ("host selection override", re.compile(r"\bhost_override\b")),
 )
 REQUIRED_FRONTMATTER = {"name", "description"}
 OPTIONAL_FRONTMATTER = {"disable-model-invocation"}
@@ -142,6 +148,15 @@ def check_skill(skill_dir: Path) -> List[Finding]:
         findings.append(Finding(relative(skill_file), "frontmatter name must match the skill directory"))
     if fields.get("disable-model-invocation") not in {None, "true"}:
         findings.append(Finding(relative(skill_file), "disable-model-invocation must be true or omitted"))
+    if skill_dir.name in CONFIG_DEPENDENT_SKILLS:
+        if "~/.dstack/config.json" not in body:
+            findings.append(Finding(relative(skill_file), "config-dependent skill must name the fixed config path"))
+        if "hosts[<active-harness>]" not in body:
+            findings.append(Finding(relative(skill_file), "config-dependent skill must select the active harness entry directly"))
+        if "stop and name the exact problem" not in body or "Call the Skill tool with `setup-dstack`." not in body:
+            findings.append(Finding(relative(skill_file), "config-dependent skill must fail closed with setup-dstack guidance"))
+        if skill_dir.name not in {"automate-me", "recall"} and "concrete model and effort pair" not in body:
+            findings.append(Finding(relative(skill_file), "profile-consuming skill must require a concrete model and effort pair"))
     findings.extend(check_sidecar(skill_dir, "disable-model-invocation" in fields))
 
     package_texts: List[Tuple[Path, str]] = []
@@ -214,9 +229,14 @@ def check_structure() -> List[Finding]:
         return findings + [Finding(relative(schema), "invalid JSON schema: {}".format(error))]
     if value.get("$schema") != "https://json-schema.org/draft/2020-12/schema":
         findings.append(Finding(relative(schema), "schema must use JSON Schema draft 2020-12"))
+    if set(value.get("required", [])) != {"schema_version", "hosts"} or set(value.get("properties", {})) != {"schema_version", "hosts"}:
+        findings.append(Finding(relative(schema), "config root must contain only schema_version and hosts"))
     profile_properties = value.get("properties", {}).get("hosts", {}).get("additionalProperties", {}).get("properties", {}).get("profiles", {}).get("properties", {})
     if set(profile_properties) != PROFILES:
         findings.append(Finding(relative(schema), "config must define exactly the four supported profiles"))
+    reserved = value.get("$defs", {}).get("modelIdentifier", {}).get("not", {}).get("enum", [])
+    if set(reserved) != {"auto", "inherit-parent"}:
+        findings.append(Finding(relative(schema), "config must reject automatic and parent-inheritance binding aliases"))
     return findings
 
 

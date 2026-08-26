@@ -8,6 +8,10 @@ disable-model-invocation: true
 
 For work a human reviews after the fact, a decision trail lets them reconstruct what was decided, why, and on what evidence, without rerunning the work or reading the whole transcript. Keep one canonical log so the trail is consistent and a future agent can find it.
 
+## Configuration
+
+Before locating the transcript or using a profile, read `~/.dstack/config.json` and select `hosts[<active-harness>]` using the lowercase identity of the active harness. This location and host selection rule are fixed; do not use an environment override or another host entry. If the file is missing, unreadable, or invalid, the active harness cannot be identified, its host entry is absent, or a required profile is missing or listed in `invalid_bindings`, stop and name the exact problem. Tell the user: Call the Skill tool with `setup-dstack`. Every profile must provide a concrete model and effort pair; do not guess, omit, or inherit a binding.
+
 ## The format
 
 A single TSV file, one row per decision. TSV because GitHub renders it as a sortable table, `column -s$'\t' -t` and spreadsheets read it, and a row appends with one command. Cells stay single-line. Evidence is a pointer, not prose.
@@ -53,7 +57,7 @@ Commit it only when the work is ambitious enough that a reviewer needs the trail
 
 ## Audit the log against the transcript
 
-At the end of the run, before handing back, check the log told the truth. Read the active host's `transcripts_directory` from `DSTACK_HOME/config.json`, defaulting `DSTACK_HOME` to `~/.dstack`. Do not search again. When it is `null`, missing, or unreadable, audit the log against your own record and say the transcript check did not happen. Walk the log against what actually happened:
+At the end of the run, before handing back, check the log told the truth. Use the active host's configured `transcripts_directory`. Do not search again. When it is `null` or the directory is unreadable, audit the log against your own record and say the transcript check did not happen. Walk the log against what actually happened:
 
 - Every row maps to a real action. Cut invented or aspirational entries.
 - Each row's evidence resolves and shows what the row claims.

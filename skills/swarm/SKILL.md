@@ -10,6 +10,10 @@ Fan out N parallel workers. They may cover separate slices, race the same brief,
 
 Spawn workers with the active harness's native subagent tool. Every supported harness can spawn subagents. If a nested spawn is denied, run the affected slice in the current agent and report that it was serialized.
 
+## Configuration
+
+Before using a profile, read `~/.dstack/config.json` and select `hosts[<active-harness>]` using the lowercase identity of the active harness. This location and host selection rule are fixed; do not use an environment override or another host entry. If the file is missing, unreadable, or invalid, the active harness cannot be identified, its host entry is absent, or a required profile is missing or listed in `invalid_bindings`, stop and name the exact problem. Tell the user: Call the Skill tool with `setup-dstack`. Every profile must provide a concrete model and effort pair; do not guess, omit, or inherit a binding.
+
 ## Start
 
 Open a todolist with one entry per phase before launching anything.

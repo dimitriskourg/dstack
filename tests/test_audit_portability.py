@@ -18,11 +18,11 @@ class PortabilityAuditTests(unittest.TestCase):
     SIDECAR = 'interface:\n  display_name: "Sample"\n  short_description: "A sample skill"\n'
     SIDECAR_USER_INVOKED = SIDECAR + "policy:\n  allow_implicit_invocation: false\n"
 
-    def make_skill(self, root: Path, body: str, extra=None, frontmatter="", sidecar=None) -> Path:
-        skill = root / "sample"
+    def make_skill(self, root: Path, body: str, extra=None, frontmatter="", sidecar=None, name="sample") -> Path:
+        skill = root / name
         skill.mkdir(parents=True)
         (skill / "SKILL.md").write_text(
-            "---\nname: sample\ndescription: sample skill\n" + frontmatter + "---\n\n" + body,
+            "---\nname: {}\ndescription: sample skill\n".format(name) + frontmatter + "---\n\n" + body,
             encoding="utf-8",
         )
         files = {}
@@ -56,6 +56,35 @@ class PortabilityAuditTests(unittest.TestCase):
             messages = self.messages(skill)
             self.assertIn("provider name", messages)
             self.assertIn("provider helper schema", messages)
+
+    def test_config_dependent_skill_requires_fixed_fail_closed_contract(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(Path(temp), "Use the configured profiles.\n", name="arena")
+            messages = self.messages(skill)
+            self.assertIn("config-dependent skill must name the fixed config path", messages)
+            self.assertIn("config-dependent skill must select the active harness entry directly", messages)
+            self.assertIn("config-dependent skill must fail closed with setup-dstack guidance", messages)
+            self.assertIn("profile-consuming skill must require a concrete model and effort pair", messages)
+
+    def test_config_dependent_skill_contract_passes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(
+                Path(temp),
+                "Read `~/.dstack/config.json` and select `hosts[<active-harness>]`; on failure, stop and name the exact problem. "
+                "Call the Skill tool with `setup-dstack`. Require a concrete model and effort pair.\n",
+                name="arena",
+            )
+            self.assertEqual([], self.messages(skill))
+
+    def test_config_path_override_fails(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(Path(temp), "Read `DSTACK_HOME/config.json`.\n")
+            self.assertIn("config path override", self.messages(skill))
+
+    def test_host_selection_override_fails(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(Path(temp), "Read `host_override`.\n")
+            self.assertIn("host selection override", self.messages(skill))
 
     def test_backticked_provider_helper_schema_fails(self):
         with tempfile.TemporaryDirectory() as temp:

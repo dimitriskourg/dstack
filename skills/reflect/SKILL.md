@@ -10,6 +10,10 @@ Mine the current conversation for durable learnings, then route them into skill 
 
 Spawn reviewers with the active harness's native subagent tool. Every supported harness can spawn subagents. If a nested spawn is denied, run the affected review serially and disclose the loss of independence.
 
+## Configuration
+
+Before locating the transcript or using a profile, read `~/.dstack/config.json` and select `hosts[<active-harness>]` using the lowercase identity of the active harness. This location and host selection rule are fixed; do not use an environment override or another host entry. If the file is missing, unreadable, or invalid, the active harness cannot be identified, its host entry is absent, or a required profile is missing or listed in `invalid_bindings`, stop and name the exact problem. Tell the user: Call the Skill tool with `setup-dstack`. Every profile must provide a concrete model and effort pair; do not guess, omit, or inherit a binding.
+
 ## When to invoke
 
 - The user said "reflect" or "/reflect".
@@ -24,7 +28,7 @@ Skip when the conversation is trivial, off-topic, or already covered by an exist
 
 ### 1. Locate the active transcript
 
-Read `DSTACK_HOME/config.json`, defaulting `DSTACK_HOME` to `~/.dstack`, and use the active host's `transcripts_directory`. Do not search again here. The saved directory is scoped to the active workspace. When it is `null`, missing, or unreadable, skip to the digest fallback below.
+Use the active host's configured `transcripts_directory`. Do not search again here. The saved directory is scoped to the active workspace. When it is `null` or the directory is unreadable, skip to the digest fallback below.
 
 ```bash
 ls -t <transcript-dir>/*.jsonl <transcript-dir>/*/*.jsonl <transcript-dir>/*/subagents/*.jsonl 2>/dev/null | head -10

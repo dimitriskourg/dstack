@@ -21,7 +21,7 @@ Evals test how a change affects agent behavior before promoting it: a new skill 
 3. **Author one organic prompt.** What a user would type. No leakage of what's being measured.
 4. **Spawn N parallel candidates** across the configured profiles per the **arena** skill's Phase B. Each works in its own sanitized dir; same prompt to each.
 5. **Spawn one blinded judge** with the `skeptical-reviewer` profile per the **arena** skill's Phase C. Judge sees outputs by sanitized label and the rubric, never a profile name.
-6. **Verify the chain from transcripts, not self-report.** Read the active host's `transcripts_directory` from `DSTACK_HOME/config.json`, defaulting `DSTACK_HOME` to `~/.dstack`. Do not search again. When it is `null`, missing, or unreadable, grade only from the resulting code and say the chain check was not possible. Grade chain-following from the files each candidate actually read plus the shape of the code, never from self-report.
+6. **Verify the chain from transcripts, not self-report.** Use the active host's configured `transcripts_directory`, already loaded by dstack-mode from `~/.dstack/config.json`. Do not search again. When it is `null` or the directory is unreadable, grade only from the resulting code and say the chain check was not possible. Grade chain-following from the files each candidate actually read plus the shape of the code, never from self-report.
 7. **Read every candidate output yourself** end to end. Compare to the judge's verdict. Disagreement means a model is biased or the rubric is ambiguous. Synthesize.
 
 **Reply:** variant under test, rubric, per-candidate notes, judge's verdict, your synthesis, and a recommendation for whether to promote the variant.

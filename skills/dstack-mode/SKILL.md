@@ -6,6 +6,10 @@ disable-model-invocation: true
 
 # Dstack mode
 
+## Configuration
+
+Before routing or spawning, read `~/.dstack/config.json` and select `hosts[<active-harness>]` using the lowercase identity of the active harness. This location and host selection rule are fixed; do not use an environment override or another host entry. If the file is missing, unreadable, or invalid, the active harness cannot be identified, its host entry is absent, or a required profile is missing or listed in `invalid_bindings`, stop and name the exact problem. Tell the user: Call the Skill tool with `setup-dstack`. Do not enter a playbook or guess, omit, or inherit a binding. Every profile must provide a concrete model and effort pair.
+
 ## Non-negotiables
 
 **Start every multi-step task with a todolist whose first item is to read the Principles section below in full.** The principles ground every trigger here. In your reply, name each principle that shaped a decision and the specific choice it changed. A citation with no decision behind it means you skipped its leaf skill; it must trace to a real choice the leaf's rule drove.
@@ -85,7 +89,7 @@ Read the leaf skill in full for any principle you apply. Each entry names when i
 
 **Any subagent you spawn inside a playbook step works in this mode** (code-writing delegates, ad-hoc helpers). Spawn it with the active harness's native subagent tool. Every supported harness can spawn subagents. If a nested spawn is denied, the current agent owns that work directly. Its brief tells it to read this SKILL.md in full first, including the Principles index above, and to open a leaf `principle-*` skill whenever it applies that principle. Routed workflow skills prescribe their own helpers for diverse-model review; respect what the skill prescribes rather than forcing this mode onto them.
 
-**Defaults for every spawn.** Run in the background when supported, preserve the tools the task needs, pass file pointers instead of inlining large context, and select a model from the configured profile. To change profiles, Call the Skill tool with `setup-dstack`. Use `fast-explorer` for cheap read-only breadth, `feature-worker` for implementation, `bug-worker` for evidence-backed fixes, and `skeptical-reviewer` for judgment or independent review. A profile bound to `inherit-parent` runs on the parent model. If the harness cannot select a child model, inherit the parent and say so.
+**Defaults for every spawn.** Run in the background when supported, preserve the tools the task needs, pass file pointers instead of inlining large context, and select the concrete model and effort from the configured profile. To change profiles, Call the Skill tool with `setup-dstack`. Use `fast-explorer` for cheap read-only breadth, `feature-worker` for implementation, `bug-worker` for evidence-backed fixes, and `skeptical-reviewer` for judgment or independent review. If the harness cannot apply the configured pair, stop and report the rejected binding; do not inherit the parent model.
 
 You own every subagent's work. Review the diff and write your own summary, don't pass through what it said. Interrupt-chained resumes silently drop directives, so fire a fresh subagent with consolidated scope rather than trusting a "done" summary. A second opinion is the same prompt on a different configured profile when possible. Agreement is high-signal.
 

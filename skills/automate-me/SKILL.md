@@ -10,6 +10,10 @@ A guided flow for turning the user's working conventions into a skill agents wil
 
 This skill orchestrates three others: an inline mining pass (see step 1), your host's skill-authoring skill (authoring), and the **unslop** skill (prose discipline). It sequences them; it doesn't replace them.
 
+## Configuration
+
+Before mining transcripts, read `~/.dstack/config.json` and select `hosts[<active-harness>]` using the lowercase identity of the active harness. This location and host selection rule are fixed; do not use an environment override or another host entry. If the file is missing, unreadable, or invalid, the active harness cannot be identified, or its host entry is absent, stop and name the exact problem. Tell the user: Call the Skill tool with `setup-dstack`.
+
 ## Flow
 
 ### 0. Check for an existing skill
@@ -26,7 +30,7 @@ Update mode changes the rest of the flow:
 
 ### 1. Mine their history
 
-Read the active host's `transcripts_directory` from `DSTACK_HOME/config.json`, defaulting `DSTACK_HOME` to `~/.dstack`. Do not search again or cross workspace boundaries. When it is `null`, missing, or unreadable, skip mining and rely on step 2.
+Use the active host's configured `transcripts_directory`. Do not search again or cross workspace boundaries. When it is `null` or the directory is unreadable, skip mining and rely on step 2.
 
 Survey recent agent conversations within that scope for recurring patterns. Run multiple parallel subagents across slices of history (e.g. last 2-4 weeks, split into 3 slices so each has enough material). Each slice mining subagent reads transcripts from the workspace-scoped path the parent provides, looks for the signals below, and returns a short structured list of patterns it saw with evidence pointers. Default signals worth hunting:
 
