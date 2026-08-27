@@ -13,6 +13,8 @@ Companion to the `how` skill. `how` answers what the code does and how it works.
 
 Before using a profile, read `~/.dstack/config.json` and select `hosts[<active-harness>]` using the lowercase identity of the active harness. This location and host selection rule are fixed; do not use an environment override or another host entry. If the file is missing, unreadable, or invalid, the active harness cannot be identified, its host entry is absent, or a required profile is missing or listed in `invalid_bindings`, stop and name the exact problem. Tell the user to invoke `setup-dstack` explicitly. Every profile must provide a concrete model and effort pair; do not guess, omit, or inherit a binding.
 
+Apply the profile through `worker_binding`: pass its exact model and effort for `spawn-arguments`; for `worker-definitions`, spawn `dstack-<profile>` without overrides. Stop if the binding is missing, rejected, or different. Never inherit session effort.
+
 ## How this skill works
 
 Historical context spreads across seven evidence categories: source control history, issue or ticket tracking, long-form documents, real-time team chat, infrastructure observability, error or exception tracking, and product analytics warehouses. You cannot predict from the question alone which one holds the answer, so the skill enumerates available MCPs at run time, maps each to a category, queries all seven in parallel, then synthesizes with explicit confidence calibration. Null results from searched categories are first-class evidence about how the decision was made; report them alongside positive findings. The default is coverage, not minimalism.

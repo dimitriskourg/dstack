@@ -11,3 +11,5 @@ Config-dependent skills read the file themselves. They stop with an explicit `se
 The lowercase identity of the active harness is always the key under `hosts`; there is no override to another host's configuration.
 
 Profiles always resolve to concrete model-and-effort pairs. A skill stops if the harness rejects its configured pair; it never omits model selection to inherit the parent conversation.
+
+How a pair reaches a worker depends on the host entry's `worker_binding`. With `spawn-arguments`, the skill passes the model and effort in the spawn call. With `worker-definitions`, setup has already generated one worker per profile, named `dstack-<profile>`, and the skill spawns that worker without a per-spawn override. The second mechanism exists because a spawn call that carries only a model leaves the worker on the session effort, which silently breaks the exact-pair contract.

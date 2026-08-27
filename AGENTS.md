@@ -10,6 +10,7 @@ This project is under development. Keep schema version 2 unless the user explici
 - Spawn subagents with the active harness's native subagent tool. If a nested spawn is denied, complete the pass in the current agent and disclose the degradation.
 - Keep only the four profiles documented in `DIFFERENCES.md`.
 - Every profile must contain a concrete model and effort pair. Parent-model inheritance and automatic model aliases are not configuration options.
+- Both halves of a pair must reach the worker through the host entry's `worker_binding`. A worker never inherits session effort.
 - Read profiles and the workspace-scoped transcript directory only from `~/.dstack/config.json`. The location is fixed. Config-dependent skills stop when it or the active host entry is unavailable.
 - Do not recreate adapters, capability files, or provider-specific rules.
 - Do not infer live-host proof from static validation.

@@ -14,7 +14,7 @@
       },
       "additionalProperties": {
         "type": "object",
-        "required": ["profiles", "invalid_bindings", "transcripts_directory"],
+        "required": ["profiles", "invalid_bindings", "worker_binding", "transcripts_directory"],
         "properties": {
           "profiles": {
             "type": "object",
@@ -28,6 +28,7 @@
             "additionalProperties": false
           },
           "invalid_bindings": { "type": "array", "items": { "$ref": "#/$defs/modelBinding" }, "uniqueItems": true },
+          "worker_binding": { "$ref": "#/$defs/workerBinding" },
           "transcripts_directory": { "type": ["string", "null"], "minLength": 1 }
         },
         "additionalProperties": false
@@ -39,6 +40,22 @@
       "type": "string",
       "pattern": "^\\S+$",
       "not": { "enum": ["inherit-parent", "auto"] }
+    },
+    "workerBinding": {
+      "type": "object",
+      "required": ["mechanism", "definitions_directory"],
+      "properties": {
+        "mechanism": { "enum": ["spawn-arguments", "worker-definitions"] },
+        "definitions_directory": { "type": ["string", "null"], "minLength": 1 }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": { "properties": { "mechanism": { "const": "worker-definitions" } }, "required": ["mechanism"] },
+          "then": { "properties": { "definitions_directory": { "type": "string" } } },
+          "else": { "properties": { "definitions_directory": { "type": "null" } } }
+        }
+      ]
     },
     "modelBinding": {
       "type": "object",

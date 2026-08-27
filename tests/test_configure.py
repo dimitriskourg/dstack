@@ -26,11 +26,12 @@ class ConfiguratorTests(unittest.TestCase):
             for profile in CONFIGURE.PROFILES
         }
 
-    def proposal(self, host: str, prefix: str, transcripts: str = "/tmp/transcripts"):
+    def proposal(self, host: str, prefix: str, transcripts: str = "/tmp/transcripts", worker_binding=None):
         return {
             "host": host,
             "profiles": self.profiles(prefix),
             "invalid_bindings": [],
+            "worker_binding": worker_binding or {"mechanism": "spawn-arguments", "definitions_directory": None},
             "transcripts_directory": transcripts,
         }
 
@@ -189,6 +190,65 @@ class ConfiguratorTests(unittest.TestCase):
                     CONFIGURE.write_atomic(config, changed)
             self.assertEqual(original, json.loads(config.read_text(encoding="utf-8")))
             self.assertEqual([], list(root.glob(".config.*.tmp")))
+
+    def test_worker_binding_is_required_and_preserved_per_host(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = root / "config.json"
+            first = root / "first.json"
+            second = root / "second.json"
+            self.write_json(first, self.proposal("host-a", "alpha"))
+            self.write_json(
+                second,
+                self.proposal(
+                    "host-b",
+                    "beta",
+                    worker_binding={"mechanism": "worker-definitions", "definitions_directory": "/tmp/workers"},
+                ),
+            )
+            self.assertEqual(0, self.apply(config, first)[0])
+            self.assertEqual(0, self.apply(config, second)[0])
+            saved = json.loads(config.read_text(encoding="utf-8"))
+            self.assertEqual(
+                {"mechanism": "spawn-arguments", "definitions_directory": None},
+                saved["hosts"]["host-a"]["worker_binding"],
+            )
+            self.assertEqual(
+                {"mechanism": "worker-definitions", "definitions_directory": "/tmp/workers"},
+                saved["hosts"]["host-b"]["worker_binding"],
+            )
+
+    def test_missing_worker_binding_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = root / "config.json"
+            proposal = root / "proposal.json"
+            invalid = self.proposal("host-a", "candidate")
+            del invalid["worker_binding"]
+            self.write_json(proposal, invalid)
+            status, _, stderr = self.apply(config, proposal)
+            self.assertEqual(2, status)
+            self.assertIn("proposal is missing: worker_binding", stderr)
+            self.assertFalse(config.exists())
+
+    def test_worker_binding_mechanism_and_directory_must_agree(self):
+        cases = (
+            ({"mechanism": "inherit", "definitions_directory": None}, "must be one of"),
+            ({"mechanism": "worker-definitions", "definitions_directory": None}, "must be an absolute path"),
+            ({"mechanism": "worker-definitions", "definitions_directory": "workers"}, "must be an absolute path"),
+            ({"mechanism": "spawn-arguments", "definitions_directory": "/tmp/workers"}, "must be null"),
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for index, (binding, expected) in enumerate(cases):
+                with self.subTest(binding=binding):
+                    config = root / "{}.config.json".format(index)
+                    proposal = root / "{}.proposal.json".format(index)
+                    self.write_json(proposal, self.proposal("host-a", "candidate", worker_binding=binding))
+                    status, _, stderr = self.apply(config, proposal)
+                    self.assertEqual(2, status)
+                    self.assertIn(expected, stderr)
+                    self.assertFalse(config.exists())
 
 
 if __name__ == "__main__":

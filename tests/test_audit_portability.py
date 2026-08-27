@@ -65,16 +65,48 @@ class PortabilityAuditTests(unittest.TestCase):
             self.assertIn("config-dependent skill must select the active harness entry directly", messages)
             self.assertIn("config-dependent skill must fail closed with setup-dstack guidance", messages)
             self.assertIn("profile-consuming skill must require a concrete model and effort pair", messages)
+            self.assertIn("profile-consuming skill must name the worker_binding mechanisms", messages)
+            self.assertIn("profile-consuming skill must forbid inheriting session effort", messages)
 
     def test_config_dependent_skill_contract_passes(self):
         with tempfile.TemporaryDirectory() as temp:
             skill = self.make_skill(
                 Path(temp),
                 "Read `~/.dstack/config.json` and select `hosts[<active-harness>]`; on failure, stop and name the exact problem. "
-                "Tell the user to invoke `setup-dstack` explicitly. Require a concrete model and effort pair.\n",
+                "Tell the user to invoke `setup-dstack` explicitly. Require a concrete model and effort pair. "
+                "Apply it through `worker_binding`: `spawn-arguments` carries both values in the spawn call and "
+                "`worker-definitions` uses the generated worker. Never inherit session effort.\n",
                 name="arena",
             )
             self.assertEqual([], self.messages(skill))
+
+    def test_profile_consuming_skill_must_pin_effort_with_the_worker_binding(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(
+                Path(temp),
+                "Read `~/.dstack/config.json` and select `hosts[<active-harness>]`; on failure, stop and name the exact problem. "
+                "Tell the user to invoke `setup-dstack` explicitly. Require a concrete model and effort pair. "
+                "Pass the profile model in the spawn call.\n",
+                name="arena",
+            )
+            messages = self.messages(skill)
+            self.assertIn("profile-consuming skill must name the worker_binding mechanisms", messages)
+            self.assertIn("profile-consuming skill must forbid inheriting session effort", messages)
+
+    def test_transcript_only_config_skill_needs_no_worker_binding(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(
+                Path(temp),
+                "Read `~/.dstack/config.json` and select `hosts[<active-harness>]`; on failure, stop and name the exact problem. "
+                "Tell the user to invoke `setup-dstack` explicitly.\n",
+                name="recall",
+            )
+            self.assertEqual([], self.messages(skill))
+
+    def test_shipped_schema_requires_a_worker_binding(self):
+        findings = [finding.message for finding in AUDIT.check_structure()]
+        self.assertNotIn("each host entry must require a worker binding", findings)
+        self.assertNotIn("config must define exactly the two supported worker binding mechanisms", findings)
 
     def test_config_path_override_fails(self):
         with tempfile.TemporaryDirectory() as temp:

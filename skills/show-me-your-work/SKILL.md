@@ -11,6 +11,8 @@ For work a human reviews after the fact, a decision trail lets them reconstruct 
 
 Before locating the transcript or using a profile, read `~/.dstack/config.json` and select `hosts[<active-harness>]` using the lowercase identity of the active harness. This location and host selection rule are fixed; do not use an environment override or another host entry. If the file is missing, unreadable, or invalid, the active harness cannot be identified, its host entry is absent, or a required profile is missing or listed in `invalid_bindings`, stop and name the exact problem. Tell the user to invoke `setup-dstack` explicitly. Every profile must provide a concrete model and effort pair; do not guess, omit, or inherit a binding.
 
+Apply the profile through `worker_binding`: pass its exact model and effort for `spawn-arguments`; for `worker-definitions`, spawn `dstack-<profile>` without overrides. Stop if the binding is missing, rejected, or different. Never inherit session effort.
+
 ## The format
 
 A single TSV file, one row per decision. TSV because GitHub renders it as a sortable table, `column -s$'\t' -t` and spreadsheets read it, and a row appends with one command. Cells stay single-line. Evidence is a pointer, not prose.

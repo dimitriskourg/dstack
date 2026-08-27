@@ -155,8 +155,13 @@ def check_skill(skill_dir: Path) -> List[Finding]:
             findings.append(Finding(relative(skill_file), "config-dependent skill must select the active harness entry directly"))
         if "stop and name the exact problem" not in body or "Tell the user to invoke `setup-dstack` explicitly." not in body:
             findings.append(Finding(relative(skill_file), "config-dependent skill must fail closed with setup-dstack guidance"))
-        if skill_dir.name not in {"automate-me", "recall"} and "concrete model and effort pair" not in body:
-            findings.append(Finding(relative(skill_file), "profile-consuming skill must require a concrete model and effort pair"))
+        if skill_dir.name not in {"automate-me", "recall"}:
+            if "concrete model and effort pair" not in body:
+                findings.append(Finding(relative(skill_file), "profile-consuming skill must require a concrete model and effort pair"))
+            if "`worker_binding`" not in body or not {"`spawn-arguments`", "`worker-definitions`"} <= set(re.findall(r"`[a-z-]+`", body)):
+                findings.append(Finding(relative(skill_file), "profile-consuming skill must name the worker_binding mechanisms"))
+            if not re.search(r"\b(?:never|do not|must not)\b[^.\n]{0,80}\bsession effort\b", body, re.IGNORECASE):
+                findings.append(Finding(relative(skill_file), "profile-consuming skill must forbid inheriting session effort"))
     findings.extend(check_sidecar(skill_dir, "disable-model-invocation" in fields))
 
     package_texts: List[Tuple[Path, str]] = []
@@ -237,6 +242,12 @@ def check_structure() -> List[Finding]:
     reserved = value.get("$defs", {}).get("modelIdentifier", {}).get("not", {}).get("enum", [])
     if set(reserved) != {"auto", "inherit-parent"}:
         findings.append(Finding(relative(schema), "config must reject automatic and parent-inheritance binding aliases"))
+    host_entry = value.get("properties", {}).get("hosts", {}).get("additionalProperties", {})
+    if "worker_binding" not in set(host_entry.get("required", [])):
+        findings.append(Finding(relative(schema), "each host entry must require a worker binding"))
+    mechanisms = value.get("$defs", {}).get("workerBinding", {}).get("properties", {}).get("mechanism", {}).get("enum", [])
+    if set(mechanisms) != {"spawn-arguments", "worker-definitions"}:
+        findings.append(Finding(relative(schema), "config must define exactly the two supported worker binding mechanisms"))
     return findings
 
 

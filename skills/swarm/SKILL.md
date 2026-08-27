@@ -13,6 +13,8 @@ Spawn workers with the active harness's native subagent tool. Every supported ha
 
 Before using a profile, read `~/.dstack/config.json` and select `hosts[<active-harness>]` using the lowercase identity of the active harness. This location and host selection rule are fixed; do not use an environment override or another host entry. If the file is missing, unreadable, or invalid, the active harness cannot be identified, its host entry is absent, or a required profile is missing or listed in `invalid_bindings`, stop and name the exact problem. Tell the user to invoke `setup-dstack` explicitly. Every profile must provide a concrete model and effort pair; do not guess, omit, or inherit a binding.
 
+Apply the profile through `worker_binding`: pass its exact model and effort for `spawn-arguments`; for `worker-definitions`, spawn `dstack-<profile>` without overrides. Stop if the binding is missing, rejected, or different. Never inherit session effort.
+
 ## Start
 
 Open a todolist with one entry per phase before launching anything.
@@ -32,7 +34,7 @@ Open a todolist with one entry per phase before launching anything.
 
 ## Phase B: Fan out
 
-Spawn all N workers at once as general-purpose subagents on the configured model, in the background where your host supports it.
+Spawn all N workers at once as general-purpose subagents bound to the chosen profile's model and effort, in the background where your host supports it.
 
 When a worker must start from a non-default pushed branch, name that branch in its brief.
 

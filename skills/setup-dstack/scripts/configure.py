@@ -18,6 +18,9 @@ SCHEMA_VERSION = 2
 CONFIG_PATH = Path("~/.dstack/config.json").expanduser()
 PROFILES = ("fast-explorer", "feature-worker", "bug-worker", "skeptical-reviewer")
 RESERVED_BINDING_VALUES = {"auto", "inherit-parent"}
+SPAWN_ARGUMENTS = "spawn-arguments"
+WORKER_DEFINITIONS = "worker-definitions"
+WORKER_MECHANISMS = (SPAWN_ARGUMENTS, WORKER_DEFINITIONS)
 HOST_PATTERN = re.compile(r"^[a-z][a-z0-9-]*$")
 
 
@@ -95,6 +98,30 @@ def validate_invalid_bindings(value: Any, location: str) -> List[Dict[str, str]]
     return bindings
 
 
+def validate_worker_binding(value: Any, location: str) -> Dict[str, Any]:
+    binding = require_object(value, location)
+    require_exact_keys(binding, ("mechanism", "definitions_directory"), (), location)
+    mechanism = require_identifier(binding["mechanism"], "{}.mechanism".format(location))
+    if mechanism not in WORKER_MECHANISMS:
+        raise ConfigError(
+            "{}.mechanism must be one of: {}".format(location, ", ".join(WORKER_MECHANISMS))
+        )
+    directory = binding["definitions_directory"]
+    if mechanism == WORKER_DEFINITIONS:
+        if not isinstance(directory, str) or not directory or not Path(directory).expanduser().is_absolute():
+            raise ConfigError(
+                "{}.definitions_directory must be an absolute path when the mechanism is {}".format(
+                    location, WORKER_DEFINITIONS
+                )
+            )
+        return {"mechanism": mechanism, "definitions_directory": str(Path(directory).expanduser())}
+    if directory is not None:
+        raise ConfigError(
+            "{}.definitions_directory must be null when the mechanism is {}".format(location, SPAWN_ARGUMENTS)
+        )
+    return {"mechanism": mechanism, "definitions_directory": None}
+
+
 def validate_transcripts_directory(value: Any, location: str) -> Optional[str]:
     if value is None:
         return None
@@ -114,10 +141,11 @@ def validate_config(value: Any) -> Dict[str, Any]:
         validate_host(host, "config host key")
         location = "config.hosts.{}".format(host)
         entry = require_object(hosts[host], location)
-        require_exact_keys(entry, ("profiles", "invalid_bindings", "transcripts_directory"), (), location)
+        require_exact_keys(entry, ("profiles", "invalid_bindings", "worker_binding", "transcripts_directory"), (), location)
         checked_hosts[host] = {
             "profiles": validate_profiles(entry["profiles"], "{}.profiles".format(location)),
             "invalid_bindings": validate_invalid_bindings(entry["invalid_bindings"], "{}.invalid_bindings".format(location)),
+            "worker_binding": validate_worker_binding(entry["worker_binding"], "{}.worker_binding".format(location)),
             "transcripts_directory": validate_transcripts_directory(entry["transcripts_directory"], "{}.transcripts_directory".format(location)),
         }
     return {
@@ -130,7 +158,7 @@ def validate_proposal(value: Any) -> Dict[str, Any]:
     proposal = require_object(value, "proposal")
     require_exact_keys(
         proposal,
-        ("host", "profiles", "invalid_bindings", "transcripts_directory"),
+        ("host", "profiles", "invalid_bindings", "worker_binding", "transcripts_directory"),
         (),
         "proposal",
     )
@@ -138,6 +166,7 @@ def validate_proposal(value: Any) -> Dict[str, Any]:
         "host": validate_host(proposal["host"], "proposal.host"),
         "profiles": validate_profiles(proposal["profiles"], "proposal.profiles"),
         "invalid_bindings": validate_invalid_bindings(proposal["invalid_bindings"], "proposal.invalid_bindings"),
+        "worker_binding": validate_worker_binding(proposal["worker_binding"], "proposal.worker_binding"),
         "transcripts_directory": validate_transcripts_directory(proposal["transcripts_directory"], "proposal.transcripts_directory"),
     }
     return checked
@@ -166,6 +195,7 @@ def merge_proposal(config: Mapping[str, Any], proposal: Mapping[str, Any]) -> Di
     merged["hosts"][proposal["host"]] = {
         "profiles": copy.deepcopy(proposal["profiles"]),
         "invalid_bindings": copy.deepcopy(proposal["invalid_bindings"]),
+        "worker_binding": copy.deepcopy(proposal["worker_binding"]),
         "transcripts_directory": proposal["transcripts_directory"],
     }
     return validate_config(merged)

@@ -55,9 +55,9 @@ Add managed Claude-compatible links when wanted:
 python3 install.py --with-claude-links
 ```
 
-Then explicitly invoke `setup-dstack` in the harness where you will use dstack. Setup discovers the current model catalog when possible, asks you to confirm the four profiles, finds the active workspace's transcript directory, and writes one host entry to `config.json`.
+Then explicitly invoke `setup-dstack` in the harness where you will use dstack. Setup discovers the current model catalog when possible, asks you to confirm the four profiles, records how that harness binds a worker to a model and effort pair, finds the active workspace's transcript directory, and writes one host entry to `config.json`.
 
-Any skill that needs profiles or transcripts reads that file directly and selects the entry matching the lowercase identity of the active harness. There is no host override. If the file is missing or invalid, the harness cannot be identified, or its host entry is absent, the skill stops and tells you to run `setup-dstack`; it does not guess or silently inherit an unconfigured model.
+Any skill that needs profiles or transcripts reads that file directly and selects the entry matching the lowercase identity of the active harness. There is no host override. If the file is missing or invalid, the harness cannot be identified, or its host entry is absent, the skill stops and tells you to run `setup-dstack`; it does not guess or silently inherit an unconfigured model or session effort. On a harness whose spawn call cannot carry both halves of a pair, setup generates one worker definition per profile so the effort is pinned before any worker starts.
 
 ## Validate
 

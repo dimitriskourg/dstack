@@ -38,19 +38,21 @@ This contradicts the documented workspace-scoped guarantee and can cross a proje
 
 ## P1: Model binding and harness identity
 
-### [ ] 3. Define how Claude Code applies both model and effort to a spawned subagent
+### [x] 3. Define how Claude Code applies both model and effort to a spawned subagent
 
-**Failure:** Claude Code documents `model` and `effort` on subagent definitions, but documents only a per-invocation `model` override. Dstack installs no profile-backed definitions under `~/.claude/agents/`. A generic Agent-tool call may therefore use the configured model while inheriting the session effort, violating dstack's exact-pair contract.
+**Confirmed by inspection (Claude Code 2.1.246, 2026-08-26):** the live Agent tool schema takes a per-invocation `model` and has no effort argument, so a generic Agent call applies the configured model and leaves the worker on the session effort. Subagent definition files accept both `model` and `effort`. An unknown model in a definition fails loudly (`Agent terminated early due to an API error`), but an unknown effort is accepted silently and the worker keeps the session effort, so effort values cannot be validated at spawn time.
 
-**Affected areas:** `setup-dstack`, every profile-consuming skill, installer structure if generated Claude agents are needed, and live-host conformance tests.
+**Resolved design:** each host entry records a `worker_binding`. `spawn-arguments` means the spawn call carries both halves. `worker-definitions` means the host reads effort from a pre-declared worker, so `setup-dstack` generates one definition per profile into the recorded `definitions_directory`. Setup must choose `worker-definitions` whenever the host's spawn operation has no effort argument, and must take effort values from the host's own enumeration rather than accepting an unvalidated string.
 
-**Done when:**
+**Implemented:** `schemas/config.schema.json` and `configure.py` require and validate `worker_binding`; `skills/setup-dstack/scripts/worker_bindings.py` synchronizes and confirms generated definitions without touching unrelated files; `setup-dstack` discovers the mechanism, enumerates effort levels, and synchronizes after `apply`; the nine profile-consuming skills name the mechanism, forbid a per-spawn override that differs from the profile, and forbid inheriting session effort; `audit_portability.py` enforces that contract and the schema shape.
 
-- the current Claude Agent tool schema is inspected rather than inferred;
-- dstack has an executable, documented way to apply both values from a profile;
-- the consuming skill can confirm or detect rejection of the requested pair;
-- no skill silently inherits session effort;
-- at least one non-parent model/effort pair is proven in a live Claude Code subagent.
+**Live proof (Claude Code 2.1.246, headless runs, 2026-08-26):**
+
+- generated `dstack-fast-explorer` (`claude-sonnet-5`, `effort: low`) spawned from a parent running `claude-opus-5` at `--effort max` returned a reply with `thinking_tokens: 0` and no thinking block, so the definition's effort overrode the session effort and the model differed from the parent;
+- the same worker at `effort: high` on the same model and prompt produced a thinking block, which is the observable difference the low run does not have;
+- `subagent_stats.by_type` recorded the generated worker name for every spawn.
+
+**Remaining risk:** Codex-side validation of pairs against the spawn operation is issue 4. Effort application is only observable through reasoning behavior, so a host that silently ignores a valid-looking effort cannot be detected at spawn time; setup's enumeration check is the guard.
 
 Reference: [Claude Code subagent fields and model selection](https://code.claude.com/docs/en/sub-agents#supported-frontmatter-fields).
 
@@ -227,7 +229,7 @@ Reference: [Claude Code personal skill locations](https://code.claude.com/docs/e
 Baseline observed on 2026-08-26:
 
 - `python3 scripts/audit_portability.py`: 0 errors;
-- `python3 -m unittest discover -s tests -v`: 56 tests passed;
+- `python3 -m unittest discover -s tests -v`: 67 tests passed;
 - `python3 -m json.tool schemas/config.schema.json`: passed;
 - Skill Creator `quick_validate.py`: 18 valid, 30 rejected only because the bundled validator does not recognize `disable-model-invocation`.
 
@@ -240,7 +242,7 @@ Work in this order to avoid validating behavior on top of broken foundations:
 1. Live Claude Code and Codex proof for the resolved skill-to-skill invocation policy.
 2. Workspace-keyed transcript storage.
 3. Canonical harness IDs.
-4. Claude and Codex model/effort application.
+4. Claude and Codex model/effort application. The Claude half is done; Codex spawn-operation validation remains.
 5. Bounded fan-out and explicit worktree isolation.
 6. Conditional runtime playbooks.
 7. Installation and smaller configuration/documentation inconsistencies.

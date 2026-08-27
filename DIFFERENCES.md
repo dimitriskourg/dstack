@@ -43,11 +43,16 @@ The separate general `orchestrate` plugin is not copied. Pstack's Orchestrate ro
 
 - four model-and-effort profiles;
 - invalid model-and-effort bindings;
+- the worker binding mechanism for that harness;
 - the absolute transcript directory scoped to the active workspace, or `null`.
 
 The four profiles are `fast-explorer`, `feature-worker`, `bug-worker`, and `skeptical-reviewer`. Panel configuration and the former judgment-only profiles were removed.
 
 Every profile requires a concrete model and effort pair. Parent inheritance and automatic model aliases are invalid. If the active harness rejects a configured pair, the consuming skill stops instead of omitting the model selection.
+
+`worker_binding` records how a host applies a pair, because not every harness accepts both halves as spawn arguments. `spawn-arguments` means the spawn call carries the model and the effort. `worker-definitions` means the host reads the effort from a pre-declared worker definition, so `setup-dstack` synchronizes one definition per profile into the recorded `definitions_directory`. Synchronization verifies the generated definitions and leaves every other file untouched. Setup chooses `worker-definitions` whenever the host's spawn operation has no effort argument, since a model-only override leaves the worker on the session effort.
+
+This is a portable mechanism recorded in configuration, not a provider rule folder: the mechanism and the directory are discovered live by setup in the active harness.
 
 `setup-dstack` searches for and confirms the active workspace transcript directory once. Transcript-backed skills read the saved path and do not rediscover it on every invocation.
 
