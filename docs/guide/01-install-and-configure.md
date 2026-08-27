@@ -1,6 +1,6 @@
 # Install and configure
 
-Preview with `python3 install.py --dry-run`, then install with `python3 install.py`. Add `--with-claude-links` only when compatibility links under `~/.claude/skills` are wanted.
+Preview with `python3 install.py --dry-run`, then install with `python3 install.py` for Codex and Cursor. For Claude Code, install with `python3 install.py --with-claude-links`; local Claude Code discovers the managed skills through `~/.claude/skills`.
 
 After installation, explicitly invoke `setup-dstack`. It identifies the active harness, reads a trustworthy model catalog when available, confirms four profiles, finds the transcript directory scoped to the active workspace, and atomically writes the fixed file `~/.dstack/config.json`.
 

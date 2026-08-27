@@ -15,7 +15,7 @@ Apply the profile through `worker_binding`: pass its exact model and effort for 
 
 ## Start
 
-Open a todolist with one entry per phase before starting. Autonomous mode without checkpoints needs the list to show phase position and keep phases from silently disappearing.
+Open a todolist with one entry per phase before starting. The list shows phase position and keeps phases from silently disappearing.
 
 1. Ground
 2. Sketch

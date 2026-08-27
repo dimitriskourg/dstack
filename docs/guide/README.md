@@ -5,3 +5,4 @@
 3. [dstack mode](03-dstack-mode.md)
 4. [Workflows](04-workflows.md)
 5. [Maintaining upstream alignment](05-maintaining-dstack.md)
+6. [Supported scope](06-supported-scope.md)
