@@ -4,11 +4,11 @@ Skills are canonical under `~/.agents/skills`. Portable instructions live with e
 
 When one skill invokes another, it says: Call the Skill tool with `skill-name`. When a workflow delegates, it uses the active harness's native subagent tool. Model and effort selection comes from one of four profiles in the fixed file `~/.dstack/config.json`.
 
-Transcript-backed skills read the active host entry's `transcripts_directory`. Setup discovers and confirms that workspace-scoped path once.
+Transcript-backed skills currently read the active host entry's `transcripts_directory`. Setup discovers and confirms that path once. The supported contract is repository-scoped transcript selection, but the current schema stores only one directory per harness; see issue 2 in `KNOWN_ISSUES.md`.
 
 Config-dependent skills read the file themselves. They stop with an explicit `setup-dstack` instruction instead of guessing when the configuration or active host entry is unavailable.
 
-The lowercase identity of the active harness is always the key under `hosts`; there is no override to another host's configuration.
+The active harness selects the key under `hosts`; there is no override to another host's configuration. The intended stable IDs are `codex`, `claude`, and `cursor`, but their live derivation is not yet deterministic; see issue 5 in `KNOWN_ISSUES.md`.
 
 Profiles always resolve to concrete model-and-effort pairs. A skill stops if the harness rejects its configured pair; it never omits model selection to inherit the parent conversation.
 

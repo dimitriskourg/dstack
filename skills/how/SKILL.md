@@ -58,7 +58,7 @@ Spawn all explorers at once:
 - model: your configured `fast-explorer` role
 
 Each explorer gets the same base prompt from `references/explorer-prompt.md` plus a specific exploration angle naming its slice. Each explorer should:
-- Start broad: Glob for relevant directories, Grep for key types/interfaces/class names
+- Start broad: use the active harness's file search for relevant directories and fast text search for key types, interfaces, and class names
 - Follow the thread: from an entry point, trace the call chain (callers, callees, data flow, type definitions)
 - Read the actual code, don't guess from file names
 - Stop when it can describe the full path from input to output (or trigger to effect) without hand-waving any step
@@ -120,7 +120,7 @@ After the explanation is complete, spawn two or more architectural critics at on
 
 For each critic:
 - helper: a general-purpose subagent, read-only
-- model: your configured `skeptical-reviewer` role. Bindings are minimum reasoning levels. The lead should escalate when the architecture warrants deeper analysis.
+- model: your configured `skeptical-reviewer` role. Use its exact configured model and effort pair.
 
 Read `references/critic-prompt.md` for the prompt template. Each critic gets:
 1. The explanation from Step 1 (so they don't re-explore)
