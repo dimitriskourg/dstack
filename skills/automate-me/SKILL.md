@@ -82,9 +82,9 @@ Call the Skill tool with `unslop`. Apply it and the authoring skill's writing gu
 
 Show the draft to the user and take feedback. Expect multiple iterations. Cut ruthlessly; a mode skill is not a manual.
 
-### 6. Land it
+### 6. Hand it back
 
-Work in a worktree off main. Commit and open a PR so the user can review it. Don't push to main directly.
+Present the finished local skill and its validation result. Do not commit, push, or open a PR unless the user explicitly requests that separate delivery step.
 
 ## Guardrails
 

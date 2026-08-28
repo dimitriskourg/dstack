@@ -40,9 +40,9 @@ Hosts differ in layout. Flat (`<id>.jsonl`), nested (`<id>/<id>.jsonl`), and sub
 
 For each candidate, read the first line and check that its message text contains the conversation's opening user prompt. Take the matching path. If no path resolves, write a tight digest of the session and pass that instead.
 
-### 2. Spawn three reviewers in parallel
+### 2. Run three reviewers
 
-Spawn three general-purpose subagents at once, each on a different configured profile, with full tool access. **Don't use a restricted read-only mode.** Reviewers need MCP access for context lookups. The prompt forbids file writes; the parent applies edits.
+Launch three general-purpose subagents in bounded waves that fit the active harness's available child capacity, each on a different configured profile, with full tool access. **Don't use a restricted read-only mode.** Reviewers need MCP access for context lookups. The prompt forbids file writes; the parent applies edits. Every required reviewer runs even when the first wave cannot hold all three.
 
 | Lens | Model role | Prompt template |
 |---|---|---|
@@ -62,9 +62,9 @@ Sanity-check the synthesizer's Accepted list. For any item that would be enforce
 
 ### 5. Apply
 
-Before applying any Accepted edit, present the synthesizer's full Accepted/Rejected/Backlog output to the user and wait for explicit approval. The user picks which subset to apply and may redirect routings. Skill changes affect every future agent in the org; do not auto-apply.
+Before applying any Accepted edit or filing any Backlog item, present the synthesizer's full Accepted/Rejected/Backlog output to the user and wait for explicit approval. The user picks which subsets to apply or file and may redirect routings. Skill changes affect every future agent in the org, and tracker writes mutate external state; do not perform either automatically.
 
-Backlog items file to whatever devex / backlog tracker your team uses automatically. Those are tracker submissions, not skill edits. Only the Accepted list waits for approval.
+When approved Backlog items have no configured tracker or the requested write is unavailable, keep them in the in-chat result without blocking approved skill edits.
 
 For each approved Accepted item, follow the Routing field exactly:
 
@@ -81,5 +81,5 @@ Short list, no preamble:
 
 - Edits applied: `<skill path>`. What changed, one line each.
 - New skills created: `<skill path>`. One line each (rare).
-- Backlog filed to the devex tracker: `<issue title>` (`<tags>`). One line each.
+- Backlog proposed: `<issue title>` (`<tags>`). State `filed` with the tracker link only when the user approved and the write succeeded; otherwise state `not filed`.
 - Dropped: one line per rejected finding + reason from the synthesizer.

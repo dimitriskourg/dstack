@@ -30,17 +30,17 @@ Open a todolist with one entry per phase before launching anything.
 2. Choose the shape. Partition into slices, race N workers on identical briefs, or mix both. For a race or mixed shape, declare `first pass`, `rank all`, or `best-of` before spawning.
 3. Set N from the user or derive it from the shape. N is total workers, not your host's concurrency limit.
 4. Pick the worker model from your configured `feature-worker` role, or `fast-explorer` when the slice is read-only. For a model race, name each arm's binding up front.
-5. Give each worker its own writable output when it writes. Use a worktree, branch, or `/tmp/swarm-<slug>/worker-<n>/`.
+5. Give each worker its own writable output outside the repository, such as `/tmp/swarm-<slug>/worker-<n>/`. Workers may fan out read-only repository analysis or independent external artifacts. Repository writers are serialized in the active checkout.
 
 ## Phase B: Fan out
 
-Spawn all N workers at once as general-purpose subagents bound to the chosen profile's model and effort, in the background where your host supports it.
+Launch workers in bounded waves that fit the active harness's available child capacity. Bind each general-purpose subagent to the chosen profile's model and effort. Every required slice runs even when N exceeds the first wave's capacity.
 
 When a worker must start from a non-default pushed branch, name that branch in its brief.
 
 Every brief stands alone. Include the goal, scope, exact slice or race arm, how to verify, and what to report. Reports use `PASS`, `ISSUES`, or `BLOCKED` with evidence.
 
-If a worker drops out, proceed with N-1 and note it.
+If a required worker drops out, retry or run that slice serially in the current agent. Do not report complete coverage with a missing required slice. For a best-of race, a dropout may reduce the candidate set only when the declared race rule permits it; note the reduction.
 
 ## Phase C: Aggregate
 

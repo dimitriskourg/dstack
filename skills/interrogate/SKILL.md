@@ -38,13 +38,13 @@ Write one clear paragraph. Reviewers challenge whether the work achieves the int
 
 ## Step 3, Spawn Reviewers
 
-Launch reviewers at once across `skeptical-reviewer`, `bug-worker`, `feature-worker`, and `fast-explorer`. Use only the profiles whose angle fits the rubric, but keep at least two independent reviewers.
+Select reviewers across `skeptical-reviewer`, `bug-worker`, `feature-worker`, and `fast-explorer`. Use only the profiles whose angle fits the rubric, but keep at least two independent reviewers. Launch them in bounded waves that fit the active harness's available child capacity.
 
 For each reviewer:
 - helper: a general-purpose subagent, read-only
-- model: a distinct `skeptical-reviewer` binding from your profile
+- binding: the exact model and effort pair from that reviewer's selected profile
 
-When there are fewer distinct configured bindings than reviewers, reuse concrete profiles and disclose the reduced model diversity. Never spawn a reviewer without its configured model and effort pair.
+When selected profiles resolve to the same concrete binding, disclose the reduced model diversity. Never spawn a reviewer without the exact configured model and effort pair for its named profile.
 
 Read `references/reviewer-prompt.md` and fill in the template with:
 1. The stated intent
@@ -92,7 +92,7 @@ Present the verdict in this structure:
 > [The stated intent paragraph from Step 2]
 
 ### Reviewers
-- Reviewer [label]: [model name], [N findings] (one bullet per reviewer)
+- Reviewer [label]: [profile], [model], [effort], [N findings] (one bullet per reviewer)
 
 ### Act On
 [Findings that should be addressed. For each: description, which models raised it, why it matters.]
