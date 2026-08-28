@@ -34,18 +34,16 @@ Static validation is not live-host proof. When an item changes runtime behavior,
 
 ## P1: Parallel read-only fan-out
 
-### [ ] 6. Apply bounded waves in every retained fan-out workflow
+### [ ] 6. Prove bounded waves in every retained fan-out workflow
 
-**Failure:** Arena, Swarm, Interrogate, and Reflect now require bounded waves, but How, Why, Eval, Architect composition, and other retained callers can still request more children than the active harness can run simultaneously.
+**Implemented design:** Every retained direct fan-out workflow and nested fan-out caller now uses host-reported available child capacity when exposed and otherwise launches one child or nested group at a time. Each drains bounded waves, retries denied or dropped required work, completes persistent failures in the current agent, and reports parallel waves, serialized fallback, and lost independence. The portability audit owns the exact fan-out inventory and rejects incomplete scheduling contracts.
 
 Dstack serializes repository writers. This item concerns read-only exploration, review, and independent artifacts outside the repository.
 
+**Remaining risk:** Static instructions and audit coverage do not prove that each live host reports capacity accurately, rejects excess children predictably, or completes N greater than capacity without dropping work.
+
 **Done when:**
 
-- every retained fan-out workflow discovers or conservatively derives available child capacity;
-- N greater than capacity runs in bounded waves;
-- required slices are retried or completed serially instead of dropped;
-- reports distinguish parallel waves, serialized fallback, and lost independence;
 - live Codex, Claude Code, and Cursor tests cover N greater than available capacity.
 
 ## P1: Forge workflows
@@ -80,10 +78,10 @@ Dstack serializes repository writers. This item concerns read-only exploration, 
 Observed after the 2026-08-27 scope cut:
 
 - `python3 scripts/audit_portability.py`: 0 errors;
-- `python3 -m unittest discover -s tests -v`: 75 tests passed;
+- `python3 -m unittest discover -s tests -v`: 77 tests passed;
 - `python3 -m json.tool schemas/config.schema.json`: passed;
 - `git diff --check`: passed;
-- Skill Creator `quick_validate.py`: the changed `setup-dstack` package was rejected only because the bundled validator does not accept dstack's `disable-model-invocation` extension.
+- Skill Creator `quick_validate.py`: all ordinary changed skill packages passed; the five changed explicit-only packages were rejected only because the bundled validator does not accept dstack's `disable-model-invocation` extension.
 
 These static results do not prove skill discovery, nested invocation, model/effort enforcement, repository transcript isolation, bounded fan-out, forge behavior, or end-to-end behavior in Codex, Claude Code, or Cursor.
 

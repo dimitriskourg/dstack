@@ -20,7 +20,7 @@ Apply the profile through `worker_binding`: pass its exact model and effort for 
 
 Helpers below are read-only. If your host cannot enforce that, instruct the helper not to write and don't describe the boundary as enforced. Profiles resolve through your configuration and always name a concrete model and effort pair.
 
-Spawn helpers with the active harness's native subagent tool. Every supported harness can spawn subagents. If a nested spawn is denied, the current agent performs that pass directly.
+Spawn helpers with the active harness's native subagent tool. Every supported harness can spawn subagents. Use the host's reported available child capacity when it exposes one; otherwise conservatively launch one helper at a time. Drain each bounded wave before starting the next. If a required spawn is denied or drops out, retry it in a later wave, then perform that pass in the current agent if it still cannot run. Do not silently omit a slice. Report the number of parallel waves, any serialized fallback, and any lost independence.
 
 ## Explain Mode
 
@@ -52,7 +52,7 @@ Decompose the question into 2-4 parallel exploration angles, each a distinct sli
 
 The right decomposition depends on the question. Use your judgment. Narrow questions: 2 explorers is fine. Broad subsystems: up to 4.
 
-Spawn all explorers at once:
+Launch every explorer across bounded waves using the capacity rule above:
 
 - helper: a general-purpose subagent, read-only
 - model: your configured `fast-explorer` role
@@ -116,7 +116,7 @@ Run the full explain flow above (Steps 1-4). You must understand the architectur
 
 ### Step 2. Spawn Critics
 
-After the explanation is complete, spawn two or more architectural critics at once. Use `skeptical-reviewer` first and `bug-worker` for an independent second angle. Repeat profiles only when more critics materially improve coverage.
+After the explanation is complete, run two or more architectural critics across bounded waves. Use `skeptical-reviewer` first and `bug-worker` for an independent second angle. Repeat profiles only when more critics materially improve coverage.
 
 For each critic:
 - helper: a general-purpose subagent, read-only

@@ -38,7 +38,7 @@ Write one clear paragraph. Reviewers challenge whether the work achieves the int
 
 ## Step 3, Spawn Reviewers
 
-Select reviewers across `skeptical-reviewer`, `bug-worker`, `feature-worker`, and `fast-explorer`. Use only the profiles whose angle fits the rubric, but keep at least two independent reviewers. Launch them in bounded waves that fit the active harness's available child capacity.
+Select reviewers across `skeptical-reviewer`, `bug-worker`, `feature-worker`, and `fast-explorer`. Use only the profiles whose angle fits the rubric, but keep at least two independent reviewers. Use the host's reported available child capacity when it exposes one; otherwise conservatively launch one reviewer at a time. Drain each bounded wave before starting the next. Retry a denied or dropped required reviewer in a later wave, then perform that review pass in the current agent if it still cannot run. Do not silently reduce the reviewer set. Report the number of parallel waves, any serialized fallback, and any lost independence.
 
 For each reviewer:
 - helper: a general-purpose subagent, read-only

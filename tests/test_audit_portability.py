@@ -135,6 +135,30 @@ class PortabilityAuditTests(unittest.TestCase):
         self.assertEqual(AUDIT.REQUIRED_DSTACK_PLAYBOOKS, actual)
         self.assertFalse(AUDIT.EXCLUDED_DSTACK_PLAYBOOKS & actual)
 
+    def test_fanout_inventory_is_exact_and_contracts_pass(self):
+        self.assertEqual(
+            AUDIT.FANOUT_CONTRACT_FILES,
+            AUDIT.discover_fanout_contract_files(),
+        )
+        for relative_path in AUDIT.FANOUT_CONTRACT_FILES:
+            self.assertEqual(
+                [],
+                AUDIT.check_fanout_contract(AUDIT.ROOT / relative_path),
+                relative_path,
+            )
+
+    def test_fanout_contract_requires_capacity_waves_retry_fallback_and_reporting(self):
+        with tempfile.TemporaryDirectory() as temp:
+            workflow = Path(temp) / "SKILL.md"
+            workflow.write_text("Spawn N parallel subagents.\n", encoding="utf-8")
+            messages = [finding.message for finding in AUDIT.check_fanout_contract(workflow)]
+            self.assertIn("fan-out workflow must use reported child capacity", messages)
+            self.assertIn("fan-out workflow must drain bounded waves", messages)
+            self.assertIn("fan-out workflow must retry required work", messages)
+            self.assertIn("fan-out workflow must provide a serial current-agent fallback", messages)
+            self.assertIn("fan-out workflow must report serialized fallback", messages)
+            self.assertIn("fan-out workflow must report lost independence", messages)
+
     def test_config_path_override_fails(self):
         with tempfile.TemporaryDirectory() as temp:
             skill = self.make_skill(Path(temp), "Read `DSTACK_HOME/config.json`.\n")

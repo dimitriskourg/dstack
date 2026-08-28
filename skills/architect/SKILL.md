@@ -13,6 +13,8 @@ Before using a profile, map the system-provided product identity to the canonica
 
 Apply the profile through `worker_binding`: pass its exact model and effort for `spawn-arguments`; for `worker-definitions`, spawn `dstack-<profile>` without overrides. Stop if the binding is missing, rejected, or different. Never inherit session effort.
 
+Treat each invoked `how`, `why`, `arena`, or `interrogate` workflow as a nested fan-out group. Use the host's reported available child capacity only when it exposes enough capacity for overlapping groups and their children; otherwise conservatively run the groups one at a time. Drain each bounded wave before starting the next. If a required group is denied or drops out, retry it later, then complete that pass in the current agent if it still cannot run. Report the number of parallel waves, any serialized fallback, and any lost independence.
+
 ## Start
 
 Open a todolist with one entry per phase before starting. The list shows phase position and keeps phases from silently disappearing.

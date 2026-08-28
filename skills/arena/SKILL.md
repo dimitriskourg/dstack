@@ -7,7 +7,7 @@ description: "Spawn N parallel candidates at the same task, pick a base, graft t
 
 Fan out N parallel attempts at the same task. Read every candidate end to end. Pick the strongest as the base. Graft the best ideas from the others into it. Verify the synthesized result.
 
-Spawn candidates and judges with the active harness's native subagent tool. Every supported harness can spawn subagents. If a nested spawn is denied, run the affected pass serially in the current agent and disclose the loss of independence.
+Spawn candidates and judges with the active harness's native subagent tool. Every supported harness can spawn subagents. Use the host's reported available child capacity when it exposes one; otherwise conservatively launch one candidate at a time. Drain each bounded wave before starting the next. If a required spawn is denied or drops out, retry it in a later wave, then run that pass serially in the current agent if it still cannot run. Do not silently reduce N. Report the number of parallel waves, any serialized fallback, and any lost independence.
 
 ## Configuration
 
@@ -37,7 +37,7 @@ The N candidates will receive the same prompt, so the prompt is the contract. Ge
 
 ## Phase B: Fan out
 
-Launch candidates in bounded waves that fit the active harness's available child capacity. Each gets the task, the path to the shared grounding, its own output path, and instructions to produce both the artifact and a short rationale. Every required candidate runs even when N exceeds the first wave's capacity.
+Launch candidates in bounded waves using the capacity rule above. Each gets the task, the path to the shared grounding, its own output path, and instructions to produce both the artifact and a short rationale. Every required candidate runs even when N exceeds the first wave's capacity.
 
 The rationale is mandatory. Without it, the parent cannot tell whether a candidate's structure is principled or accidental, which makes Phase E grafting unreliable. Each rationale names the alternatives the candidate considered and what it rejected.
 

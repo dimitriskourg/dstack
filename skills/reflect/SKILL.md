@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 Mine the current conversation for durable learnings, then route them into skill edits.
 
-Spawn reviewers with the active harness's native subagent tool. Every supported harness can spawn subagents. If a nested spawn is denied, run the affected review serially and disclose the loss of independence.
+Spawn reviewers with the active harness's native subagent tool. Every supported harness can spawn subagents. Use the host's reported available child capacity when it exposes one; otherwise conservatively launch one reviewer at a time. Drain each bounded wave before starting the next. If a required reviewer is denied or drops out, retry it in a later wave, then run that review in the current agent if it still cannot run. Do not silently reduce the reviewer set. Report the number of parallel waves, any serialized fallback, and any lost independence.
 
 ## Configuration
 

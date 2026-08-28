@@ -50,6 +50,27 @@ EXCLUDED_DSTACK_PLAYBOOKS = {
     "autonomous-run", "autopilot-full", "autopilot-stack", "shipping",
     "worktree-cleanup",
 }
+FANOUT_CONTRACT_FILES = {
+    "skills/architect/SKILL.md",
+    "skills/arena/SKILL.md",
+    "skills/automate-me/SKILL.md",
+    "skills/how/SKILL.md",
+    "skills/interrogate/SKILL.md",
+    "skills/maintain-verification-skill/SKILL.md",
+    "skills/recall/SKILL.md",
+    "skills/reflect/SKILL.md",
+    "skills/swarm/SKILL.md",
+    "skills/teach/SKILL.md",
+    "skills/why/SKILL.md",
+    "skills/dstack-mode/playbooks/bug-fix.md",
+    "skills/dstack-mode/playbooks/eval.md",
+}
+FANOUT_MARKER = re.compile(
+    r"parallel subagents|spawn N\b|spawn multiple|spawn two or more|"
+    r"run multiple (?:parallel )?subagents|one (?:read-only )?subagent per|"
+    r"one reviewer per configured|select reviewers across|nested fan-out groups?|bounded waves",
+    re.IGNORECASE,
+)
 LEAKAGE_PATTERNS: Tuple[Tuple[str, re.Pattern[str]], ...] = (
     ("provider name", re.compile(r"\b(?:Cursor|Codex|Claude Code)\b", re.I)),
     ("provider helper schema", re.compile(r"\b(?:subagent_type|run_in_background|readonly)`?\s*[:=]", re.I)),
@@ -139,6 +160,35 @@ def mentions_directory(text: str, source_dir: Path, skill_dir: Path, target: Pat
         re.search(re.escape(form + "/") + r"(?![\w./-])", text)
         for form in reference_forms(source_dir, skill_dir, target)
     )
+
+
+def check_fanout_contract(path: Path) -> List[Finding]:
+    if not path.is_file():
+        return [Finding(relative(path), "registered fan-out workflow is missing")]
+    text = path.read_text(encoding="utf-8").lower()
+    requirements = (
+        ("available child capacity", "fan-out workflow must use reported child capacity"),
+        ("bounded wave", "fan-out workflow must drain bounded waves"),
+        ("retry", "fan-out workflow must retry required work"),
+        ("current agent", "fan-out workflow must provide a serial current-agent fallback"),
+        ("serialized fallback", "fan-out workflow must report serialized fallback"),
+        ("lost independence", "fan-out workflow must report lost independence"),
+    )
+    return [
+        Finding(relative(path), message)
+        for fragment, message in requirements
+        if fragment not in text
+    ]
+
+
+def discover_fanout_contract_files(root: Path = ROOT) -> Set[str]:
+    candidates = list((root / "skills").glob("*/SKILL.md"))
+    candidates.extend((root / "skills" / "dstack-mode" / "playbooks").glob("*.md"))
+    return {
+        path.relative_to(root).as_posix()
+        for path in candidates
+        if FANOUT_MARKER.search(path.read_text(encoding="utf-8"))
+    }
 
 
 def check_skill(skill_dir: Path) -> List[Finding]:
@@ -283,6 +333,14 @@ def check_structure() -> List[Finding]:
         findings.append(Finding(relative(playbooks / (missing + ".md")), "missing supported dstack-mode playbook"))
     for excluded in sorted(EXCLUDED_DSTACK_PLAYBOOKS & actual_playbooks):
         findings.append(Finding(relative(playbooks / (excluded + ".md")), "excluded dstack-mode playbook must stay absent"))
+
+    discovered_fanout = discover_fanout_contract_files()
+    for unregistered in sorted(discovered_fanout - FANOUT_CONTRACT_FILES):
+        findings.append(Finding(unregistered, "fan-out workflow is missing from the bounded-wave inventory"))
+    for stale in sorted(FANOUT_CONTRACT_FILES - discovered_fanout):
+        findings.append(Finding(stale, "bounded-wave inventory entry no longer describes fan-out"))
+    for path in sorted(FANOUT_CONTRACT_FILES):
+        findings.extend(check_fanout_contract(ROOT / path))
 
     unsupported_references = {
         "playbooks/{}.md".format(name) for name in EXCLUDED_DSTACK_PLAYBOOKS

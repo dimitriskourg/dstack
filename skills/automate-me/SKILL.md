@@ -32,7 +32,7 @@ Update mode changes the rest of the flow:
 
 Use the selected repository entry's configured `transcripts_directory`. Do not search again or cross repository boundaries. When it is `null` or the directory is unreadable, skip mining and rely on step 2.
 
-Survey recent agent conversations within that scope for recurring patterns. Run multiple parallel subagents across slices of history (e.g. last 2-4 weeks, split into 3 slices so each has enough material). Each slice mining subagent reads transcripts from the workspace-scoped path the parent provides, looks for the signals below, and returns a short structured list of patterns it saw with evidence pointers. Default signals worth hunting:
+Survey recent agent conversations within that scope for recurring patterns. Run multiple subagents across slices of history (e.g. last 2-4 weeks, split into 3 slices so each has enough material). Use the host's reported available child capacity when it exposes one; otherwise conservatively launch one child at a time. Drain each bounded wave before starting the next. Retry a denied or dropped required slice in a later wave, then mine it in the current agent if it still cannot run. Do not silently omit a slice. Report the number of parallel waves, any serialized fallback, and any lost independence. Each slice mining subagent reads transcripts from the workspace-scoped path the parent provides, looks for the signals below, and returns a short structured list of patterns it saw with evidence pointers. Default signals worth hunting:
 
 - Response preferences (length, tone, format, "dumb it down" corrections)
 - Delegation habits (subagents, models, specialized workflows, parallelism)
