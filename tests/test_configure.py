@@ -32,13 +32,14 @@ class ConfiguratorTests(unittest.TestCase):
         prefix: str,
         transcripts: str = "/tmp/transcripts",
         worker_binding=None,
+        invalid_bindings=None,
         repository_root: str = "/private/tmp/repository",
     ):
         return {
             "host": host,
             "repository_root": repository_root,
             "profiles": self.profiles(prefix),
-            "invalid_bindings": [],
+            "invalid_bindings": invalid_bindings or [],
             "worker_binding": worker_binding or {"mechanism": "spawn-arguments", "definitions_directory": None},
             "transcripts_directory": transcripts,
         }
@@ -65,6 +66,24 @@ class ConfiguratorTests(unittest.TestCase):
             self.assertEqual("", stderr)
             self.assertEqual(CONFIGURE.default_config(), json.loads(stdout))
             self.assertFalse(config.exists())
+
+    def test_validate_rejects_missing_config_without_writing(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            config = Path(temporary) / "config.json"
+            status, stdout, stderr = self.run_configurator(["validate"], config)
+            self.assertEqual(2, status)
+            self.assertEqual("", stdout)
+            self.assertIn("configuration file does not exist: {}".format(config.resolve()), stderr)
+            self.assertFalse(config.exists())
+
+    def test_validate_accepts_an_existing_config(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            config = Path(temporary) / "config.json"
+            self.write_json(config, CONFIGURE.default_config())
+            status, stdout, stderr = self.run_configurator(["validate"], config)
+            self.assertEqual(0, status)
+            self.assertEqual("", stderr)
+            self.assertIn("Valid dstack configuration: {}".format(config.resolve()), stdout)
 
     def test_host_settings_and_transcript_paths_coexist(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -105,6 +124,40 @@ class ConfiguratorTests(unittest.TestCase):
                 saved["hosts"]["codex"]["repositories"]["/private/tmp/repository"]["transcripts_directory"]
             )
             self.assertNotIn("host_override", saved)
+
+    def test_reconciled_invalid_bindings_survive_apply_until_restored(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = root / "config.json"
+            proposal = root / "proposal.json"
+            unavailable = [{"model": "retired-model", "effort": "medium"}]
+
+            self.write_json(
+                proposal,
+                self.proposal("codex", "replacement", invalid_bindings=unavailable),
+            )
+            self.assertEqual(0, self.apply(config, proposal)[0])
+            self.assertEqual(
+                unavailable,
+                json.loads(config.read_text(encoding="utf-8"))["hosts"]["codex"]["invalid_bindings"],
+            )
+
+            self.write_json(
+                proposal,
+                self.proposal("codex", "replacement", "/tmp/refreshed", invalid_bindings=unavailable),
+            )
+            self.assertEqual(0, self.apply(config, proposal)[0])
+            self.assertEqual(
+                unavailable,
+                json.loads(config.read_text(encoding="utf-8"))["hosts"]["codex"]["invalid_bindings"],
+            )
+
+            self.write_json(proposal, self.proposal("codex", "restored", invalid_bindings=[]))
+            self.assertEqual(0, self.apply(config, proposal)[0])
+            self.assertEqual(
+                [],
+                json.loads(config.read_text(encoding="utf-8"))["hosts"]["codex"]["invalid_bindings"],
+            )
 
     def test_host_override_is_rejected(self):
         with tempfile.TemporaryDirectory() as temporary:

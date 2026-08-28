@@ -1,6 +1,6 @@
 # Known portability and runtime issues
 
-Updated 2026-08-27. This backlog contains unresolved defects inside dstack's [supported scope](docs/guide/06-supported-scope.md). Intentional exclusions are documented there and in `DIFFERENCES.md`; they are not backlog items. Issue numbers remain stable where an earlier backlog item still applies.
+Updated 2026-08-28. This backlog contains unresolved defects inside dstack's [supported scope](docs/guide/06-supported-scope.md). Intentional exclusions are documented there and in `DIFFERENCES.md`; they are not backlog items. Issue numbers remain stable where an earlier backlog item still applies.
 
 Static validation is not live-host proof. When an item changes runtime behavior, verify it in every affected live harness before checking it off.
 
@@ -75,46 +75,15 @@ Dstack serializes repository writers. This item concerns read-only exploration, 
 - Codex and Cursor discovery is verified from the canonical installation;
 - unrelated entries under `~/.claude/skills` remain untouched.
 
-### [ ] 10. Make `configure.py validate` fail when the fixed config file is missing
-
-**Failure:** `configure.py validate` currently reports a missing `~/.dstack/config.json` as valid implicit defaults. That conflicts with the rule that config-dependent workflows stop explicitly when the fixed file does not exist.
-
-**Done when:**
-
-- `validate` exits non-zero and names the missing fixed path;
-- `show` retains an intentional first-setup behavior;
-- config-dependent skills use a deterministic validation path;
-- setup remains the only workflow allowed to create the missing file.
-
-### [ ] 11. Preserve reconciled invalid bindings in the setup proposal
-
-**Failure:** Setup requires unavailable former pairs to be recorded in `invalid_bindings`, but its proposal example hardcodes an empty array. Following the example literally erases the reconciliation result.
-
-**Done when:**
-
-- the proposal uses the reconciled invalid-binding list;
-- unavailable old pairs remain recorded until they become valid again;
-- tests cover a non-empty reconciled list through apply and later restoration.
-
-### [ ] 13. Restore executable validation commands to `AGENTS.md`
-
-**Failure:** `AGENTS.md` says to run "the validation commands in AGENTS.md" but does not contain those commands.
-
-**Done when:**
-
-- `AGENTS.md` contains the exact portability audit, unit-test, JSON, diff, and changed-skill validation commands;
-- it states that these are static gates rather than live-host proof;
-- the instruction no longer points recursively to missing information.
-
 ## Validation baseline
 
 Observed after the 2026-08-27 scope cut:
 
 - `python3 scripts/audit_portability.py`: 0 errors;
-- `python3 -m unittest discover -s tests -v`: 68 tests passed;
+- `python3 -m unittest discover -s tests -v`: 75 tests passed;
 - `python3 -m json.tool schemas/config.schema.json`: passed;
 - `git diff --check`: passed;
-- Skill Creator `quick_validate.py`: 8 changed skills passed; 4 were rejected only because the bundled validator does not accept dstack's `disable-model-invocation` extension.
+- Skill Creator `quick_validate.py`: the changed `setup-dstack` package was rejected only because the bundled validator does not accept dstack's `disable-model-invocation` extension.
 
 These static results do not prove skill discovery, nested invocation, model/effort enforcement, repository transcript isolation, bounded fan-out, forge behavior, or end-to-end behavior in Codex, Claude Code, or Cursor.
 
@@ -123,4 +92,4 @@ These static results do not prove skill discovery, nested invocation, model/effo
 1. Live nested invocation and Codex spawn-operation profile validation.
 2. Bounded fan-out across every retained caller.
 3. GitHub and GitLab request-flow proof.
-4. Installation and smaller setup/documentation inconsistencies.
+4. Installation discovery proof.

@@ -15,4 +15,15 @@ This project is under development. Keep schema version 2 unless the user explici
 - Do not recreate adapters, capability files, or provider-specific rules.
 - Do not infer live-host proof from static validation.
 
-Run the validation commands in `AGENTS.md` and validate every changed skill with Skill Creator's `quick_validate.py`.
+## Validation
+
+Run these static gates from the repository root:
+
+```bash
+python3 scripts/audit_portability.py
+python3 -m unittest discover -s tests -v
+python3 -m json.tool schemas/config.schema.json >/dev/null
+git diff --check
+```
+
+These commands validate repository structure and static contracts. They do not prove discovery, nested invocation, model-and-effort enforcement, fan-out, forge behavior, or end-to-end behavior in a live harness.

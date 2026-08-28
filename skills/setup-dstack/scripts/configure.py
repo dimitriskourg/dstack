@@ -271,13 +271,14 @@ def run(arguments: Sequence[str]) -> int:
     options = parser().parse_args(arguments)
     path = CONFIG_PATH.resolve()
     try:
+        if options.command == "validate" and not path.exists():
+            raise ConfigError("configuration file does not exist: {}".format(path))
         config = default_config() if not path.exists() else validate_config(read_json(path, str(path)))
         if options.command == "show":
             print(json.dumps(config, indent=2, ensure_ascii=False))
             return 0
         if options.command == "validate":
-            state = "file" if path.exists() else "implicit defaults"
-            print("Valid dstack configuration ({}): {}".format(state, path))
+            print("Valid dstack configuration: {}".format(path))
             return 0
         proposal = load_proposal(options.proposal)
         write_atomic(path, merge_proposal(config, proposal))
