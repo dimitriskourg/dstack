@@ -1,6 +1,6 @@
 # dstack differences from pstack
 
-Updated 2026-08-26. This is the source-of-truth handoff for upstream alignment and project structure. dstack is under development, so compatible pre-release shape changes do not bump schema version 2.
+Updated 2026-08-27. This is the source-of-truth handoff for upstream alignment and project structure. The supported product scope lives in [the scope guide](docs/guide/06-supported-scope.md). dstack is under development, so compatible pre-release shape changes do not bump schema version 2.
 
 ## Upstream baseline
 
@@ -13,6 +13,10 @@ Updated 2026-08-26. This is the source-of-truth handoff for upstream alignment a
 Recheck the local source revision before a future sync. Treat pstack and other plugin folders as immutable inputs.
 
 ## Deliberate differences
+
+### Curated scope
+
+dstack ports selected pstack material rather than pursuing source completeness. All current standalone skills remain retained, but `dstack-mode` ships 18 local playbooks. Retained source stays as close to pstack as the supported harnesses and team requirements allow. Excluded source remains available through pstack and Git history; dstack does not keep a disabled archive.
 
 ### Names
 
@@ -44,7 +48,9 @@ The separate general `orchestrate` plugin is not copied. Pstack's Orchestrate ro
 - four model-and-effort profiles;
 - invalid model-and-effort bindings;
 - the worker binding mechanism for that harness;
-- the absolute transcript directory scoped to the active workspace, or `null`.
+- one absolute transcript directory, or `null`.
+
+The retained product contract scopes transcripts by both harness and repository. The current schema still stores one directory per harness; [known issue 2](KNOWN_ISSUES.md) tracks the required correction.
 
 The four profiles are `fast-explorer`, `feature-worker`, `bug-worker`, and `skeptical-reviewer`. Panel configuration and the former judgment-only profiles were removed.
 
@@ -54,7 +60,7 @@ Every profile requires a concrete model and effort pair. Parent inheritance and 
 
 This is a portable mechanism recorded in configuration, not a provider rule folder: the mechanism and the directory are discovered live by setup in the active harness.
 
-`setup-dstack` searches for and confirms the active workspace transcript directory once. Transcript-backed skills read the saved path and do not rediscover it on every invocation.
+`setup-dstack` searches for and confirms the active repository's transcript directory once. Transcript-backed skills read the saved path and do not rediscover it on every invocation. Until known issue 2 is resolved, configuring another repository under the same harness can overwrite that saved path.
 
 Every independently invocable skill that consumes profiles or transcripts reads the fixed file itself and selects the entry keyed by the lowercase identity of the active harness. There is no host override. A missing or invalid file, unidentified harness, missing host entry, missing required profile, or invalid configured binding stops the skill with an explicit `setup-dstack` instruction.
 
@@ -70,9 +76,25 @@ The currently bundled Skill Creator validator rejects that portable frontmatter 
 
 `comment-sicko` remains an additional normal skill.
 
+### Additional playbook
+
+`apple-dev-cleanup` is a dstack-specific explicit playbook. The pstack worktree-and-simulator cleanup workflow mixed repository cleanup with machine-wide Apple development state. Dstack excludes worktree management and retains the Apple cleanup value behind a separate audit and approval gate.
+
 ### Excluded pstack runtime
 
-dstack does not ship pstack's provider-specific automation, agent wrappers, silent Bun bootstrap, or PR watcher. The current `dstack-mode` also omits the heavyweight Orchestrate playbook/runtime. These are intentional scope choices, not capability gaps.
+dstack does not ship pstack's provider-specific automation, agent wrappers, silent Bun bootstrap, PR watcher, or heavyweight Orchestrate runtime. The curated `dstack-mode` also excludes:
+
+- `autonomous-run`, because supported local sessions do not promise unattended wake or persistence;
+- `autopilot-full`, because dstack does not support autonomous parallel repository writers or automated merging;
+- `autopilot-stack`, because dstack does not support that autonomy or Graphite;
+- `shipping`, because the source playbook is Graphite-specific and dstack stops at merge-ready;
+- `worktree-cleanup` and its audit script, because dstack does not create or manage worktrees.
+
+These are intentional scope choices, not capability gaps or known issues. Repository writers serialize. Read-only exploration, review, and independent artifacts outside the repository may still fan out in bounded waves.
+
+### Forge support
+
+Opening a request and Babysit resolve the repository remote first. GitHub uses authenticated `gh`; GitLab uses authenticated `glab`. Opening a pull request or merge request is explicit only, Babysit is a separate explicit follow-up, and merge authority remains with the team.
 
 ## Structure
 
@@ -83,7 +105,7 @@ Portable behavior lives inside `skills/`. Deterministic helpers live with the sk
 1. Record the exact old and new pstack revisions.
 2. Diff those revisions before copying anything.
 3. Inventory skills, playbooks, references, scripts, agents, and automations separately.
-4. Copy portable source with the smallest possible edits.
+4. Copy only supported portable source with the smallest possible edits.
 5. Apply only the deliberate transformations above.
 6. Inventory skill names referenced outside pstack and copy matching general-plugin skills when they are real dependencies.
 7. Update this file for every explained source difference.
