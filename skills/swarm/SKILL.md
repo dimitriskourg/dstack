@@ -7,7 +7,7 @@ description: "Fan out N parallel workers, drain them, and return one report. Use
 
 Fan out N parallel workers. They may cover separate slices, race the same brief, or mix both. The parent waits, aggregates, and returns one report.
 
-Spawn workers with the active harness's native subagent tool. Every supported harness can spawn subagents. If a nested spawn is denied, run the affected slice in the current agent and report that it was serialized.
+Spawn workers with the active harness's native subagent tool. Every supported harness can spawn subagents. Use the host's reported available child capacity when it exposes one; otherwise conservatively launch one worker at a time. Drain each bounded wave before starting the next. If a required worker is denied or drops out, retry it in a later wave, then run that slice in the current agent if it still cannot run. Do not silently reduce N. Report the number of parallel waves, any serialized fallback, and any lost independence.
 
 ## Configuration
 
@@ -34,7 +34,7 @@ Open a todolist with one entry per phase before launching anything.
 
 ## Phase B: Fan out
 
-Launch workers in bounded waves that fit the active harness's available child capacity. Bind each general-purpose subagent to the chosen profile's model and effort. Every required slice runs even when N exceeds the first wave's capacity.
+Launch workers in bounded waves using the capacity rule above. Bind each general-purpose subagent to the chosen profile's model and effort. Every required slice runs even when N exceeds the first wave's capacity.
 
 When a worker must start from a non-default pushed branch, name that branch in its brief.
 

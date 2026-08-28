@@ -15,6 +15,8 @@ Before using a profile, map the system-provided product identity to the canonica
 
 Apply the profile through `worker_binding`: pass its exact model and effort for `spawn-arguments`; for `worker-definitions`, spawn `dstack-<profile>` without overrides. Stop if the binding is missing, rejected, or different. Never inherit session effort.
 
+Spawn investigators with the active harness's native subagent tool. Use the host's reported available child capacity when it exposes one; otherwise conservatively launch one investigator at a time. Drain each bounded wave before starting the next. If a required investigator is denied or drops out, retry it in a later wave, then perform that category search in the current agent if it still cannot run. Do not silently drop a source. Report the number of parallel waves, any serialized fallback, and any lost independence.
+
 ## How this skill works
 
 Historical context spreads across seven evidence categories: source control history, issue or ticket tracking, long-form documents, real-time team chat, infrastructure observability, error or exception tracking, and product analytics warehouses. Local Git history is the baseline. At run time, enumerate available integrations, map each to a category, query available categories in parallel, and synthesize with explicit confidence calibration. An unavailable category is a reported evidence gap, not a setup failure. Null results from searched categories are first-class evidence about how the decision was made; report them alongside positive findings.
@@ -115,7 +117,7 @@ Source control is always available through local Git. Forge discussion is availa
 
 Aim for a complete **coverage map**, not a minimal one. A null result from an issue tracker is evidence the decision was not ticketed, a useful fact in itself. Document the null, don't skip the search.
 
-Launch all matching investigators in a single message so they run concurrently. One investigator per category lets each specialize in one tool's query vocabulary and result shape. Don't ask one agent to cover multiple MCPs.
+Launch all matching investigators across bounded waves using the capacity rule above. One investigator per category lets each specialize in one tool's query vocabulary and result shape. Don't ask one agent to cover multiple MCPs.
 
 Subagent config (each):
 - helper: a general-purpose subagent

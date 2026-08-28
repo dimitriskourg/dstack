@@ -10,6 +10,6 @@ Be scientific. Every shipped line traces to runtime evidence. Belt-and-suspender
 4. Verify on the same surface; the original repro now passes. "Inconclusive" or wrong-surface is not a pass; flag it. Unit tests show branch behavior, not bug absence.
 5. Stage the commits so the failing repro lands before the fix in git history; the diff tells the story. See the **tdd** skill for the failing-test-first cadence when the bug has a cheap local test path; skip it when the test would be expensive, integration-heavy, or unclear.
    This is the canonical **sequence-verifiable-units** principle skill, the failing test first and the fix on top.
-Investigation fans out `how` + `why` as parallel subagents.
+Investigation uses `how` + `why` as nested fan-out groups. Use the host's reported available child capacity only when it exposes enough capacity for both groups and their children; otherwise conservatively run the groups one at a time. Drain each bounded wave before starting the next. Retry a denied group later, then complete its pass in the current agent if it still cannot run. Report the number of parallel waves, any serialized fallback, and any lost independence.
 
 **Reply:** what was broken, root cause, fix, how you verified. Paste failing-then-passing repro output verbatim.
