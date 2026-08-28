@@ -48,9 +48,9 @@ The separate general `orchestrate` plugin is not copied. Pstack's Orchestrate ro
 - four model-and-effort profiles;
 - invalid model-and-effort bindings;
 - the worker binding mechanism for that harness;
-- one absolute transcript directory, or `null`.
+- repository entries keyed by canonical absolute Git root, each containing one absolute transcript directory or `null`.
 
-The retained product contract scopes transcripts by both harness and repository. The current schema still stores one directory per harness; [known issue 2](KNOWN_ISSUES.md) tracks the required correction.
+The retained product contract scopes transcripts by both harness and repository. Host keys are exactly `codex`, `claude`, and `cursor`. Each host's `repositories` object is keyed by the canonical absolute Git root and repeats that root inside the entry so consumers can verify the identity before reading transcripts.
 
 The four profiles are `fast-explorer`, `feature-worker`, `bug-worker`, and `skeptical-reviewer`. Panel configuration and the former judgment-only profiles were removed.
 
@@ -60,9 +60,9 @@ Every profile requires a concrete model and effort pair. Parent inheritance and 
 
 This is a portable mechanism recorded in configuration, not a provider rule folder: the mechanism and the directory are discovered live by setup in the active harness.
 
-`setup-dstack` searches for and confirms the active repository's transcript directory once. Transcript-backed skills read the saved path and do not rediscover it on every invocation. Until known issue 2 is resolved, configuring another repository under the same harness can overwrite that saved path.
+`setup-dstack` searches for and confirms the active repository's transcript directory once. Transcript-backed skills read only the entry matching the canonical active-repository root and do not rediscover it on every invocation. Configuring another repository under the same harness preserves every existing repository entry.
 
-Every independently invocable skill that consumes profiles or transcripts reads the fixed file itself and selects the entry keyed by the lowercase identity of the active harness. There is no host override. A missing or invalid file, unidentified harness, missing host entry, missing required profile, or invalid configured binding stops the skill with an explicit `setup-dstack` instruction.
+Every independently invocable skill that consumes profiles or transcripts reads the fixed file itself and maps the system-provided product identity to `codex`, `claude`, or `cursor`. There is no alias or host override. Transcript consumers additionally derive the canonical Git root, select that repository entry, and verify its repeated `repository_root`. A missing or invalid file, unidentified harness or repository, missing entry, missing required profile, or invalid configured binding stops the skill with an explicit `setup-dstack` instruction.
 
 ### Invocation metadata
 

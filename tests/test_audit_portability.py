@@ -63,6 +63,8 @@ class PortabilityAuditTests(unittest.TestCase):
             messages = self.messages(skill)
             self.assertIn("config-dependent skill must name the fixed config path", messages)
             self.assertIn("config-dependent skill must select the active harness entry directly", messages)
+            self.assertIn("config-dependent skill must derive a canonical harness id", messages)
+            self.assertIn("config-dependent skill must reject harness aliases", messages)
             self.assertIn("config-dependent skill must fail closed with setup-dstack guidance", messages)
             self.assertIn("profile-consuming skill must require a concrete model and effort pair", messages)
             self.assertIn("profile-consuming skill must name the worker_binding mechanisms", messages)
@@ -72,6 +74,7 @@ class PortabilityAuditTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             skill = self.make_skill(
                 Path(temp),
+                "Map the system-provided product identity to `codex`, `claude`, or `cursor`; never invent an alias. "
                 "Read `~/.dstack/config.json` and select `hosts[<active-harness>]`; on failure, stop and name the exact problem. "
                 "Tell the user to invoke `setup-dstack` explicitly. Require a concrete model and effort pair. "
                 "Apply it through `worker_binding`: `spawn-arguments` carries both values in the spawn call and "
@@ -84,6 +87,7 @@ class PortabilityAuditTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             skill = self.make_skill(
                 Path(temp),
+                "Map the system-provided product identity to `codex`, `claude`, or `cursor`; never invent an alias. "
                 "Read `~/.dstack/config.json` and select `hosts[<active-harness>]`; on failure, stop and name the exact problem. "
                 "Tell the user to invoke `setup-dstack` explicitly. Require a concrete model and effort pair. "
                 "Pass the profile model in the spawn call.\n",
@@ -97,16 +101,33 @@ class PortabilityAuditTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             skill = self.make_skill(
                 Path(temp),
-                "Read `~/.dstack/config.json` and select `hosts[<active-harness>]`; on failure, stop and name the exact problem. "
+                "Map the system-provided product identity to `codex`, `claude`, or `cursor`; never invent an alias. "
+                "Read `~/.dstack/config.json`, select `hosts[<active-harness>].repositories[<canonical-repository-root>]`, "
+                "and verify its `repository_root` exactly matches; on failure, stop and name the exact problem. "
                 "Tell the user to invoke `setup-dstack` explicitly.\n",
                 name="recall",
             )
             self.assertEqual([], self.messages(skill))
 
+    def test_transcript_skill_requires_repository_identity(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(
+                Path(temp),
+                "Map the system-provided product identity to `codex`, `claude`, or `cursor`; never invent an alias. "
+                "Read `~/.dstack/config.json` and select `hosts[<active-harness>]`; on failure, stop and name the exact problem. "
+                "Tell the user to invoke `setup-dstack` explicitly.\n",
+                name="recall",
+            )
+            messages = self.messages(skill)
+            self.assertIn("transcript skill must select the canonical repository entry", messages)
+            self.assertIn("transcript skill must verify the repository entry identity", messages)
+
     def test_shipped_schema_requires_a_worker_binding(self):
         findings = [finding.message for finding in AUDIT.check_structure()]
         self.assertNotIn("each host entry must require a worker binding", findings)
         self.assertNotIn("config must define exactly the two supported worker binding mechanisms", findings)
+        self.assertNotIn("config must define exactly the three canonical harness ids", findings)
+        self.assertNotIn("each host entry must require repository-scoped configuration", findings)
 
     def test_supported_playbook_inventory_is_exact(self):
         playbooks = AUDIT.SKILLS / "dstack-mode" / "playbooks"

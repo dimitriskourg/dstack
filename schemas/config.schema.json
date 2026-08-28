@@ -9,12 +9,11 @@
     "hosts": {
       "type": "object",
       "propertyNames": {
-        "pattern": "^[a-z][a-z0-9-]*$",
-        "not": { "const": "auto" }
+        "enum": ["codex", "claude", "cursor"]
       },
       "additionalProperties": {
         "type": "object",
-        "required": ["profiles", "invalid_bindings", "worker_binding", "transcripts_directory"],
+        "required": ["profiles", "invalid_bindings", "worker_binding", "repositories"],
         "properties": {
           "profiles": {
             "type": "object",
@@ -29,7 +28,11 @@
           },
           "invalid_bindings": { "type": "array", "items": { "$ref": "#/$defs/modelBinding" }, "uniqueItems": true },
           "worker_binding": { "$ref": "#/$defs/workerBinding" },
-          "transcripts_directory": { "type": ["string", "null"], "minLength": 1 }
+          "repositories": {
+            "type": "object",
+            "propertyNames": { "minLength": 1 },
+            "additionalProperties": { "$ref": "#/$defs/repositoryConfig" }
+          }
         },
         "additionalProperties": false
       }
@@ -40,6 +43,15 @@
       "type": "string",
       "pattern": "^\\S+$",
       "not": { "enum": ["inherit-parent", "auto"] }
+    },
+    "repositoryConfig": {
+      "type": "object",
+      "required": ["repository_root", "transcripts_directory"],
+      "properties": {
+        "repository_root": { "type": "string", "minLength": 1 },
+        "transcripts_directory": { "type": ["string", "null"], "minLength": 1 }
+      },
+      "additionalProperties": false
     },
     "workerBinding": {
       "type": "object",

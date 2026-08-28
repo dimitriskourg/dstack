@@ -12,7 +12,7 @@ Spawn reviewers with the active harness's native subagent tool. Every supported 
 
 ## Configuration
 
-Before locating the transcript or using a profile, read `~/.dstack/config.json` and select `hosts[<active-harness>]` using the lowercase identity of the active harness. This location and host selection rule are fixed; do not use an environment override or another host entry. If the file is missing, unreadable, or invalid, the active harness cannot be identified, its host entry is absent, or a required profile is missing or listed in `invalid_bindings`, stop and name the exact problem. Tell the user to invoke `setup-dstack` explicitly. Every profile must provide a concrete model and effort pair; do not guess, omit, or inherit a binding.
+Before locating the transcript or using a profile, map the system-provided product identity to the canonical id `codex`, `claude`, or `cursor`. Resolve the canonical repository root with `git rev-parse --show-toplevel` and symlink resolution. Read `~/.dstack/config.json`, select `hosts[<active-harness>]` and its `repositories[<canonical-repository-root>]`, and verify the repository entry's `repository_root` exactly matches. Never invent an alias or select another host or repository entry. If the file is missing, unreadable, or invalid, either entry is absent, the identity or repository is unknown, or a required profile is missing or listed in `invalid_bindings`, stop and name the exact problem. Tell the user to invoke `setup-dstack` explicitly. Every profile must provide a concrete model and effort pair; do not guess, omit, or inherit a binding.
 
 Apply the profile through `worker_binding`: pass its exact model and effort for `spawn-arguments`; for `worker-definitions`, spawn `dstack-<profile>` without overrides. Stop if the binding is missing, rejected, or different. Never inherit session effort.
 
@@ -30,7 +30,7 @@ Skip when the conversation is trivial, off-topic, or already covered by an exist
 
 ### 1. Locate the active transcript
 
-Use the active host's configured `transcripts_directory`. Do not search again here. The saved directory is scoped to the active workspace. When it is `null` or the directory is unreadable, skip to the digest fallback below.
+Use the selected repository entry's configured `transcripts_directory`. Do not search again here. When it is `null` or the directory is unreadable, skip to the digest fallback below.
 
 ```bash
 ls -t <transcript-dir>/*.jsonl <transcript-dir>/*/*.jsonl <transcript-dir>/*/subagents/*.jsonl 2>/dev/null | head -10

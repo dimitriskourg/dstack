@@ -12,7 +12,7 @@ This skill orchestrates three others: an inline mining pass (see step 1), your h
 
 ## Configuration
 
-Before mining transcripts, read `~/.dstack/config.json` and select `hosts[<active-harness>]` using the lowercase identity of the active harness. This location and host selection rule are fixed; do not use an environment override or another host entry. If the file is missing, unreadable, or invalid, the active harness cannot be identified, or its host entry is absent, stop and name the exact problem. Tell the user to invoke `setup-dstack` explicitly.
+Before mining transcripts, map the system-provided product identity to the canonical id `codex`, `claude`, or `cursor`. Resolve the canonical repository root with `git rev-parse --show-toplevel` and symlink resolution. Read `~/.dstack/config.json`, select `hosts[<active-harness>].repositories[<canonical-repository-root>]`, and verify its `repository_root` exactly matches. Never invent an alias, use another host or repository entry, or fall back across repositories. If any step fails, stop and name the exact problem. Tell the user to invoke `setup-dstack` explicitly.
 
 ## Flow
 
@@ -30,7 +30,7 @@ Update mode changes the rest of the flow:
 
 ### 1. Mine their history
 
-Use the active host's configured `transcripts_directory`. Do not search again or cross workspace boundaries. When it is `null` or the directory is unreadable, skip mining and rely on step 2.
+Use the selected repository entry's configured `transcripts_directory`. Do not search again or cross repository boundaries. When it is `null` or the directory is unreadable, skip mining and rely on step 2.
 
 Survey recent agent conversations within that scope for recurring patterns. Run multiple parallel subagents across slices of history (e.g. last 2-4 weeks, split into 3 slices so each has enough material). Each slice mining subagent reads transcripts from the workspace-scoped path the parent provides, looks for the signals below, and returns a short structured list of patterns it saw with evidence pointers. Default signals worth hunting:
 

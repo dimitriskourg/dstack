@@ -41,10 +41,10 @@ class WorkerBindingTests(unittest.TestCase):
                 "mechanism": mechanism,
                 "definitions_directory": str(directory) if directory is not None else None,
             },
-            "transcripts_directory": None,
+            "repositories": {},
         }
 
-    def write_config(self, config: Path, entry, host="host-a"):
+    def write_config(self, config: Path, entry, host="codex"):
         config.write_text(
             json.dumps({"schema_version": 2, "hosts": {host: entry}}),
             encoding="utf-8",
@@ -64,7 +64,7 @@ class WorkerBindingTests(unittest.TestCase):
             config = root / "config.json"
             workers = root / "workers"
             self.write_config(config, self.host_entry(workers))
-            status, stdout, stderr = self.run_bindings(["--host", "host-a"], config)
+            status, stdout, stderr = self.run_bindings(["--host", "codex"], config)
             self.assertEqual(0, status, stderr)
             self.assertEqual(
                 sorted("dstack-{}.md".format(profile) for profile in CONFIGURE.PROFILES),
@@ -82,13 +82,13 @@ class WorkerBindingTests(unittest.TestCase):
             config = root / "config.json"
             workers = root / "workers"
             self.write_config(config, self.host_entry(workers))
-            self.run_bindings(["--host", "host-a"], config)
-            status, stdout, _ = self.run_bindings(["--host", "host-a"], config)
+            self.run_bindings(["--host", "codex"], config)
+            status, stdout, _ = self.run_bindings(["--host", "codex"], config)
             self.assertEqual(0, status)
             self.assertEqual(4, stdout.count("unchanged"))
             drifted = workers / "dstack-bug-worker.md"
             drifted.write_text(drifted.read_text(encoding="utf-8").replace("effort: low", "effort: max"), encoding="utf-8")
-            status, stdout, _ = self.run_bindings(["--host", "host-a"], config)
+            status, stdout, _ = self.run_bindings(["--host", "codex"], config)
             self.assertEqual(0, status)
             self.assertIn("updated dstack-bug-worker.md", stdout)
             self.assertIn("effort: low\n", drifted.read_text(encoding="utf-8"))
@@ -102,7 +102,7 @@ class WorkerBindingTests(unittest.TestCase):
             unrelated = workers / "reviewer.md"
             unrelated.write_text("Mine.\n", encoding="utf-8")
             self.write_config(config, self.host_entry(workers))
-            self.assertEqual(0, self.run_bindings(["--host", "host-a"], config)[0])
+            self.assertEqual(0, self.run_bindings(["--host", "codex"], config)[0])
             self.assertEqual("Mine.\n", unrelated.read_text(encoding="utf-8"))
 
     def test_spawn_argument_host_generates_nothing(self):
@@ -110,7 +110,7 @@ class WorkerBindingTests(unittest.TestCase):
             root = Path(temporary)
             config = root / "config.json"
             self.write_config(config, self.host_entry(None, mechanism="spawn-arguments"))
-            status, stdout, _ = self.run_bindings(["--host", "host-a"], config)
+            status, stdout, _ = self.run_bindings(["--host", "codex"], config)
             self.assertEqual(0, status)
             self.assertIn("no worker definitions are needed", stdout)
 
@@ -122,7 +122,7 @@ class WorkerBindingTests(unittest.TestCase):
             entry = self.host_entry(workers)
             entry["profiles"]["fast-explorer"]["effort"] = "inherit-parent"
             self.write_config(config, entry)
-            status, _, stderr = self.run_bindings(["--host", "host-a"], config)
+            status, _, stderr = self.run_bindings(["--host", "codex"], config)
             self.assertEqual(2, status)
             self.assertIn("must be a concrete value", stderr)
             self.assertFalse(workers.exists())

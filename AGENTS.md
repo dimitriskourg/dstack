@@ -11,7 +11,7 @@ This project is under development. Keep schema version 2 unless the user explici
 - Keep only the four profiles documented in `DIFFERENCES.md`.
 - Every profile must contain a concrete model and effort pair. Parent-model inheritance and automatic model aliases are not configuration options.
 - Both halves of a pair must reach the worker through the host entry's `worker_binding`. A worker never inherits session effort.
-- Read profiles and the workspace-scoped transcript directory only from `~/.dstack/config.json`. The location is fixed. Config-dependent skills stop when it or the active host entry is unavailable.
+- Read profiles and repository-scoped transcript directories only from `~/.dstack/config.json`. Map the system product identity to `codex`, `claude`, or `cursor`; transcript consumers also select and verify the canonical Git-root entry. Config-dependent skills stop when the file or required entry is unavailable.
 - Do not recreate adapters, capability files, or provider-specific rules.
 - Do not infer live-host proof from static validation.
 

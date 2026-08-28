@@ -7,7 +7,6 @@ import argparse
 import copy
 import json
 import os
-import re
 import sys
 import tempfile
 from pathlib import Path
@@ -21,7 +20,7 @@ RESERVED_BINDING_VALUES = {"auto", "inherit-parent"}
 SPAWN_ARGUMENTS = "spawn-arguments"
 WORKER_DEFINITIONS = "worker-definitions"
 WORKER_MECHANISMS = (SPAWN_ARGUMENTS, WORKER_DEFINITIONS)
-HOST_PATTERN = re.compile(r"^[a-z][a-z0-9-]*$")
+SUPPORTED_HOSTS = ("codex", "claude", "cursor")
 
 
 class ConfigError(Exception):
@@ -57,8 +56,8 @@ def require_identifier(value: Any, location: str) -> str:
 
 def validate_host(value: Any, location: str) -> str:
     host = require_identifier(value, location)
-    if not HOST_PATTERN.fullmatch(host) or host == "auto":
-        raise ConfigError("{} must be a lowercase host id".format(location))
+    if host not in SUPPORTED_HOSTS:
+        raise ConfigError("{} must be one of: {}".format(location, ", ".join(SUPPORTED_HOSTS)))
     return host
 
 
@@ -130,6 +129,37 @@ def validate_transcripts_directory(value: Any, location: str) -> Optional[str]:
     return str(Path(value).expanduser())
 
 
+def validate_repository_root(value: Any, location: str) -> str:
+    if not isinstance(value, str) or not value or not Path(value).expanduser().is_absolute():
+        raise ConfigError("{} must be a canonical absolute path".format(location))
+    resolved = str(Path(value).expanduser().resolve())
+    if value != resolved:
+        raise ConfigError("{} must be canonical; expected {}".format(location, resolved))
+    return resolved
+
+
+def validate_repositories(value: Any, location: str) -> Dict[str, Dict[str, Optional[str]]]:
+    repositories = require_object(value, location)
+    checked: Dict[str, Dict[str, Optional[str]]] = {}
+    for key in sorted(repositories):
+        repository_root = validate_repository_root(key, "{} key".format(location))
+        entry_location = "{}[{}]".format(location, json.dumps(key))
+        entry = require_object(repositories[key], entry_location)
+        require_exact_keys(entry, ("repository_root", "transcripts_directory"), (), entry_location)
+        recorded_root = validate_repository_root(
+            entry["repository_root"], "{}.repository_root".format(entry_location)
+        )
+        if recorded_root != repository_root:
+            raise ConfigError("{}.repository_root must match its repository key".format(entry_location))
+        checked[repository_root] = {
+            "repository_root": repository_root,
+            "transcripts_directory": validate_transcripts_directory(
+                entry["transcripts_directory"], "{}.transcripts_directory".format(entry_location)
+            ),
+        }
+    return checked
+
+
 def validate_config(value: Any) -> Dict[str, Any]:
     config = require_object(value, "config")
     require_exact_keys(config, ("schema_version", "hosts"), (), "config")
@@ -141,12 +171,12 @@ def validate_config(value: Any) -> Dict[str, Any]:
         validate_host(host, "config host key")
         location = "config.hosts.{}".format(host)
         entry = require_object(hosts[host], location)
-        require_exact_keys(entry, ("profiles", "invalid_bindings", "worker_binding", "transcripts_directory"), (), location)
+        require_exact_keys(entry, ("profiles", "invalid_bindings", "worker_binding", "repositories"), (), location)
         checked_hosts[host] = {
             "profiles": validate_profiles(entry["profiles"], "{}.profiles".format(location)),
             "invalid_bindings": validate_invalid_bindings(entry["invalid_bindings"], "{}.invalid_bindings".format(location)),
             "worker_binding": validate_worker_binding(entry["worker_binding"], "{}.worker_binding".format(location)),
-            "transcripts_directory": validate_transcripts_directory(entry["transcripts_directory"], "{}.transcripts_directory".format(location)),
+            "repositories": validate_repositories(entry["repositories"], "{}.repositories".format(location)),
         }
     return {
         "schema_version": SCHEMA_VERSION,
@@ -158,12 +188,13 @@ def validate_proposal(value: Any) -> Dict[str, Any]:
     proposal = require_object(value, "proposal")
     require_exact_keys(
         proposal,
-        ("host", "profiles", "invalid_bindings", "worker_binding", "transcripts_directory"),
+        ("host", "repository_root", "profiles", "invalid_bindings", "worker_binding", "transcripts_directory"),
         (),
         "proposal",
     )
     checked = {
         "host": validate_host(proposal["host"], "proposal.host"),
+        "repository_root": validate_repository_root(proposal["repository_root"], "proposal.repository_root"),
         "profiles": validate_profiles(proposal["profiles"], "proposal.profiles"),
         "invalid_bindings": validate_invalid_bindings(proposal["invalid_bindings"], "proposal.invalid_bindings"),
         "worker_binding": validate_worker_binding(proposal["worker_binding"], "proposal.worker_binding"),
@@ -192,11 +223,17 @@ def load_proposal(path: str) -> Dict[str, Any]:
 
 def merge_proposal(config: Mapping[str, Any], proposal: Mapping[str, Any]) -> Dict[str, Any]:
     merged = copy.deepcopy(config)
+    previous = merged["hosts"].get(proposal["host"], {})
+    repositories = copy.deepcopy(previous.get("repositories", {}))
+    repositories[proposal["repository_root"]] = {
+        "repository_root": proposal["repository_root"],
+        "transcripts_directory": proposal["transcripts_directory"],
+    }
     merged["hosts"][proposal["host"]] = {
         "profiles": copy.deepcopy(proposal["profiles"]),
         "invalid_bindings": copy.deepcopy(proposal["invalid_bindings"]),
         "worker_binding": copy.deepcopy(proposal["worker_binding"]),
-        "transcripts_directory": proposal["transcripts_directory"],
+        "repositories": repositories,
     }
     return validate_config(merged)
 
@@ -244,7 +281,11 @@ def run(arguments: Sequence[str]) -> int:
             return 0
         proposal = load_proposal(options.proposal)
         write_atomic(path, merge_proposal(config, proposal))
-        print("Configured host {} in {}".format(proposal["host"], path))
+        print(
+            "Configured host {} for repository {} in {}".format(
+                proposal["host"], proposal["repository_root"], path
+            )
+        )
         return 0
     except (ConfigError, OSError) as error:
         print("Configuration failed: {}".format(error), file=sys.stderr)

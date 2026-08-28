@@ -19,6 +19,8 @@ CONFIG_DEPENDENT_SKILLS = {
     "architect", "arena", "automate-me", "dstack-mode", "how", "interrogate",
     "recall", "reflect", "show-me-your-work", "swarm", "why",
 }
+TRANSCRIPT_CONFIG_SKILLS = {"automate-me", "dstack-mode", "recall", "reflect", "show-me-your-work"}
+CANONICAL_HOST_IDS = {"codex", "claude", "cursor"}
 REQUIRED_SKILLS = {
     "architect", "arena", "automate-me", "blast-radius", "bro", "comment-sicko",
     "control-cli", "control-ui", "create-verification-skill", "deslop", "dstack-mode",
@@ -163,6 +165,15 @@ def check_skill(skill_dir: Path) -> List[Finding]:
             findings.append(Finding(relative(skill_file), "config-dependent skill must name the fixed config path"))
         if "hosts[<active-harness>]" not in body:
             findings.append(Finding(relative(skill_file), "config-dependent skill must select the active harness entry directly"))
+        if not CANONICAL_HOST_IDS <= set(re.findall(r"`([a-z]+)`", body)) or "system-provided product identity" not in body:
+            findings.append(Finding(relative(skill_file), "config-dependent skill must derive a canonical harness id"))
+        if "invent an alias" not in body:
+            findings.append(Finding(relative(skill_file), "config-dependent skill must reject harness aliases"))
+        if skill_dir.name in TRANSCRIPT_CONFIG_SKILLS:
+            if "repositories[<canonical-repository-root>]" not in body:
+                findings.append(Finding(relative(skill_file), "transcript skill must select the canonical repository entry"))
+            if "`repository_root` exactly matches" not in body:
+                findings.append(Finding(relative(skill_file), "transcript skill must verify the repository entry identity"))
         if "stop and name the exact problem" not in body or "Tell the user to invoke `setup-dstack` explicitly." not in body:
             findings.append(Finding(relative(skill_file), "config-dependent skill must fail closed with setup-dstack guidance"))
         if skill_dir.name not in {"automate-me", "recall"}:
@@ -183,6 +194,8 @@ def check_skill(skill_dir: Path) -> List[Finding]:
         for line_number, line in enumerate(text.splitlines(), 1):
             for label, pattern in LEAKAGE_PATTERNS:
                 if pattern.search(line):
+                    if label == "provider name" and all(host in line.lower() for host in CANONICAL_HOST_IDS):
+                        continue
                     findings.append(Finding(relative(path), label, line_number))
             if "Call the Skill tool with" in line:
                 calls = SKILL_CALL.findall(line)
@@ -255,6 +268,11 @@ def check_structure() -> List[Finding]:
     host_entry = value.get("properties", {}).get("hosts", {}).get("additionalProperties", {})
     if "worker_binding" not in set(host_entry.get("required", [])):
         findings.append(Finding(relative(schema), "each host entry must require a worker binding"))
+    host_ids = value.get("properties", {}).get("hosts", {}).get("propertyNames", {}).get("enum", [])
+    if set(host_ids) != CANONICAL_HOST_IDS:
+        findings.append(Finding(relative(schema), "config must define exactly the three canonical harness ids"))
+    if "repositories" not in set(host_entry.get("required", [])):
+        findings.append(Finding(relative(schema), "each host entry must require repository-scoped configuration"))
     mechanisms = value.get("$defs", {}).get("workerBinding", {}).get("properties", {}).get("mechanism", {}).get("enum", [])
     if set(mechanisms) != {"spawn-arguments", "worker-definitions"}:
         findings.append(Finding(relative(schema), "config must define exactly the two supported worker binding mechanisms"))

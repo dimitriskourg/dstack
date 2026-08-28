@@ -1,6 +1,6 @@
 ---
 name: setup-dstack
-description: Configure dstack model-and-effort profiles and the active workspace transcript directory. Use for setup-dstack, changing profile assignments, or refreshing transcript discovery. Never invent model identifiers, effort support, or transcript paths.
+description: Configure dstack model-and-effort profiles and the active repository's transcript directory. Use for setup-dstack, changing profile assignments, or refreshing transcript discovery. Never invent model identifiers, effort support, or transcript paths.
 disable-model-invocation: true
 ---
 
@@ -10,7 +10,9 @@ Use `~/.dstack/config.json` as the only configuration source. Its location is fi
 
 ## 1. Identify the host
 
-Use the current system identity and tool surface to choose the lowercase id of the active harness. This id is always the configuration key; there is no override. If the active harness cannot be identified, stop and report that setup cannot safely choose a host entry.
+Map the system-provided product identity to exactly one canonical harness id: Codex is `codex`, Claude Code is `claude`, and Cursor is `cursor`. Never derive the id from repository files, transcript paths, or user-provided aliases. This id is always the configuration key; there is no override. If the product identity is unavailable or is not one of those three, stop and report the observed identity evidence.
+
+Resolve the active repository with `git rev-parse --show-toplevel`, then canonicalize that absolute path by resolving symlinks. This canonical repository root is the repository id. If there is no active Git repository or the root cannot be canonicalized, stop; never reuse another repository entry.
 
 ## 2. Discover models
 
@@ -40,15 +42,15 @@ Choose `worker-definitions` whenever the spawn operation has no effort argument,
 
 ## 4. Find the transcript directory
 
-Search the active host's documented state locations and the current workspace metadata for its transcript directory. The candidate must be scoped to the active workspace. Confirm it by matching the opening user message from the current conversation in a recent transcript. Never glob across every workspace or save a global transcript root.
+Search the active host's documented state locations and the current repository metadata for its transcript directory. The candidate must be scoped to the canonical repository root. Confirm it by matching the opening user message from the current conversation in a recent transcript. Never glob across every workspace or save a global transcript root.
 
-If no scoped directory can be confirmed, store `null` and say transcript-backed skills will use the visible conversation or user-supplied exports. Do not guess a provider path. If a configured directory already exists and still matches the active workspace, keep it without searching again.
+If no scoped directory can be confirmed, store `null` and say transcript-backed skills will use the visible conversation or user-supplied exports. Do not guess a provider path. If `hosts[<active-harness>].repositories[<canonical-repository-root>]` already exists, its `repository_root` exactly matches the canonical root, and its configured directory still matches this repository, keep it without searching again.
 
 ## 5. Reconcile and confirm
 
 Run the configurator's `show` command. Preserve other hosts. For the active host, preserve model-effort pairs still present in the catalog. Put unavailable former pairs in `invalid_bindings`, require a concrete replacement for every affected profile, and remove pairs that become valid again. Never write a profile binding rejected by the available catalog.
 
-Show the current and proposed value for all four profiles, the worker binding mechanism and definitions directory, the transcript directory, invalid bindings, catalog status, and active harness id. Ask only about actual preferences. Do not write before the user confirms.
+Show the current and proposed value for all four profiles, the worker binding mechanism and definitions directory, the active repository root and its transcript directory, invalid bindings, catalog status, and canonical harness id. Preserve every other harness and repository entry. Ask only about actual preferences. Do not write before the user confirms.
 
 ## 6. Apply
 
@@ -56,7 +58,8 @@ Create a temporary proposal with this exact shape:
 
 ```json
 {
-  "host": "<active-host>",
+  "host": "<codex|claude|cursor>",
+  "repository_root": "<canonical-repository-root>",
   "profiles": {
     "fast-explorer": {"model": "<model-id>", "effort": "<effort>"},
     "feature-worker": {"model": "<model-id>", "effort": "<effort>"},
@@ -65,7 +68,7 @@ Create a temporary proposal with this exact shape:
   },
   "invalid_bindings": <reconciled-invalid-bindings>,
   "worker_binding": {"mechanism": "<spawn-arguments|worker-definitions>", "definitions_directory": <absolute-path-or-null>},
-  "transcripts_directory": null
+  "transcripts_directory": <absolute-path-or-null>
 }
 ```
 

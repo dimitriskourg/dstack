@@ -4,11 +4,11 @@ Skills are canonical under `~/.agents/skills`. Portable instructions live with e
 
 When one skill invokes another, it says: Call the Skill tool with `skill-name`. When a workflow delegates, it uses the active harness's native subagent tool. Model and effort selection comes from one of four profiles in the fixed file `~/.dstack/config.json`.
 
-Transcript-backed skills currently read the active host entry's `transcripts_directory`. Setup discovers and confirms that path once. The supported contract is repository-scoped transcript selection, but the current schema stores only one directory per harness; see issue 2 in `KNOWN_ISSUES.md`.
+Transcript-backed skills map the system-provided product identity to `codex`, `claude`, or `cursor`, derive the canonical Git repository root, and read only that repository entry's `transcripts_directory`. The entry repeats its `repository_root`; a mismatch fails closed. Setup discovers and confirms the path once per harness and repository.
 
-Config-dependent skills read the file themselves. They stop with an explicit `setup-dstack` instruction instead of guessing when the configuration or active host entry is unavailable.
+Config-dependent skills read the file themselves. They stop with an explicit `setup-dstack` instruction instead of guessing when the configuration, canonical host entry, or required repository entry is unavailable.
 
-The active harness selects the key under `hosts`; there is no override to another host's configuration. The intended stable IDs are `codex`, `claude`, and `cursor`, but their live derivation is not yet deterministic; see issue 5 in `KNOWN_ISSUES.md`.
+The active harness selects exactly one key under `hosts`: `codex`, `claude`, or `cursor`. The mapping comes from the system-provided product identity, not repository files, transcript paths, or user aliases. Unknown identities fail closed.
 
 Profiles always resolve to concrete model-and-effort pairs. A skill stops if the harness rejects its configured pair; it never omits model selection to inherit the parent conversation.
 

@@ -17,22 +17,6 @@ Static validation is not live-host proof. When an item changes runtime behavior,
 - representative nested calls succeed in live Claude Code, Codex, and Cursor sessions;
 - denied nested spawning falls back to the current agent and discloses the lost independence.
 
-### [ ] 2. Scope transcript directories by both harness and repository
-
-**Failure:** `schemas/config.schema.json` stores one `transcripts_directory` per harness. Running `setup-dstack` for the same harness in repository B overwrites the directory saved for repository A. Returning to A can make transcript-backed skills read B's transcripts.
-
-This contradicts the retained repository-scoped contract and can cross a project privacy boundary.
-
-**Affected areas:** `schemas/config.schema.json`, `skills/setup-dstack/scripts/configure.py`, setup, Recall, Reflect, Automate Me, Show Me Your Work, Session Pickup, Eval, documentation, audit rules, and tests.
-
-**Done when:**
-
-- transcript configuration is keyed by a stable active-repository identity beneath each harness;
-- setup updates only the active harness/repository entry and preserves every other entry;
-- consumers verify the selected entry matches the active repository before reading it;
-- switching A -> B -> A returns the correct transcript directory each time;
-- no consumer can silently fall back to another repository's directory.
-
 ## P1: Model binding and harness identity
 
 ### [ ] 4. Validate Codex profiles against the subagent operation, not only the general catalog
@@ -47,17 +31,6 @@ This contradicts the retained repository-scoped contract and can cross a project
 - the general catalog is only a fallback whose spawning limitations are explicit;
 - unsupported catalog-only models cannot be saved as validated worker profiles;
 - stale or rejected pairs enter `invalid_bindings` and require replacement.
-
-### [ ] 5. Define canonical harness IDs
-
-**Failure:** "the lowercase identity of the active harness" is not deterministic. Different sessions may choose aliases such as `claude` and `claude-code`, causing setup and consuming skills to select different host entries.
-
-**Done when:**
-
-- supported harnesses have the fixed IDs `codex`, `claude`, and `cursor`, unless live inspection requires another stable mapping;
-- setup and all consumers derive the same ID from the same rule;
-- unknown harnesses fail closed with the observed identity evidence;
-- aliases cannot create duplicate entries for one harness.
 
 ## P1: Parallel read-only fan-out
 
@@ -147,8 +120,7 @@ These static results do not prove skill discovery, nested invocation, model/effo
 
 ## Completion order
 
-1. Repository-keyed transcript storage and canonical harness IDs.
-2. Live nested invocation and Codex spawn-operation profile validation.
-3. Bounded fan-out across every retained caller.
-4. GitHub and GitLab request-flow proof.
-5. Installation and smaller setup/documentation inconsistencies.
+1. Live nested invocation and Codex spawn-operation profile validation.
+2. Bounded fan-out across every retained caller.
+3. GitHub and GitLab request-flow proof.
+4. Installation and smaller setup/documentation inconsistencies.
