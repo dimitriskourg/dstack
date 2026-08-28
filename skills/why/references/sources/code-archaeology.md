@@ -3,7 +3,7 @@
 ## What this source contains
 
 - Commit history (messages, dates, authors, diffs)
-- PR descriptions, review comments, and discussion threads (via `gh`)
+- Pull-request or merge-request descriptions, review comments, and discussion threads through the matching authenticated forge CLI when available
 - Inline code comments, TODOs, FIXMEs, deprecation notes
 - ADRs (architectural decision records) if the repo keeps them
 - Tests. Names and assertions often encode the edge cases that motivated a change
@@ -37,16 +37,14 @@ git show <hash>
 git log <old>..<new> -p -- <file>
 ```
 
-For each substantive commit, pull the PR context:
+For each substantive commit, resolve the configured remote and pull request context through authenticated `gh` for GitHub or `glab` for GitLab. If the matching CLI is unavailable, continue with Git history and report forge discussion as an evidence gap.
 
 ```bash
 # Find the PR number from the merge commit or branch
 git log -1 --format=%B <hash>
 
-# Full PR context: body, review comments, linked issues
-gh pr view <number> --json title,body,author,createdAt,mergedAt,labels,closingIssuesReferences,comments,reviews,files
-
-# The --json reviews and comments fields are where the real signal is
+# Then use the matching forge CLI or API to retrieve the body, review comments,
+# linked issues, changed files, author, and merge time.
 ```
 
 Look for out-of-band docs:

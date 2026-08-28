@@ -1,8 +1,8 @@
 ### Opening a PR
 
-Invoked at the end of every other playbook.
+Explicit only. Run after the user asks to publish already verified local work as a GitHub pull request or GitLab merge request.
 
-**Worktree.** Work from a git worktree off main; subagents inherit it. Multiple `Task` calls on the same branch each get their own worktree, or `git fetch && git reset --hard origin/<branch>` between them. Dirty branch with unrelated work: patch out, fresh worktree, apply. Snarled worktree: reset from main, redo minimally.
+**Checkout safety.** Use the current checkout when it is dedicated to this change. Inspect the branch, status, and complete diff before staging. Preserve unrelated tracked and untracked work, stage explicit paths rather than `git add -A`, and stop when the intended patch cannot be separated safely. Never discard repository state, checkout over user changes, or use another destructive recovery shortcut.
 
 **Commits.** Commit liberally; rebase into small, ordered commits before opening PRs. Each commit is a future PR: landable, ordered to tell the story. Amend when the fix belongs in a just-made commit; new commit when separable.
 
@@ -20,10 +20,12 @@ Invoked at the end of every other playbook.
 
 After these sections, attach videos or screenshots when they prove a claim. Do not use `## Summary` or `## Test plan` boilerplate. A commit body does not restate its subject.
 
-**Size and stacks.** Prefer five narrow PRs to one large PR. Stack follow-ups with Graphite (`gt`), and keep the ordered stack visible to reviewers. Branch from main only for independent work. Rebase on `main` before substantial stack work.
+**Size and dependent changes.** Prefer narrow, independently reviewable changes to one large request. When changes are genuinely dependent, preserve their order with ordinary Git branches and the forge's base-branch support. Branch from the default branch only for independent work. Do not introduce a stack manager.
 
-**Readiness.** Open every PR ready, never as a draft. Cloud-agent PR tools default to draft, so set `draft: false` on every PR creation call. If a PR still opens as a draft, run the host's ready command, such as `gh pr ready <number>`. Run `gh pr view <number>` before you refer to PR status.
+**Forge.** Resolve the repository's configured remote before choosing a CLI. Use authenticated `gh` for GitHub and authenticated `glab` for GitLab. Stop when the remote is ambiguous, the matching CLI is unavailable, or authentication fails. Do not choose a forge because one CLI merely happens to be installed.
 
-**Babysit.** Opening a PR does not start a babysit. Post the URL and keep building. Finish the phase or stack first. Run a separate babysit pass only when the user asks for one after the whole stack exists. A babysit for each new PR stalls the build and spends checks on commits that later waves restart. Push back when feedback drifts from intent.
+**Readiness.** Open every request ready, never as a draft. Verify the created request with the matching CLI before referring to its status. Return the actual forge URL.
 
-A subagent that opens a PR must Call the Skill tool with `interrogate`. It must Call the Skill tool with `unslop`. It must Call the Skill tool with `no-comments`. It returns the URL and does not babysit. Return to the parent.
+**Babysit.** Opening a request does not start Babysit. Post the URL and stop at the requested delivery boundary. Run a separate Babysit pass only when the user explicitly asks for PR or merge-request follow-up.
+
+Before opening the request, Call the Skill tool with `interrogate`. Call the Skill tool with `unslop`. Call the Skill tool with `no-comments`. Return the URL and do not start Babysit.

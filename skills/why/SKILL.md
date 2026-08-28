@@ -1,6 +1,6 @@
 ---
 name: why
-description: "Use for 'why does X work this way', 'why we picked Y', design rationale, regressions, postmortems, or data-backed thresholds. Discovers available MCPs and queries each evidence category (source control, issue tracker, long-form docs, real-time chat, infrastructure observability, error tracking, product analytics warehouse) in parallel, then returns a cited read on decisions and tradeoffs. Use how for runtime behavior."
+description: "Use for 'why does X work this way', 'why we picked Y', design rationale, regressions, postmortems, or data-backed thresholds. Searches local source history and any available evidence integrations, then returns a cited read on decisions, tradeoffs, and gaps. Use how for runtime behavior."
 ---
 
 # Why
@@ -17,7 +17,7 @@ Apply the profile through `worker_binding`: pass its exact model and effort for 
 
 ## How this skill works
 
-Historical context spreads across seven evidence categories: source control history, issue or ticket tracking, long-form documents, real-time team chat, infrastructure observability, error or exception tracking, and product analytics warehouses. You cannot predict from the question alone which one holds the answer, so the skill enumerates available MCPs at run time, maps each to a category, queries all seven in parallel, then synthesizes with explicit confidence calibration. Null results from searched categories are first-class evidence about how the decision was made; report them alongside positive findings. The default is coverage, not minimalism.
+Historical context spreads across seven evidence categories: source control history, issue or ticket tracking, long-form documents, real-time team chat, infrastructure observability, error or exception tracking, and product analytics warehouses. Local Git history is the baseline. At run time, enumerate available integrations, map each to a category, query available categories in parallel, and synthesize with explicit confidence calibration. An unavailable category is a reported evidence gap, not a setup failure. Null results from searched categories are first-class evidence about how the decision was made; report them alongside positive findings.
 
 ## Operating Posture
 
@@ -89,11 +89,7 @@ git log --oneline -20 -- <file>
 git log -1 --format=%B <commit>
 ```
 
-Pull PR bodies and discussion via `gh` for any substantive commits:
-
-```bash
-gh pr view <number> --json title,body,author,createdAt,mergedAt,labels,closingIssuesReferences,comments,reviews
-```
+Resolve the repository's configured remote. For substantive commits, use authenticated `gh` for GitHub or authenticated `glab` for GitLab to pull request or merge-request context. When the matching CLI or authentication is unavailable, continue with local Git and report the missing forge discussion as a gap.
 
 Capture this as seed context (file paths, symbols, commits, PR numbers, linked ticket IDs). Pass it to the investigators so they don't rediscover it.
 
@@ -115,7 +111,7 @@ Map each available MCP to one evidence category:
 6. Error / exception tracking
 7. Product analytics warehouse
 
-Source control is always available through git and `gh`. For the other six, classify using the MCP name, server instructions, tool names, and resource descriptors. If an MCP could fit more than one category, choose the one matching its primary evidence. Record ambiguous cases in the coverage map.
+Source control is always available through local Git. Forge discussion is available only when the matching GitHub or GitLab CLI is installed and authenticated. For the other six categories, classify available integrations using their names, instructions, tools, and resource descriptors. If an integration could fit more than one category, choose the one matching its primary evidence. Record unavailable and ambiguous categories in the coverage map.
 
 Aim for a complete **coverage map**, not a minimal one. A null result from an issue tracker is evidence the decision was not ticketed, a useful fact in itself. Document the null, don't skip the search.
 
@@ -139,7 +135,7 @@ Spawn one investigator per category that has a matching MCP. Each owns exactly o
 
 Each entry lists what the category physically contains and the kind of "why" it uniquely surfaces. Use it to know what to expect back, how to name a gap when a category returns empty, and (only in the rare provably-irrelevant case) to justify a skip. Every category overlaps, but each owns a kind of evidence the others cannot recover.
 
-1. **Source control investigator**. Git history, `gh` for PRs, code comments, tests. Always spawn; the only guaranteed source. Best at surfacing *implementation-time rationale captured during review*. PR descriptions stating the problem, review threads debating alternatives, inline comments encoding non-obvious constraints, test names that encode motivating edge cases, and commit messages linking tickets or incidents. Most trustworthy because it ties directly to the diff that shipped.
+1. **Source control investigator**. Local Git history, available GitHub or GitLab request context, code comments, and tests. Always spawn; local Git is the only guaranteed source. Best at surfacing *implementation-time rationale captured during review*. Request descriptions stating the problem, review threads debating alternatives, inline comments encoding non-obvious constraints, test names that encode motivating edge cases, and commit messages linking tickets or incidents. Most trustworthy because it ties directly to the diff that shipped.
 
 2. **Issue / ticket tracker investigator** (e.g. Linear, Jira, GitHub Issues, Plane, Shortcut MCP). Tickets, project docs, status updates, spec attachments. Best at surfacing *the product or business forcing function*. Customer requests ("Acme needs X for their SOC2 audit"), compliance deadlines, parent-initiative framing ("Q3 enterprise readiness"), ticket-level scope changes, and labels that categorize the motivation (`customer:*`, `incident-followup`, `compliance`, `perf-regression`). Strongest when the why is external to engineering.
 
@@ -206,7 +202,7 @@ The final output uses this structure. Adapt as needed, but keep the confidence s
 Format each line as: `- <Source>: <what was searched>. <what was found, or "no relevant results," or "skipped. reason">.`
 
 Example:
-- Source control (git/gh): `git log --follow backend/retry.ts`, PRs #49074, #47812. Found PR #49074 introduced exponential backoff and linked ENG-4421.
+- Source control (git and GitHub CLI): `git log --follow backend/retry.ts`, PRs #49074 and #47812. Found PR #49074 introduced exponential backoff and linked ENG-4421.
 - Issue tracker (Linear): searched for "retry" and ENG-4421. Found ENG-4421 parent issue but no discussion of backoff parameters.
 - Long-form docs (Notion): searched for "retry policy," "backend retries," "ENG-4421." No relevant results.
 - Real-time team chat (Slack): skipped. No matching MCP available in this environment. Gap: conversational record not searched.
