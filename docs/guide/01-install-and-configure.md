@@ -16,3 +16,7 @@ Setup also records how the harness binds a worker to a pair, in the host entry's
 For a `worker-definitions` harness, setup runs `worker_bindings.py --host <active-host>`. The command synchronizes and confirms the four generated definitions and leaves every other file in that directory alone. A failure is a failed setup.
 
 The schema stays at version 2 while dstack is under development. A missing transcript directory is stored as `null`; transcript-backed workflows then use visible conversation or explicit exports.
+
+## Uninstall
+
+Run `python3 uninstall.py --skills-only` to remove the canonical dstack skills and their Claude compatibility links while preserving configuration. Run `python3 uninstall.py --all` to also remove generated dstack worker definitions and the complete `~/.dstack` directory. Either mode accepts `--dry-run` for a non-mutating preview. The uninstaller fails before removals when ownership of any discovered dstack artifact cannot be verified, and it does not remove unrelated skills or worker definitions.

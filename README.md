@@ -31,6 +31,7 @@ Read-only exploration, review, and independent artifacts outside the repository 
 skills/                 Portable skill packages
 schemas/config.schema.json
 install.py              Installer and managed update path
+uninstall.py            Ownership-safe skills or full removal path
 scripts/audit_portability.py
 tests/
 DIFFERENCES.md          Exact differences from pstack
@@ -61,6 +62,22 @@ python3 install.py --with-claude-links
 Then explicitly invoke `setup-dstack` in the harness where you will use dstack. Setup maps the product identity to `codex`, `claude`, or `cursor`, discovers the current model catalog when possible, asks you to confirm the four profiles, records how that harness binds a worker to a model and effort pair, and saves the transcript directory beneath the canonical active-repository root.
 
 Any skill that needs profiles or transcripts reads that file directly and maps the system-provided product identity to the fixed host id `codex`, `claude`, or `cursor`; aliases and host overrides are rejected. Transcript-backed skills also derive the canonical Git repository root and select only that repository entry. If the file is missing or invalid, either identity is unavailable, or a required entry is absent, the skill stops and tells you to run `setup-dstack`; it never falls back to another repository or silently inherits an unconfigured model or session effort. On a harness whose spawn call cannot carry both halves of a pair, setup generates one worker definition per profile so the effort is pinned before any worker starts.
+
+## Uninstall
+
+Remove only dstack skill packages and Claude compatibility links while preserving `~/.dstack` and generated worker definitions:
+
+```bash
+python3 uninstall.py --skills-only
+```
+
+Remove those skills plus generated dstack worker definitions and the complete `~/.dstack` directory:
+
+```bash
+python3 uninstall.py --all
+```
+
+Add `--dry-run` to either command to preview every removal. The uninstaller checks all discovered artifacts before deleting anything and stops if a same-named skill, Claude entry, or worker definition cannot be verified as dstack-owned. Unrelated skills and worker definitions are preserved.
 
 ## Validate
 

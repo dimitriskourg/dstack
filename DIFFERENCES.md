@@ -98,7 +98,7 @@ Opening a request and Babysit resolve the repository remote first. GitHub uses a
 
 ## Structure
 
-Portable behavior lives inside `skills/`. Deterministic helpers live with the skill that owns them. Strict personal configuration shape lives in `schemas/config.schema.json`. The installer copies skills, the schema, license, and notice. There is no parallel adapter hierarchy to keep synchronized.
+Portable behavior lives inside `skills/`. Deterministic helpers live with the skill that owns them. Strict personal configuration shape lives in `schemas/config.schema.json`. The installer copies skills, the schema, license, and notice. The uninstaller has explicit skills-only and complete-removal modes; it verifies dstack ownership before removing canonical skills, compatibility links, or generated worker definitions. There is no parallel adapter hierarchy to keep synchronized.
 
 ## Sync procedure
 
