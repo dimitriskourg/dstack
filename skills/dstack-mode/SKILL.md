@@ -32,9 +32,8 @@ Remaining triggers:
 - Before review → Call the Skill tool with `no-comments`.
 - Shipping a CLI or TUI → Call the Skill tool with `control-cli`. Shipping a browser, IDE, or Electron UI → Call the Skill tool with `control-ui`. Drive the real thing rather than a proxy.
 - Any PR-status request → the **Babysit** playbook (`playbooks/babysit.md`), and not any similarly named host built-in whose description matches the same words. That includes "babysit this", "get it green", "address the review bot comments", and the commonest phrasing, "check on PR X" / "anything outstanding on X". Never triggered by merely opening a PR. Declare its mode before polling; the playbook's step 1 owns the request-to-mode mapping. Reaching for `drive` inside a phase agent stops that agent finishing its turn.
-- Asked to land or ship a green stack → the **Shipping** playbook (`playbooks/shipping.md`). Green is not safe. Nothing gets armed before an independent per-PR verdict, and only the contiguous verified run from the root lands.
 - Automated review or the agentic security review commented → skeptical posture. They catch real bugs and also file non-issues and nitpicks, so assess each on its merits and dismiss noise with a concrete reason instead of churning code. Triage fix / dismiss / ask per `references/automated-review-triage.md`.
-- Broken skill mid-task → fix it in its own PR. Don't block. Don't silently work around it.
+- Broken skill mid-task → fix it locally as a separate change. Don't block. Don't silently work around it. Publish it only when the user explicitly asks to open a pull request or merge request.
 - Long, autonomous, or multi-phase work, or any task the user steps away from to review later → Call the Skill tool with `show-me-your-work`. Commit the trail when stakes need an auditable record; keep it local otherwise.
 
 ## Principles
@@ -79,11 +78,11 @@ Read the leaf skill in full for any principle you apply. Each entry names when i
 
 ## Autonomy
 
-**Just do it.** Use any MCP tool. Reversible work and external actions (team chat, ticket updates, kicking off evals) proceed without asking.
+**Just do it locally.** Reversible local work proceeds without asking. Use an external integration when the task explicitly calls for it; external writes such as team messages, ticket updates, and forge requests require explicit user authorization.
 
 **Always pause** for irreversible writes: force-push to shared branches, deploys, data deletion, customer messages.
 
-**Session overrides:** "Don't stop" / "going to bed" / "run until done" / "be fully autonomous" → keep going.
+**Session overrides:** "Don't stop" / "going to bed" / "run until done" / "be fully autonomous" → keep going while the active local session can supervise the work. Do not promise background wake or persistence after the session ends.
 
 **No is an acceptable answer.** Asked whether to do something, invited to add scope, or shown an approach, reply with your real judgment. Decline, push back, or say "this doesn't earn its place" when true. A recommendation is a judgment, not a validation. Agreement is not the default, candor over sycophancy.
 
@@ -106,7 +105,7 @@ Write the reply clean as you draft it. The cleanup-afterward pass has been measu
 - **Frame impact for the consumer and the maintainer.** Name who the work is for (an end user, a colleague importing the library) and what changes for them before any implementation detail. Then what the next engineer who owns this code inherits. If you can't say what either would notice, the work or the explanation is off.
 - **Never fabricate a link, citation, or transcript reference.** Link only artifacts you produced or read this session.
 
-Every playbook ends with a reply written this way, PR link as `https://github.com/<owner>/<repo>/pull/<number>`. The per-playbook lines below name only the content unique to that playbook.
+Every playbook ends with a reply written this way. When a forge artifact exists, link its actual GitHub or GitLab URL. The per-playbook lines below name only the content unique to that playbook.
 
 ## Comments
 
@@ -130,16 +129,12 @@ A large or cross-cutting effort, or work the user steps away from to trust later
 - **Visual parity.** Pixel-exact UI equivalence: matching two implementations or migrating a styling system. `playbooks/visual-parity.md`.
 - **Authoring or modifying a skill.** Writing or editing a SKILL.md. `playbooks/authoring-a-skill.md`.
 - **Eval.** Testing how a skill, structure, or prompt change affects agent behavior before promoting it. `playbooks/eval.md`.
-- **Babysit.** Driving a PR or a stack to merge-ready: conflicts, review threads, CI. `playbooks/babysit.md`.
-- **Shipping.** The half after Babysit. Independently verifying a green stack, then landing the contiguous verified run with Graphite merge-when-ready. `playbooks/shipping.md`.
-- **Autonomous run.** A long task to drive to completion without stopping ("run until done", "/loop until X"). `playbooks/autonomous-run.md`.
-- **Autopilot-full.** A queue of independent PRs run to merged with full autonomy: one owner per PR carries build through merge, and the root swarm-verifies each merge-ready head before its owner merges ("autopilot this queue", "full autopilot", one-owner-per-PR programs). `playbooks/autopilot-full.md`.
-- **Autopilot-stack.** A queue of changes built and verified with full autonomy, delivered as one linear reviewed Graphite stack the operator lands herself ("autopilot-stack", "stack them, don't ship", "build the stack, I'll land it"). `playbooks/autopilot-stack.md`.
-- **Session pickup.** Resuming or taking over a prior agent's in-flight work from a transcript, cloud-agent URL, or pushed branch. `playbooks/session-pickup.md`.
+- **Babysit.** Driving a pull request, merge request, or explicit ordered set to merge-ready: conflicts, review threads, and CI. `playbooks/babysit.md`.
+- **Session pickup.** Resuming or taking over prior work from the current repository's active-harness transcript, an explicit transcript export, or a branch. `playbooks/session-pickup.md`.
 - **Pause safely.** Suspending in-flight work cleanly so it can be resumed, on an explicit pause, going offline, a host restart, or imminent context compaction. The complement to Session pickup. Full steps: `playbooks/pause-safely.md`.
-- **Multi-phase or multi-PR plan.** Work that spans phases or stacked PRs. `playbooks/multi-phase-plan.md`.
-- **Worktree and simulator cleanup.** Reclaiming local disk by pruning merged or abandoned git worktrees and stale iOS simulators ("what's using my disk", "clean up worktrees", "prune safe-to-prune worktrees", "free up space", "delete old simulators"). `playbooks/worktree-cleanup.md`.
-- **Opening a PR.** Invoked at the end of every other playbook. `playbooks/opening-a-pr.md`.
+- **Multi-phase or multi-request plan.** Work that spans phases or dependent pull or merge requests. `playbooks/multi-phase-plan.md`.
+- **Apple development cleanup.** Explicit machine-wide cleanup of stale simulators, runtimes, DerivedData, and device-support files ("clean up Xcode", "delete old simulators", "free Apple development disk space"). `playbooks/apple-dev-cleanup.md`.
+- **Opening a PR.** Explicitly packaging and publishing already verified local work ("open a PR", "create a merge request"). It is never an automatic final step of another playbook. `playbooks/opening-a-pr.md`.
 
 ## Mode lifetime
 

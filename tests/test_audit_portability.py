@@ -108,6 +108,12 @@ class PortabilityAuditTests(unittest.TestCase):
         self.assertNotIn("each host entry must require a worker binding", findings)
         self.assertNotIn("config must define exactly the two supported worker binding mechanisms", findings)
 
+    def test_supported_playbook_inventory_is_exact(self):
+        playbooks = AUDIT.SKILLS / "dstack-mode" / "playbooks"
+        actual = {path.stem for path in playbooks.glob("*.md")}
+        self.assertEqual(AUDIT.REQUIRED_DSTACK_PLAYBOOKS, actual)
+        self.assertFalse(AUDIT.EXCLUDED_DSTACK_PLAYBOOKS & actual)
+
     def test_config_path_override_fails(self):
         with tempfile.TemporaryDirectory() as temp:
             skill = self.make_skill(Path(temp), "Read `DSTACK_HOME/config.json`.\n")

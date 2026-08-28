@@ -38,6 +38,16 @@ REQUIRED_SKILLS = {
     "principle-sequence-verifiable-units", "principle-subtract-before-you-add",
     "principle-type-system-discipline",
 }
+REQUIRED_DSTACK_PLAYBOOKS = {
+    "apple-dev-cleanup", "authoring-a-skill", "babysit", "bug-fix", "eval",
+    "feature", "hillclimb", "investigation", "multi-phase-plan", "opening-a-pr",
+    "pause-safely", "perf-issue", "prototype", "refactoring", "runtime-forensics",
+    "session-pickup", "trace-forensics", "visual-parity",
+}
+EXCLUDED_DSTACK_PLAYBOOKS = {
+    "autonomous-run", "autopilot-full", "autopilot-stack", "shipping",
+    "worktree-cleanup",
+}
 LEAKAGE_PATTERNS: Tuple[Tuple[str, re.Pattern[str]], ...] = (
     ("provider name", re.compile(r"\b(?:Cursor|Codex|Claude Code)\b", re.I)),
     ("provider helper schema", re.compile(r"\b(?:subagent_type|run_in_background|readonly)`?\s*[:=]", re.I)),
@@ -248,6 +258,26 @@ def check_structure() -> List[Finding]:
     mechanisms = value.get("$defs", {}).get("workerBinding", {}).get("properties", {}).get("mechanism", {}).get("enum", [])
     if set(mechanisms) != {"spawn-arguments", "worker-definitions"}:
         findings.append(Finding(relative(schema), "config must define exactly the two supported worker binding mechanisms"))
+
+    playbooks = SKILLS / "dstack-mode" / "playbooks"
+    actual_playbooks = {path.stem for path in playbooks.glob("*.md")}
+    for missing in sorted(REQUIRED_DSTACK_PLAYBOOKS - actual_playbooks):
+        findings.append(Finding(relative(playbooks / (missing + ".md")), "missing supported dstack-mode playbook"))
+    for excluded in sorted(EXCLUDED_DSTACK_PLAYBOOKS & actual_playbooks):
+        findings.append(Finding(relative(playbooks / (excluded + ".md")), "excluded dstack-mode playbook must stay absent"))
+
+    unsupported_references = {
+        "playbooks/{}.md".format(name) for name in EXCLUDED_DSTACK_PLAYBOOKS
+    }
+    for path in sorted(SKILLS.rglob("*")):
+        if not path.is_file() or path.suffix.lower() not in {".md", ".txt", ".json", ".py", ".sh", ".ts", ".js"}:
+            continue
+        text = path.read_text(encoding="utf-8")
+        for reference in sorted(unsupported_references):
+            if reference in text:
+                findings.append(Finding(relative(path), "reference to excluded playbook {!r}".format(reference)))
+        if "git reset --hard" in text:
+            findings.append(Finding(relative(path), "destructive hard-reset workflow is forbidden"))
     return findings
 
 
