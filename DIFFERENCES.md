@@ -12,7 +12,7 @@ Updated 2026-09-09. This is the source-of-truth handoff for upstream alignment a
 
 Recheck the local source revision before a future sync. Treat pstack and other plugin folders as immutable inputs.
 
-The 2026-09-09 retained-source refresh absorbed pstack `0.14.1` → `0.15.0` density and punctuation, the two new principle leaves, the TypeScript schemas-before-guards rule, PR-body briefing language, and the removal of Critique mode from `how`. These 0.15.0 changes are still unported and remain deliberate follow-ups: the `multi-phase-plan` verified checklist and `check-plan.mjs`, Babysit forge-specific stop conditions, Cursor sticky-mode metadata, hardcoded Fable 5.1 / Grok defaults, human-only invocation on Skill-tool callees (`how`, `why`, `unslop`, `typescript-best-practices`), the plugin logo, and `make-bot-ui`.
+The 2026-09-09 retained-source refresh absorbed pstack `0.14.1` → `0.15.0` density and punctuation, the two new principle leaves, the TypeScript schemas-before-guards rule, PR-body briefing language, and the removal of Critique mode from `how`. Dstack currently diverges on pstack's machine-checked multi-phase plan. Revisit that choice later. These 0.15.0 changes are still unported and remain deliberate follow-ups: Babysit forge-specific stop conditions, Cursor sticky-mode metadata, hardcoded Fable 5.1 / Grok defaults, human-only invocation on Skill-tool callees (`how`, `why`, `unslop`, `typescript-best-practices`), the plugin logo, and `make-bot-ui`.
 
 ## Deliberate differences
 
@@ -81,6 +81,10 @@ The currently bundled Skill Creator validator rejects that portable frontmatter 
 ### Additional playbook
 
 `apple-dev-cleanup` is a dstack-specific explicit playbook. The pstack worktree-and-simulator cleanup workflow mixed repository cleanup with machine-wide Apple development state. Dstack excludes worktree management and retains the Apple cleanup value behind a separate audit and approval gate.
+
+### Multi-phase plan
+
+dstack still uses `references/plan.md`. It has not taken pstack's checkbox skeleton or `check-plan.mjs`. That checker is built for pstack's autopilot runtime, cloud lanes, and a hardcoded model. Whether dstack should add a similar local checker, without that runtime, is undecided. Revisit this on the next sync.
 
 ### Excluded pstack runtime
 
