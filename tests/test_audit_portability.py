@@ -126,6 +126,8 @@ class PortabilityAuditTests(unittest.TestCase):
         findings = [finding.message for finding in AUDIT.check_structure()]
         self.assertNotIn("each host entry must require a worker binding", findings)
         self.assertNotIn("config must define exactly the two supported worker binding mechanisms", findings)
+        self.assertNotIn("config must define exactly the two supported pair encodings", findings)
+        self.assertNotIn("worker binding must require mechanism, directory, and pair encoding", findings)
         self.assertNotIn("config must define exactly the three canonical harness ids", findings)
         self.assertNotIn("each host entry must require repository-scoped configuration", findings)
 

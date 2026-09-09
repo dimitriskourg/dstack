@@ -23,14 +23,29 @@ def worker_name(profile: str) -> str:
     return "dstack-{}".format(profile)
 
 
-def render(profile: str, binding: Mapping[str, str]) -> str:
+def pin_fields(binding: Mapping[str, str], encoding: str) -> str:
+    if encoding == configure.SIBLING_FIELDS:
+        return "model: {model}\neffort: {effort}\n".format(
+            model=binding["model"],
+            effort=binding["effort"],
+        )
+    if encoding == configure.MODEL_BRACKETS:
+        return "model: {model}[effort={effort}]\nforce-default-model: true\n".format(
+            model=binding["model"],
+            effort=binding["effort"],
+        )
+    raise BindingError(
+        "pair_encoding must be one of: {}".format(", ".join(configure.PAIR_ENCODINGS))
+    )
+
+
+def render(profile: str, binding: Mapping[str, str], encoding: str) -> str:
     return (
         "---\n"
         "name: {name}\n"
         "description: dstack {profile} worker. Its model and effort are pinned by the "
         "{profile} profile in ~/.dstack/config.json.\n"
-        "model: {model}\n"
-        "effort: {effort}\n"
+        "{pin}"
         "---\n"
         "\n"
         "<!-- dstack-managed-worker: {profile} -->\n"
@@ -43,8 +58,7 @@ def render(profile: str, binding: Mapping[str, str]) -> str:
     ).format(
         name=worker_name(profile),
         profile=profile,
-        model=binding["model"],
-        effort=binding["effort"],
+        pin=pin_fields(binding, encoding),
     )
 
 
@@ -87,10 +101,11 @@ def sync(host: str) -> List[str]:
         ]
 
     directory = Path(entry["worker_binding"]["definitions_directory"])
+    encoding = entry["worker_binding"]["pair_encoding"]
     lines: List[str] = ["worker definitions for host {} in {}".format(host, directory)]
     for profile in configure.PROFILES:
         path = directory / "{}.md".format(worker_name(profile))
-        expected = render(profile, entry["profiles"][profile])
+        expected = render(profile, entry["profiles"][profile], encoding)
         current = path.read_text(encoding="utf-8") if path.is_file() else None
         if current == expected:
             state = "unchanged"

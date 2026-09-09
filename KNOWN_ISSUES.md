@@ -1,6 +1,6 @@
 # Known portability and runtime issues
 
-Updated 2026-08-28. This backlog contains unresolved defects inside dstack's [supported scope](docs/guide/06-supported-scope.md). Intentional exclusions are documented there and in `DIFFERENCES.md`; they are not backlog items. Issue numbers remain stable where an earlier backlog item still applies.
+Updated 2026-09-09. This backlog contains unresolved defects inside dstack's [supported scope](docs/guide/06-supported-scope.md). Intentional exclusions are documented there and in `DIFFERENCES.md`; they are not backlog items. Issue numbers remain stable where an earlier backlog item still applies.
 
 Static validation is not live-host proof. When an item changes runtime behavior, verify it in every affected live harness before checking it off.
 
@@ -31,6 +31,20 @@ Static validation is not live-host proof. When an item changes runtime behavior,
 - the general catalog is only a fallback whose spawning limitations are explicit;
 - unsupported catalog-only models cannot be saved as validated worker profiles;
 - stale or rejected pairs enter `invalid_bindings` and require replacement.
+
+### [ ] 16. Treat a fused or picker-capped spawn catalog as partial
+
+**Failure:** Some hosts expose spawn model identifiers that already include effort, or only the model-and-effort values currently selected in the picker. Treating that list as a complete catalog drops entitled pairs, stores a fused string as `model`, or writes a sibling `effort` field the host ignores.
+
+**Affected areas:** `skills/setup-dstack/SKILL.md`, `worker_binding.pair_encoding`, generated worker definitions, invalid-binding reconciliation, tests, and Cursor live proof.
+
+**Done when:**
+
+- a fused or picker-capped spawn list is recorded as a partial catalog and cannot alone mark existing pairs invalid;
+- stored profiles remain a separate model identifier and effort;
+- `worker-definitions` hosts pin the pair with the encoding their definition schema accepts (`sibling-fields` or `model-brackets`);
+- a host whose spawn call already carries both halves still uses `spawn-arguments` and is not rewritten onto worker files;
+- live proof on a `model-brackets` host confirms a profile effort other than the current picker value still sticks.
 
 ## P1: Parallel read-only fan-out
 
@@ -80,7 +94,7 @@ Dstack serializes repository writers. This item concerns read-only exploration, 
 Observed after the 2026-08-27 scope cut:
 
 - `python3 scripts/audit_portability.py`: 0 errors;
-- `python3 -m unittest discover -s tests -v`: 75 tests passed;
+- `python3 -m unittest discover -s tests -v`: 89 tests passed;
 - `python3 -m json.tool schemas/config.schema.json`: passed;
 - `git diff --check`: passed;
 - Skill Creator `quick_validate.py`: the changed `setup-dstack` package was rejected only because the bundled validator does not accept dstack's `disable-model-invocation` extension.
@@ -90,6 +104,7 @@ These static results do not prove skill discovery, nested invocation, model/effo
 ## Completion order
 
 1. Live nested invocation and Codex spawn-operation profile validation.
-2. Bounded fan-out across every retained caller.
-3. GitHub and GitLab request-flow proof.
-4. Installation discovery proof.
+2. Partial-catalog handling and pair encoding on worker-definition hosts.
+3. Bounded fan-out across every retained caller.
+4. GitHub and GitLab request-flow proof.
+5. Installation discovery proof.

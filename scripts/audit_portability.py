@@ -275,9 +275,15 @@ def check_structure() -> List[Finding]:
         findings.append(Finding(relative(schema), "config must define exactly the three canonical harness ids"))
     if "repositories" not in set(host_entry.get("required", [])):
         findings.append(Finding(relative(schema), "each host entry must require repository-scoped configuration"))
-    mechanisms = value.get("$defs", {}).get("workerBinding", {}).get("properties", {}).get("mechanism", {}).get("enum", [])
+    worker_binding = value.get("$defs", {}).get("workerBinding", {})
+    if set(worker_binding.get("required", [])) != {"mechanism", "definitions_directory", "pair_encoding"}:
+        findings.append(Finding(relative(schema), "worker binding must require mechanism, directory, and pair encoding"))
+    mechanisms = worker_binding.get("properties", {}).get("mechanism", {}).get("enum", [])
     if set(mechanisms) != {"spawn-arguments", "worker-definitions"}:
         findings.append(Finding(relative(schema), "config must define exactly the two supported worker binding mechanisms"))
+    encodings = worker_binding.get("properties", {}).get("pair_encoding", {}).get("enum", [])
+    if set(encodings) != {"sibling-fields", "model-brackets", None}:
+        findings.append(Finding(relative(schema), "config must define exactly the two supported pair encodings"))
 
     playbooks = SKILLS / "dstack-mode" / "playbooks"
     actual_playbooks = {path.stem for path in playbooks.glob("*.md")}

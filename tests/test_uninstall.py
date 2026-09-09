@@ -61,6 +61,7 @@ class UninstallerTests(unittest.TestCase):
                             "worker_binding": {
                                 "mechanism": "worker-definitions",
                                 "definitions_directory": str(workers),
+                                "pair_encoding": "sibling-fields",
                             }
                         }
                     },

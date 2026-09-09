@@ -40,7 +40,12 @@ class ConfiguratorTests(unittest.TestCase):
             "repository_root": repository_root,
             "profiles": self.profiles(prefix),
             "invalid_bindings": invalid_bindings or [],
-            "worker_binding": worker_binding or {"mechanism": "spawn-arguments", "definitions_directory": None},
+            "worker_binding": worker_binding
+            or {
+                "mechanism": "spawn-arguments",
+                "definitions_directory": None,
+                "pair_encoding": None,
+            },
             "transcripts_directory": transcripts,
         }
 
@@ -347,18 +352,26 @@ class ConfiguratorTests(unittest.TestCase):
                 self.proposal(
                     "claude",
                     "beta",
-                    worker_binding={"mechanism": "worker-definitions", "definitions_directory": "/tmp/workers"},
+                    worker_binding={
+                        "mechanism": "worker-definitions",
+                        "definitions_directory": "/tmp/workers",
+                        "pair_encoding": "sibling-fields",
+                    },
                 ),
             )
             self.assertEqual(0, self.apply(config, first)[0])
             self.assertEqual(0, self.apply(config, second)[0])
             saved = json.loads(config.read_text(encoding="utf-8"))
             self.assertEqual(
-                {"mechanism": "spawn-arguments", "definitions_directory": None},
+                {"mechanism": "spawn-arguments", "definitions_directory": None, "pair_encoding": None},
                 saved["hosts"]["codex"]["worker_binding"],
             )
             self.assertEqual(
-                {"mechanism": "worker-definitions", "definitions_directory": "/tmp/workers"},
+                {
+                    "mechanism": "worker-definitions",
+                    "definitions_directory": "/tmp/workers",
+                    "pair_encoding": "sibling-fields",
+                },
                 saved["hosts"]["claude"]["worker_binding"],
             )
 
@@ -377,10 +390,35 @@ class ConfiguratorTests(unittest.TestCase):
 
     def test_worker_binding_mechanism_and_directory_must_agree(self):
         cases = (
-            ({"mechanism": "inherit", "definitions_directory": None}, "must be one of"),
-            ({"mechanism": "worker-definitions", "definitions_directory": None}, "must be an absolute path"),
-            ({"mechanism": "worker-definitions", "definitions_directory": "workers"}, "must be an absolute path"),
-            ({"mechanism": "spawn-arguments", "definitions_directory": "/tmp/workers"}, "must be null"),
+            ({"mechanism": "inherit", "definitions_directory": None, "pair_encoding": None}, "must be one of"),
+            (
+                {"mechanism": "worker-definitions", "definitions_directory": None, "pair_encoding": "sibling-fields"},
+                "must be an absolute path",
+            ),
+            (
+                {"mechanism": "worker-definitions", "definitions_directory": "workers", "pair_encoding": "sibling-fields"},
+                "must be an absolute path",
+            ),
+            (
+                {"mechanism": "spawn-arguments", "definitions_directory": "/tmp/workers", "pair_encoding": None},
+                "must be null",
+            ),
+            (
+                {"mechanism": "spawn-arguments", "definitions_directory": None, "pair_encoding": "sibling-fields"},
+                "pair_encoding must be null",
+            ),
+            (
+                {"mechanism": "worker-definitions", "definitions_directory": "/tmp/workers", "pair_encoding": None},
+                "pair_encoding must be one of",
+            ),
+            (
+                {
+                    "mechanism": "worker-definitions",
+                    "definitions_directory": "/tmp/workers",
+                    "pair_encoding": "fused-slug",
+                },
+                "pair_encoding must be one of",
+            ),
         )
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -393,6 +431,115 @@ class ConfiguratorTests(unittest.TestCase):
                     self.assertEqual(2, status)
                     self.assertIn(expected, stderr)
                     self.assertFalse(config.exists())
+
+    def test_missing_pair_encoding_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = root / "config.json"
+            proposal = root / "proposal.json"
+            invalid = self.proposal("codex", "candidate")
+            del invalid["worker_binding"]["pair_encoding"]
+            self.write_json(proposal, invalid)
+            status, _, stderr = self.apply(config, proposal)
+            self.assertEqual(2, status)
+            self.assertIn("proposal.worker_binding is missing: pair_encoding", stderr)
+            self.assertFalse(config.exists())
+
+    def test_fused_identifiers_are_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for field, value in (
+                ("model", "claude-fable-5[effort=medium]"),
+                ("effort", "medium[extra]"),
+            ):
+                with self.subTest(field=field, value=value):
+                    config = root / "{}.config.json".format(field)
+                    proposal = root / "{}.proposal.json".format(field)
+                    invalid = self.proposal("codex", "candidate")
+                    invalid["profiles"]["fast-explorer"][field] = value
+                    self.write_json(proposal, invalid)
+                    status, _, stderr = self.apply(config, proposal)
+                    self.assertEqual(2, status)
+                    self.assertIn("must not contain brackets", stderr)
+                    self.assertFalse(config.exists())
+
+    def test_pair_encoding_is_preserved_independently_per_host(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = root / "config.json"
+            first = root / "first.json"
+            second = root / "second.json"
+            third = root / "third.json"
+            self.write_json(first, self.proposal("codex", "alpha"))
+            self.write_json(
+                second,
+                self.proposal(
+                    "claude",
+                    "beta",
+                    worker_binding={
+                        "mechanism": "worker-definitions",
+                        "definitions_directory": "/tmp/claude-workers",
+                        "pair_encoding": "sibling-fields",
+                    },
+                ),
+            )
+            self.write_json(
+                third,
+                self.proposal(
+                    "cursor",
+                    "gamma",
+                    worker_binding={
+                        "mechanism": "worker-definitions",
+                        "definitions_directory": "/tmp/cursor-workers",
+                        "pair_encoding": "model-brackets",
+                    },
+                ),
+            )
+            self.assertEqual(0, self.apply(config, first)[0])
+            self.assertEqual(0, self.apply(config, second)[0])
+            self.assertEqual(0, self.apply(config, third)[0])
+            saved = json.loads(config.read_text(encoding="utf-8"))
+            self.assertEqual(None, saved["hosts"]["codex"]["worker_binding"]["pair_encoding"])
+            self.assertEqual("sibling-fields", saved["hosts"]["claude"]["worker_binding"]["pair_encoding"])
+            self.assertEqual("model-brackets", saved["hosts"]["cursor"]["worker_binding"]["pair_encoding"])
+            self.assertEqual("spawn-arguments", saved["hosts"]["codex"]["worker_binding"]["mechanism"])
+
+    def test_existing_config_defaults_missing_pair_encoding(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = root / "config.json"
+            proposal = self.proposal("codex", "stable")
+            entry = {
+                "profiles": proposal["profiles"],
+                "invalid_bindings": [],
+                "worker_binding": {"mechanism": "spawn-arguments", "definitions_directory": None},
+                "repositories": {
+                    "/private/tmp/repository": {
+                        "repository_root": "/private/tmp/repository",
+                        "transcripts_directory": "/tmp/transcripts",
+                    }
+                },
+            }
+            self.write_json(config, {"schema_version": 2, "hosts": {"codex": entry}})
+            status, stdout, stderr = self.run_configurator(["validate"], config)
+            self.assertEqual(0, status, stderr)
+            self.assertIn("Valid dstack configuration", stdout)
+
+            claude = {
+                "profiles": self.profiles("claude"),
+                "invalid_bindings": [],
+                "worker_binding": {
+                    "mechanism": "worker-definitions",
+                    "definitions_directory": "/tmp/claude-workers",
+                },
+                "repositories": {},
+            }
+            self.write_json(config, {"schema_version": 2, "hosts": {"claude": claude}})
+            checked = CONFIGURE.validate_config(json.loads(config.read_text(encoding="utf-8")))
+            self.assertEqual("sibling-fields", checked["hosts"]["claude"]["worker_binding"]["pair_encoding"])
+            self.write_json(config, {"schema_version": 2, "hosts": {"codex": entry}})
+            checked = CONFIGURE.validate_config(json.loads(config.read_text(encoding="utf-8")))
+            self.assertIsNone(checked["hosts"]["codex"]["worker_binding"]["pair_encoding"])
 
 
 if __name__ == "__main__":

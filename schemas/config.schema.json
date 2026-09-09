@@ -41,7 +41,7 @@
   "$defs": {
     "modelIdentifier": {
       "type": "string",
-      "pattern": "^\\S+$",
+      "pattern": "^[^\\[\\]\\s]+$",
       "not": { "enum": ["inherit-parent", "auto"] }
     },
     "repositoryConfig": {
@@ -55,17 +55,28 @@
     },
     "workerBinding": {
       "type": "object",
-      "required": ["mechanism", "definitions_directory"],
+      "required": ["mechanism", "definitions_directory", "pair_encoding"],
       "properties": {
         "mechanism": { "enum": ["spawn-arguments", "worker-definitions"] },
-        "definitions_directory": { "type": ["string", "null"], "minLength": 1 }
+        "definitions_directory": { "type": ["string", "null"], "minLength": 1 },
+        "pair_encoding": { "enum": ["sibling-fields", "model-brackets", null] }
       },
       "additionalProperties": false,
       "allOf": [
         {
           "if": { "properties": { "mechanism": { "const": "worker-definitions" } }, "required": ["mechanism"] },
-          "then": { "properties": { "definitions_directory": { "type": "string" } } },
-          "else": { "properties": { "definitions_directory": { "type": "null" } } }
+          "then": {
+            "properties": {
+              "definitions_directory": { "type": "string" },
+              "pair_encoding": { "enum": ["sibling-fields", "model-brackets"] }
+            }
+          },
+          "else": {
+            "properties": {
+              "definitions_directory": { "type": "null" },
+              "pair_encoding": { "type": "null" }
+            }
+          }
         }
       ]
     },

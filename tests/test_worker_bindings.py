@@ -28,18 +28,21 @@ BINDINGS = load("worker_bindings")
 
 
 class WorkerBindingTests(unittest.TestCase):
-    def host_entry(self, directory, mechanism="worker-definitions"):
+    def host_entry(self, directory, mechanism="worker-definitions", encoding="sibling-fields"):
         profiles = {
             profile: {"model": "model-{}".format(profile), "effort": "low"}
             for profile in CONFIGURE.PROFILES
         }
         profiles["skeptical-reviewer"] = {"model": "model-reviewer", "effort": "high"}
+        if mechanism == "spawn-arguments":
+            encoding = None
         return {
             "profiles": profiles,
             "invalid_bindings": [],
             "worker_binding": {
                 "mechanism": mechanism,
                 "definitions_directory": str(directory) if directory is not None else None,
+                "pair_encoding": encoding,
             },
             "repositories": {},
         }
@@ -75,6 +78,8 @@ class WorkerBindingTests(unittest.TestCase):
             reviewer = (workers / "dstack-skeptical-reviewer.md").read_text(encoding="utf-8")
             self.assertIn("model: model-reviewer\n", reviewer)
             self.assertIn("effort: high\n", reviewer)
+            self.assertNotIn("force-default-model", reviewer)
+            self.assertNotIn("[effort=", reviewer)
 
     def test_sync_is_idempotent_and_restores_drift(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -126,6 +131,60 @@ class WorkerBindingTests(unittest.TestCase):
             self.assertEqual(2, status)
             self.assertIn("must be a concrete value", stderr)
             self.assertFalse(workers.exists())
+
+    def test_model_brackets_pin_effort_inside_model_and_refuse_parent_override(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = root / "config.json"
+            workers = root / "workers"
+            self.write_config(config, self.host_entry(workers, encoding="model-brackets"), host="cursor")
+            status, stdout, stderr = self.run_bindings(["--host", "cursor"], config)
+            self.assertEqual(0, status, stderr)
+            reviewer = (workers / "dstack-skeptical-reviewer.md").read_text(encoding="utf-8")
+            self.assertIn("model: model-reviewer[effort=high]\n", reviewer)
+            self.assertIn("force-default-model: true\n", reviewer)
+            self.assertNotIn("\neffort: high\n", reviewer)
+            self.assertIn("created", stdout)
+
+    def test_pair_encoding_does_not_depend_on_host_id(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            cases = (
+                ("claude", "sibling-fields"),
+                ("cursor", "sibling-fields"),
+                ("codex", "model-brackets"),
+            )
+            for host, encoding in cases:
+                config = root / "{}.json".format(host)
+                workers = root / "{}-workers".format(host)
+                self.write_config(config, self.host_entry(workers, encoding=encoding), host=host)
+                status, _, stderr = self.run_bindings(["--host", host], config)
+                self.assertEqual(0, status, stderr)
+                text = (workers / "dstack-fast-explorer.md").read_text(encoding="utf-8")
+                if encoding == "sibling-fields":
+                    self.assertIn("model: model-fast-explorer\n", text)
+                    self.assertIn("effort: low\n", text)
+                    self.assertNotIn("force-default-model", text)
+                else:
+                    self.assertIn("model: model-fast-explorer[effort=low]\n", text)
+                    self.assertIn("force-default-model: true\n", text)
+                    self.assertNotIn("\neffort: low\n", text)
+
+    def test_missing_pair_encoding_defaults_to_sibling_fields(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = root / "config.json"
+            workers = root / "workers"
+            entry = self.host_entry(workers)
+            del entry["worker_binding"]["pair_encoding"]
+            self.write_config(config, entry, host="claude")
+            status, stdout, stderr = self.run_bindings(["--host", "claude"], config)
+            self.assertEqual(0, status, stderr)
+            text = (workers / "dstack-fast-explorer.md").read_text(encoding="utf-8")
+            self.assertIn("model: model-fast-explorer\n", text)
+            self.assertIn("effort: low\n", text)
+            self.assertNotIn("force-default-model", text)
+            self.assertIn("created", stdout)
 
 
 if __name__ == "__main__":

@@ -60,6 +60,8 @@ Every profile requires a concrete model and effort pair. Parent inheritance and 
 
 `worker_binding` records how a host applies a pair, because not every harness accepts both halves as spawn arguments. `spawn-arguments` means the spawn call carries the model and the effort. `worker-definitions` means the host reads the effort from a pre-declared worker definition, so `setup-dstack` synchronizes one definition per profile into the recorded `definitions_directory`. Synchronization verifies the generated definitions and leaves every other file untouched. Setup chooses `worker-definitions` whenever the host's spawn operation has no effort argument, since a model-only override leaves the worker on the session effort.
 
+`pair_encoding` records how a generated definition pins that pair. `sibling-fields` writes separate `model` and `effort` keys. `model-brackets` writes `model: <id>[effort=<value>]` and, when the definition schema can refuse a parent spawn override, sets that refusal. Setup discovers the encoding from the live definition schema. It does not infer it from the harness id. A fused spawn identifier is a partial catalog, not a stored model value.
+
 This is a portable mechanism recorded in configuration, not a provider rule folder: the mechanism and the directory are discovered live by setup in the active harness.
 
 `setup-dstack` searches for and confirms the active repository's transcript directory once. Transcript-backed skills read only the entry matching the canonical active-repository root and do not rediscover it on every invocation. Configuring another repository under the same harness preserves every existing repository entry.

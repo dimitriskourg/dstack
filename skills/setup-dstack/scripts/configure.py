@@ -20,6 +20,9 @@ RESERVED_BINDING_VALUES = {"auto", "inherit-parent"}
 SPAWN_ARGUMENTS = "spawn-arguments"
 WORKER_DEFINITIONS = "worker-definitions"
 WORKER_MECHANISMS = (SPAWN_ARGUMENTS, WORKER_DEFINITIONS)
+SIBLING_FIELDS = "sibling-fields"
+MODEL_BRACKETS = "model-brackets"
+PAIR_ENCODINGS = (SIBLING_FIELDS, MODEL_BRACKETS)
 SUPPORTED_HOSTS = ("codex", "claude", "cursor")
 
 
@@ -51,6 +54,8 @@ def require_exact_keys(
 def require_identifier(value: Any, location: str) -> str:
     if not isinstance(value, str) or not value or any(char.isspace() for char in value):
         raise ConfigError("{} must be a non-empty string without whitespace".format(location))
+    if any(char in "[]" for char in value):
+        raise ConfigError("{} must not contain brackets".format(location))
     return value
 
 
@@ -97,15 +102,40 @@ def validate_invalid_bindings(value: Any, location: str) -> List[Dict[str, str]]
     return bindings
 
 
-def validate_worker_binding(value: Any, location: str) -> Dict[str, Any]:
+def validate_pair_encoding(value: Any, location: str, mechanism: str) -> Optional[str]:
+    if mechanism == WORKER_DEFINITIONS:
+        if value not in PAIR_ENCODINGS:
+            raise ConfigError(
+                "{}.pair_encoding must be one of: {}".format(location, ", ".join(PAIR_ENCODINGS))
+            )
+        return value
+    if value is not None:
+        raise ConfigError(
+            "{}.pair_encoding must be null when the mechanism is {}".format(location, SPAWN_ARGUMENTS)
+        )
+    return None
+
+
+def validate_worker_binding(
+    value: Any, location: str, *, encoding_required: bool = False
+) -> Dict[str, Any]:
     binding = require_object(value, location)
-    require_exact_keys(binding, ("mechanism", "definitions_directory"), (), location)
+    required = ("mechanism", "definitions_directory", "pair_encoding") if encoding_required else (
+        "mechanism",
+        "definitions_directory",
+    )
+    optional = () if encoding_required else ("pair_encoding",)
+    require_exact_keys(binding, required, optional, location)
     mechanism = require_identifier(binding["mechanism"], "{}.mechanism".format(location))
     if mechanism not in WORKER_MECHANISMS:
         raise ConfigError(
             "{}.mechanism must be one of: {}".format(location, ", ".join(WORKER_MECHANISMS))
         )
     directory = binding["definitions_directory"]
+    if "pair_encoding" in binding:
+        encoding = validate_pair_encoding(binding["pair_encoding"], location, mechanism)
+    else:
+        encoding = SIBLING_FIELDS if mechanism == WORKER_DEFINITIONS else None
     if mechanism == WORKER_DEFINITIONS:
         if not isinstance(directory, str) or not directory or not Path(directory).expanduser().is_absolute():
             raise ConfigError(
@@ -113,12 +143,16 @@ def validate_worker_binding(value: Any, location: str) -> Dict[str, Any]:
                     location, WORKER_DEFINITIONS
                 )
             )
-        return {"mechanism": mechanism, "definitions_directory": str(Path(directory).expanduser())}
+        return {
+            "mechanism": mechanism,
+            "definitions_directory": str(Path(directory).expanduser()),
+            "pair_encoding": encoding,
+        }
     if directory is not None:
         raise ConfigError(
             "{}.definitions_directory must be null when the mechanism is {}".format(location, SPAWN_ARGUMENTS)
         )
-    return {"mechanism": mechanism, "definitions_directory": None}
+    return {"mechanism": mechanism, "definitions_directory": None, "pair_encoding": None}
 
 
 def validate_transcripts_directory(value: Any, location: str) -> Optional[str]:
@@ -197,7 +231,9 @@ def validate_proposal(value: Any) -> Dict[str, Any]:
         "repository_root": validate_repository_root(proposal["repository_root"], "proposal.repository_root"),
         "profiles": validate_profiles(proposal["profiles"], "proposal.profiles"),
         "invalid_bindings": validate_invalid_bindings(proposal["invalid_bindings"], "proposal.invalid_bindings"),
-        "worker_binding": validate_worker_binding(proposal["worker_binding"], "proposal.worker_binding"),
+        "worker_binding": validate_worker_binding(
+            proposal["worker_binding"], "proposal.worker_binding", encoding_required=True
+        ),
         "transcripts_directory": validate_transcripts_directory(proposal["transcripts_directory"], "proposal.transcripts_directory"),
     }
     return checked
