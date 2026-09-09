@@ -40,7 +40,7 @@ When a worker must start from a non-default pushed branch, name that branch in i
 
 Every brief stands alone. Include the goal, scope, exact slice or race arm, how to verify, and what to report. Reports use `PASS`, `ISSUES`, or `BLOCKED` with evidence.
 
-If a required worker drops out, retry or run that slice serially in the current agent. Do not report complete coverage with a missing required slice. For a best-of race, a dropout may reduce the candidate set only when the declared race rule permits it; note the reduction.
+If a required worker drops out, retry or run that slice serially in the current agent. Do not report complete coverage with a missing required slice. For a best-of race, a dropout may reduce the candidate set only when the declared race rule permits it. Note the reduction.
 
 ## Phase C: Aggregate
 

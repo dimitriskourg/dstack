@@ -40,11 +40,14 @@ git log <old>..<new> -p -- <file>
 For each substantive commit, resolve the configured remote and pull request context through authenticated `gh` for GitHub or `glab` for GitLab. If the matching CLI is unavailable, continue with Git history and report forge discussion as an evidence gap.
 
 ```bash
-# Find the PR number from the merge commit or branch
+# Find the request number from the merge commit or branch
 git log -1 --format=%B <hash>
 
-# Then use the matching forge CLI or API to retrieve the body, review comments,
-# linked issues, changed files, author, and merge time.
+# GitHub: body, review comments, linked issues
+gh pr view <number> --json title,body,author,createdAt,mergedAt,labels,closingIssuesReferences,comments,reviews,files
+
+# GitLab: body, discussions, and related issues
+glab mr view <number>
 ```
 
 Look for out-of-band docs:

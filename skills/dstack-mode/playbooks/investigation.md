@@ -4,7 +4,7 @@
 
 Read-only requests: "how does X work?", "why was Y built this way?", "are we sure about Z?", "should we do X or Y?". They produce a cited explanation or a recommendation, not a code change.
 
-1. Call the Skill tool with `how`. Use Explain mode for narrow questions or Critique mode for "are we sure?" For motivation questions, Call the Skill tool with `why`.
+1. Call the Skill tool with `how`. For motivation questions, Call the Skill tool with `why`.
 2. Throughput checkpoint stays one line: `throughput checkpoint: n/a, read-only investigation`. The four-item version is for code-shaped work.
 3. Produce the `how`-shaped output (Overview / Key Concepts / How It Works / Where Things Live / Gotchas), or a recommendation with a tradeoffs table if the request is a decision between alternatives.
 4. Call the Skill tool with `unslop`. Apply it to the reply.

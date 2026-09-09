@@ -1,16 +1,18 @@
 # dstack differences from pstack
 
-Updated 2026-08-27. This is the source-of-truth handoff for upstream alignment and project structure. The supported product scope lives in [the scope guide](docs/guide/06-supported-scope.md). dstack is under development, so compatible pre-release shape changes do not bump schema version 2.
+Updated 2026-09-09. This is the source-of-truth handoff for upstream alignment and project structure. The supported product scope lives in [the scope guide](docs/guide/06-supported-scope.md). dstack is under development, so compatible pre-release shape changes do not bump schema version 2.
 
 ## Upstream baseline
 
 - Local source: `/Users/kourgia/projects/plugins/pstack`
 - Upstream repository: <https://github.com/cursor/plugins/tree/main/pstack>
-- Recorded source commit: `63d938c2e4a165a0fec1bd0f61a8e325f0cb751e`
-- Recorded plugin version: `0.14.1`
-- Recorded inventory: 44 skills and 23 `poteto-mode` playbooks
+- Recorded source commit: `71ed0d1076fec562c1b74ee353121a8d00f75382`
+- Recorded plugin version: `0.15.0`
+- Recorded inventory: 47 skills and 23 `poteto-mode` playbooks
 
 Recheck the local source revision before a future sync. Treat pstack and other plugin folders as immutable inputs.
+
+The 2026-09-09 retained-source refresh absorbed pstack `0.14.1` → `0.15.0` density and punctuation, the two new principle leaves, the TypeScript schemas-before-guards rule, PR-body briefing language, and the removal of Critique mode from `how`. These 0.15.0 changes are still unported and remain deliberate follow-ups: the `multi-phase-plan` verified checklist and `check-plan.mjs`, Babysit forge-specific stop conditions, Cursor sticky-mode metadata, hardcoded Fable 5.1 / Grok defaults, human-only invocation on Skill-tool callees (`how`, `why`, `unslop`, `typescript-best-practices`), the plugin logo, and `make-bot-ui`.
 
 ## Deliberate differences
 
@@ -82,7 +84,7 @@ The currently bundled Skill Creator validator rejects that portable frontmatter 
 
 ### Excluded pstack runtime
 
-dstack does not ship pstack's provider-specific automation, agent wrappers, silent Bun bootstrap, PR watcher, or heavyweight Orchestrate runtime. The curated `dstack-mode` also excludes:
+dstack does not ship pstack's provider-specific automation, agent wrappers, silent Bun bootstrap, PR watcher, or heavyweight Orchestrate runtime. `make-bot-ui` is excluded because it is a Cursor Grok Bot webhook, secret-request, and Tailscale workflow, not a portable local skill. The curated `dstack-mode` also excludes:
 
 - `autonomous-run`, because supported local sessions do not promise unattended wake or persistence;
 - `autopilot-full`, because dstack does not support autonomous parallel repository writers or automated merging;

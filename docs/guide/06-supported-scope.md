@@ -58,6 +58,7 @@ All current standalone skills remain supported.
 
 ### Principles
 
+- `principle-attack-the-premise`
 - `principle-boundary-discipline`
 - `principle-build-the-lever`
 - `principle-encode-lessons-in-structure`
@@ -78,6 +79,7 @@ All current standalone skills remain supported.
 - `principle-separate-before-serializing-shared-state`
 - `principle-sequence-verifiable-units`
 - `principle-subtract-before-you-add`
+- `principle-test-behavior-not-implementation`
 - `principle-type-system-discipline`
 
 ## Retained dstack-mode playbooks
@@ -111,6 +113,7 @@ Apple development cleanup is a dstack-specific local addition. It is explicit an
 - **Shipping.** Excluded because the source workflow is Graphite-specific. Babysit stops at merge-ready and the team retains merge authority.
 - **Worktree cleanup.** Excluded because dstack does not currently create or manage worktrees.
 - **Orchestrate.** Excluded with the provider-specific pstack runtime; dstack uses its retained skills and playbooks directly.
+- **Make Bot UI.** Excluded because the source skill is a Cursor Grok Bot webhook, secret-request, and Tailscale workflow.
 
 Git worktrees remain a possible future capability. Add them only when real team usage justifies a complete creation, repository setup, runtime-resource isolation, integration, and cleanup contract across Codex, Claude Code, and Cursor.
 

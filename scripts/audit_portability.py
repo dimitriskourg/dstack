@@ -27,7 +27,8 @@ REQUIRED_SKILLS = {
     "figure-it-out", "how", "interrogate", "maintain-verification-skill", "no-comments",
     "recall", "reflect", "setup-dstack", "show-me-your-work", "swarm", "tdd", "teach",
     "technical-writing", "typescript-best-practices", "unslop", "why",
-    "principle-boundary-discipline", "principle-build-the-lever",
+    "principle-attack-the-premise", "principle-boundary-discipline",
+    "principle-build-the-lever",
     "principle-encode-lessons-in-structure", "principle-exhaust-the-design-space",
     "principle-experience-first", "principle-fix-root-causes",
     "principle-foundational-thinking", "principle-guard-the-context-window",
@@ -38,6 +39,7 @@ REQUIRED_SKILLS = {
     "principle-redesign-from-first-principles",
     "principle-separate-before-serializing-shared-state",
     "principle-sequence-verifiable-units", "principle-subtract-before-you-add",
+    "principle-test-behavior-not-implementation",
     "principle-type-system-discipline",
 }
 REQUIRED_DSTACK_PLAYBOOKS = {

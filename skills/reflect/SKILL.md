@@ -18,13 +18,7 @@ Apply the profile through `worker_binding`: pass its exact model and effort for 
 
 ## When to invoke
 
-- The user said "reflect" or "/reflect".
-- A complex task (5+ tool calls) just landed cleanly and the recipe is worth keeping.
-- The agent hit dead ends, found the working path, and the path generalizes.
-- The user corrected the agent's approach mid-task.
-- A non-trivial workflow emerged that isn't captured anywhere.
-
-Skip when the conversation is trivial, off-topic, or already covered by an existing skill the parent followed correctly. One-offs are not learnings.
+Invoke when the user says "reflect" or "/reflect". Skip when the conversation is trivial, off-topic, or already covered by an existing skill the parent followed correctly. One-offs are not learnings.
 
 ## Process
 
@@ -42,7 +36,7 @@ For each candidate, read the first line and check that its message text contains
 
 ### 2. Run three reviewers
 
-Launch three general-purpose subagents in bounded waves that fit the active harness's available child capacity, each on a different configured profile, with full tool access. **Don't use a restricted read-only mode.** Reviewers need MCP access for context lookups. The prompt forbids file writes; the parent applies edits. Every required reviewer runs even when the first wave cannot hold all three.
+Launch three general-purpose subagents in bounded waves that fit the active harness's available child capacity, each on a different configured profile, with full tool access. **Don't use a restricted read-only mode.** Reviewers need MCP access for context lookups (tickets, chat threads, observability traces referenced in the transcript). The prompt forbids file writes. The parent applies edits. Every required reviewer runs even when the first wave cannot hold all three.
 
 | Lens | Model role | Prompt template |
 |---|---|---|
@@ -54,15 +48,15 @@ Pass each template verbatim, substituting the transcript path or digest where ma
 
 ### 3. Synthesize
 
-One general-purpose subagent on your configured `skeptical-reviewer` role, with full tool access. The synthesizer's quality check includes spot-verifying citations, which can require MCP access; a restricted read-only mode strips that on some hosts. Use `references/synthesizer.md` verbatim, with each reviewer's full output inlined where marked. The synthesizer returns a structured Accepted / Rejected / Backlog list.
+One general-purpose subagent on your configured `skeptical-reviewer` role, with full tool access. The synthesizer's quality check includes spot-verifying citations, which can require MCP access. A restricted read-only mode strips that on some hosts. Use `references/synthesizer.md` verbatim, with each reviewer's full output inlined where marked. The synthesizer returns a structured Accepted / Rejected / Backlog list.
 
 ### 4. Structural enforcement check
 
-Sanity-check the synthesizer's Accepted list. For any item that would be enforced more reliably by a lint rule, script, metadata flag, or runtime check, move it from Accepted to Backlog. The synthesizer already applies this criterion; this is a final pass before edits land. See the **encode-lessons-in-structure** principle skill.
+Sanity-check the synthesizer's Accepted list. For any item that would be enforced more reliably by a lint rule, script, metadata flag, or runtime check, move it from Accepted to Backlog. See the **encode-lessons-in-structure** principle skill.
 
 ### 5. Apply
 
-Before applying any Accepted edit or filing any Backlog item, present the synthesizer's full Accepted/Rejected/Backlog output to the user and wait for explicit approval. The user picks which subsets to apply or file and may redirect routings. Skill changes affect every future agent in the org, and tracker writes mutate external state; do not perform either automatically.
+Before applying any Accepted edit or filing any Backlog item, present the synthesizer's full Accepted/Rejected/Backlog output to the user and wait for explicit approval. The user picks which subsets to apply or file and may redirect routings. Skill changes affect every future agent in the org, and tracker writes mutate external state. Do not perform either automatically.
 
 When approved Backlog items have no configured tracker or the requested write is unavailable, keep them in the in-chat result without blocking approved skill edits.
 
@@ -81,5 +75,5 @@ Short list, no preamble:
 
 - Edits applied: `<skill path>`. What changed, one line each.
 - New skills created: `<skill path>`. One line each (rare).
-- Backlog proposed: `<issue title>` (`<tags>`). State `filed` with the tracker link only when the user approved and the write succeeded; otherwise state `not filed`.
+- Backlog proposed: `<issue title>` (`<tags>`). State `filed` with the tracker link only when the user approved and the write succeeded. Otherwise state `not filed`.
 - Dropped: one line per rejected finding + reason from the synthesizer.
