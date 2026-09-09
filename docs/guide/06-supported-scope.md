@@ -10,7 +10,7 @@ dstack is a curated local workflow pack for Codex, Claude Code, and Cursor. Psta
 - Required fan-out runs in bounded waves when the active harness has fewer child slots than requested. Required slices are not dropped.
 - Long-running workflows do not promise scheduled wake, background persistence, or continuation after the active session ends.
 - Opening a pull request or merge request is explicit only. No implementation playbook publishes work automatically.
-- Babysit is explicit, supports GitHub through `gh` and GitLab through `glab`, and stops at merge-ready. Dstack does not automate merging.
+- Babysit is explicit, supports GitHub through `gh` and GitLab through `glab`, and stops at merge-ready. GitHub's merge queue and GitLab's merge train count as merge-ready. Dstack does not automate merging.
 - Transcript-backed workflows select the active harness and current repository. Cross-harness pickup requires an explicit transcript export, path, or branch.
 
 ## Retained skills

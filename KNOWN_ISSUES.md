@@ -52,7 +52,7 @@ Dstack serializes repository writers. This item concerns read-only exploration, 
 
 ### [ ] 15. Prove GitHub and GitLab request flows live
 
-**Implemented design:** Opening a PR resolves the configured remote and uses authenticated `gh` for GitHub or `glab` for GitLab. Babysit is explicit, uses the matching forge verdict, runs only while the active session can supervise it, and stops at merge-ready without authorizing a merge. Why uses local Git first and treats unavailable forge discussion as an evidence gap.
+**Implemented design:** Opening a PR resolves the configured remote and uses authenticated `gh` for GitHub or `glab` for GitLab. Babysit is explicit, uses the matching forge verdict and that forge's stop condition, runs only while the active session can supervise it, and stops at merge-ready without authorizing a merge. A request already in GitHub's merge queue or GitLab's merge train, with no remaining blockers, is merge-ready. Why uses local Git first and treats unavailable forge discussion as an evidence gap.
 
 **Remaining risk:** The GitHub and GitLab CLI field mappings, approval states, unresolved-thread handling, pipeline retry behavior, and safe comment-reply calls have not been exercised end to end.
 

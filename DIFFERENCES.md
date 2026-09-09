@@ -12,7 +12,7 @@ Updated 2026-09-09. This is the source-of-truth handoff for upstream alignment a
 
 Recheck the local source revision before a future sync. Treat pstack and other plugin folders as immutable inputs.
 
-The 2026-09-09 retained-source refresh absorbed pstack `0.14.1` → `0.15.0` density and punctuation, the two new principle leaves, the TypeScript schemas-before-guards rule, PR-body briefing language, and the removal of Critique mode from `how`. Dstack currently diverges on pstack's machine-checked multi-phase plan. Revisit that choice later. These 0.15.0 changes are still unported and remain deliberate follow-ups: Babysit forge-specific stop conditions, Cursor sticky-mode metadata, hardcoded Fable 5.1 / Grok defaults, human-only invocation on Skill-tool callees (`how`, `why`, `unslop`, `typescript-best-practices`), the plugin logo, and `make-bot-ui`.
+The 2026-09-09 retained-source refresh absorbed pstack `0.14.1` → `0.15.0` density and punctuation, the two new principle leaves, the TypeScript schemas-before-guards rule, PR-body briefing language, the removal of Critique mode from `how`, and Babysit stop conditions adapted for GitHub and GitLab. Dstack currently diverges on pstack's machine-checked multi-phase plan. Revisit that choice later. These 0.15.0 changes are still unported and remain deliberate follow-ups: Cursor sticky-mode metadata, hardcoded Fable 5.1 / Grok defaults, human-only invocation on Skill-tool callees (`how`, `why`, `unslop`, `typescript-best-practices`), the plugin logo, and `make-bot-ui`.
 
 ## Deliberate differences
 
@@ -100,7 +100,7 @@ These are intentional scope choices, not capability gaps or known issues. Reposi
 
 ### Forge support
 
-Opening a request and Babysit resolve the repository remote first. GitHub uses authenticated `gh`; GitLab uses authenticated `glab`. Opening a pull request or merge request is explicit only, Babysit is a separate explicit follow-up, and merge authority remains with the team.
+Opening a request and Babysit resolve the repository remote first. GitHub uses authenticated `gh`; GitLab uses authenticated `glab`. Babysit stop conditions are forge-specific. A request already in GitHub's merge queue or GitLab's merge train, with no remaining blockers, is merge-ready. Babysit does not wait for the merge itself. Opening a pull request or merge request is explicit only, Babysit is a separate explicit follow-up, and merge authority remains with the team.
 
 ## Structure
 
