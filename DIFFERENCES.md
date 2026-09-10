@@ -1,6 +1,6 @@
 # dstack differences from pstack
 
-Updated 2026-09-09. This is the source-of-truth handoff for upstream alignment and project structure. The supported product scope lives in [the scope guide](docs/guide/06-supported-scope.md). dstack is under development, so compatible pre-release shape changes do not bump schema version 2.
+Updated 2026-09-10. This is the source-of-truth handoff for upstream alignment and project structure. The supported product scope lives in [the scope guide](docs/guide/06-supported-scope.md). dstack is under development, so compatible pre-release shape changes do not bump schema version 2.
 
 ## Upstream baseline
 
@@ -64,9 +64,9 @@ Every profile requires a concrete model and effort pair. Parent inheritance and 
 
 This is a portable mechanism recorded in configuration, not a provider rule folder: the mechanism and the directory are discovered live by setup in the active harness.
 
-`setup-dstack` searches for and confirms the active repository's transcript directory once. Transcript-backed skills read only the entry matching the canonical active-repository root and do not rediscover it on every invocation. Configuring another repository under the same harness preserves every existing repository entry.
+`setup-dstack` searches for and confirms the active repository's transcript directory once. Transcript-backed skills read the entry matching the canonical active-repository root, or a registered checkout that shares that root's `git rev-parse --git-common-dir`, and do not rediscover the transcript directory on every invocation. A Cursor or Git linked worktree therefore uses the already-registered main checkout without a second setup pass. Configuring another repository under the same harness preserves every existing repository entry.
 
-Every independently invocable skill that consumes profiles or transcripts reads the fixed file itself and maps the system-provided product identity to `codex`, `claude`, or `cursor`. There is no alias or host override. Transcript consumers additionally derive the canonical Git root, select that repository entry, and verify its repeated `repository_root`. A missing or invalid file, unidentified harness or repository, missing entry, missing required profile, or invalid configured binding stops the skill with an explicit `setup-dstack` instruction.
+Every independently invocable skill that consumes profiles or transcripts reads the fixed file itself and maps the system-provided product identity to `codex`, `claude`, or `cursor`. There is no alias or host override. Transcript consumers additionally derive the canonical Git root, select that repository entry or a common-dir-linked registered checkout, and verify the selected entry's repeated `repository_root`. Resolution uses `configure.py resolve`. A missing or invalid file, unidentified harness or repository, missing entry, missing required profile, or invalid configured binding stops the skill with an explicit `setup-dstack` instruction.
 
 ### Invocation metadata
 

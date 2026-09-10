@@ -12,7 +12,7 @@ This skill orchestrates three others: an inline mining pass (see step 1), your h
 
 ## Configuration
 
-Before mining transcripts, map the system-provided product identity to the canonical id `codex`, `claude`, or `cursor`. Resolve the canonical repository root with `git rev-parse --show-toplevel` and symlink resolution. Read `~/.dstack/config.json`, select `hosts[<active-harness>].repositories[<canonical-repository-root>]`, and verify its `repository_root` exactly matches. Never invent an alias, use another host or repository entry, or fall back across repositories. If any step fails, stop and name the exact problem. Tell the user to invoke `setup-dstack` explicitly.
+Before mining transcripts, map the system-provided product identity to the canonical id `codex`, `claude`, or `cursor`. Resolve the canonical repository root with `git rev-parse --show-toplevel` and symlink resolution. Read `~/.dstack/config.json`, select `hosts[<active-harness>]` and `repositories[<canonical-repository-root>]` when that key is this checkout, and verify its `repository_root` exactly matches its key. If that key is absent, select the registered repository that shares this checkout's `git rev-parse --git-common-dir`. Run `configure.py resolve --host <active-harness>` from the active checkout and use that result. Never invent an alias, use another host, or fall back across repositories that do not share that git common directory. If any step fails, stop and name the exact problem. Tell the user to invoke `setup-dstack` explicitly.
 
 ## Flow
 

@@ -7,6 +7,7 @@ import argparse
 import copy
 import json
 import os
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -15,6 +16,7 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 SCHEMA_VERSION = 2
 CONFIG_PATH = Path("~/.dstack/config.json").expanduser()
+CONFIG_DISPLAY = "~/.dstack/config.json"
 PROFILES = ("fast-explorer", "feature-worker", "bug-worker", "skeptical-reviewer")
 RESERVED_BINDING_VALUES = {"auto", "inherit-parent"}
 SPAWN_ARGUMENTS = "spawn-arguments"
@@ -257,6 +259,117 @@ def load_proposal(path: str) -> Dict[str, Any]:
     return validate_proposal(read_json(Path(path), "proposal {}".format(path)))
 
 
+def git_text(arguments: Sequence[str], cwd: Optional[str] = None) -> str:
+    try:
+        completed = subprocess.run(
+            ["git", *arguments],
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+        )
+    except OSError as error:
+        raise ConfigError("cannot run git: {}".format(error)) from error
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or completed.stdout.strip() or "git command failed"
+        raise ConfigError(detail)
+    return completed.stdout.strip()
+
+
+def canonicalize_path(value: str) -> str:
+    return str(Path(value).expanduser().resolve())
+
+
+def current_checkout_root(checkout: Optional[str] = None) -> str:
+    try:
+        toplevel = git_text(["rev-parse", "--show-toplevel"], cwd=checkout)
+    except ConfigError as error:
+        raise ConfigError("no active Git repository: {}".format(error)) from error
+    return canonicalize_path(toplevel)
+
+
+def git_common_dir(checkout: str) -> str:
+    raw = git_text(["rev-parse", "--git-common-dir"], cwd=checkout)
+    path = Path(raw)
+    if not path.is_absolute():
+        path = Path(checkout) / path
+    return str(path.resolve())
+
+
+def worktree_roots(checkout: str) -> List[str]:
+    porcelain = git_text(["worktree", "list", "--porcelain"], cwd=checkout)
+    roots: List[str] = []
+    for line in porcelain.splitlines():
+        if line.startswith("worktree "):
+            roots.append(canonicalize_path(line[len("worktree "):]))
+    return roots
+
+
+def select_repository_entry(
+    config: Mapping[str, Any],
+    host: str,
+    checkout: Optional[str] = None,
+) -> Dict[str, Any]:
+    checked = validate_config(config)
+    validate_host(host, "host")
+    if host not in checked["hosts"]:
+        raise ConfigError("host {!r} has no entry in {}".format(host, CONFIG_DISPLAY))
+    checkout_root = current_checkout_root(checkout)
+    repositories = checked["hosts"][host]["repositories"]
+    if checkout_root in repositories:
+        entry = repositories[checkout_root]
+        return {
+            "host": host,
+            "checkout_root": checkout_root,
+            "match": "exact",
+            "repository_root": entry["repository_root"],
+            "transcripts_directory": entry["transcripts_directory"],
+        }
+
+    checkout_common = git_common_dir(checkout_root)
+    matches: List[Dict[str, Optional[str]]] = []
+    for root, entry in repositories.items():
+        if not Path(root).exists():
+            continue
+        try:
+            registered_common = git_common_dir(root)
+        except ConfigError:
+            continue
+        if registered_common == checkout_common:
+            matches.append(entry)
+
+    if not matches:
+        if not repositories:
+            raise ConfigError(
+                "The canonical repository root is `{}`, but {} has no repository entries for host {}.".format(
+                    checkout_root, CONFIG_DISPLAY, host
+                )
+            )
+        registered = ", ".join("`{}`".format(root) for root in sorted(repositories))
+        raise ConfigError(
+            "The canonical repository root is `{}`, but {} only registers {}.".format(
+                checkout_root, CONFIG_DISPLAY, registered
+            )
+        )
+
+    by_root = {entry["repository_root"]: entry for entry in matches}
+    selected = matches[0] if len(matches) == 1 else None
+    if selected is None:
+        for worktree in worktree_roots(checkout_root):
+            if worktree in by_root:
+                selected = by_root[worktree]
+                break
+        if selected is None:
+            selected = sorted(matches, key=lambda entry: entry["repository_root"] or "")[0]
+
+    return {
+        "host": host,
+        "checkout_root": checkout_root,
+        "match": "linked-worktree",
+        "repository_root": selected["repository_root"],
+        "transcripts_directory": selected["transcripts_directory"],
+    }
+
+
 def merge_proposal(config: Mapping[str, Any], proposal: Mapping[str, Any]) -> Dict[str, Any]:
     merged = copy.deepcopy(config)
     previous = merged["hosts"].get(proposal["host"], {})
@@ -300,6 +413,9 @@ def parser() -> argparse.ArgumentParser:
     commands.add_parser("validate")
     apply = commands.add_parser("apply")
     apply.add_argument("--proposal", required=True, metavar="PATH|-")
+    resolve = commands.add_parser("resolve")
+    resolve.add_argument("--host", required=True)
+    resolve.add_argument("--checkout")
     return result
 
 
@@ -307,7 +423,7 @@ def run(arguments: Sequence[str]) -> int:
     options = parser().parse_args(arguments)
     path = CONFIG_PATH.resolve()
     try:
-        if options.command == "validate" and not path.exists():
+        if options.command in {"validate", "resolve"} and not path.exists():
             raise ConfigError("configuration file does not exist: {}".format(path))
         config = default_config() if not path.exists() else validate_config(read_json(path, str(path)))
         if options.command == "show":
@@ -315,6 +431,11 @@ def run(arguments: Sequence[str]) -> int:
             return 0
         if options.command == "validate":
             print("Valid dstack configuration: {}".format(path))
+            return 0
+        if options.command == "resolve":
+            checkout = canonicalize_path(options.checkout) if options.checkout else None
+            selected = select_repository_entry(config, options.host, checkout)
+            print(json.dumps(selected, indent=2, ensure_ascii=False))
             return 0
         proposal = load_proposal(options.proposal)
         write_atomic(path, merge_proposal(config, proposal))

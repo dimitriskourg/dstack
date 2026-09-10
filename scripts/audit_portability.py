@@ -176,6 +176,10 @@ def check_skill(skill_dir: Path) -> List[Finding]:
                 findings.append(Finding(relative(skill_file), "transcript skill must select the canonical repository entry"))
             if "`repository_root` exactly matches" not in body:
                 findings.append(Finding(relative(skill_file), "transcript skill must verify the repository entry identity"))
+            if "git rev-parse --git-common-dir" not in body:
+                findings.append(Finding(relative(skill_file), "transcript skill must accept linked worktrees via git common directory"))
+            if "configure.py resolve" not in body:
+                findings.append(Finding(relative(skill_file), "transcript skill must resolve the repository entry with configure.py resolve"))
         if "stop and name the exact problem" not in body or "Tell the user to invoke `setup-dstack` explicitly." not in body:
             findings.append(Finding(relative(skill_file), "config-dependent skill must fail closed with setup-dstack guidance"))
         if skill_dir.name not in {"automate-me", "recall"}:

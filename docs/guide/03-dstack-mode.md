@@ -1,6 +1,6 @@
 # dstack mode
 
-Call the Skill tool with `dstack-mode` for the curated local router and retained pstack-derived playbooks. The router keeps concise writing, deliberate delegation, simple code, and verification while removing unsupported provider, autonomous, Graphite, and worktree assumptions.
+Call the Skill tool with `dstack-mode` for the curated local router and retained pstack-derived playbooks. The router keeps concise writing, deliberate delegation, simple code, and verification while removing unsupported provider, autonomous, Graphite, and worktree-management assumptions.
 
 The skill chooses a playbook, loads applicable principle skills, uses configured profiles for helpers, and keeps the parent responsible for every delegated result.
 

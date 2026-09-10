@@ -103,7 +103,8 @@ class PortabilityAuditTests(unittest.TestCase):
                 Path(temp),
                 "Map the system-provided product identity to `codex`, `claude`, or `cursor`; never invent an alias. "
                 "Read `~/.dstack/config.json`, select `hosts[<active-harness>].repositories[<canonical-repository-root>]`, "
-                "and verify its `repository_root` exactly matches; on failure, stop and name the exact problem. "
+                "and verify its `repository_root` exactly matches; if that key is absent, use `git rev-parse --git-common-dir`. "
+                "Run `configure.py resolve`; on failure, stop and name the exact problem. "
                 "Tell the user to invoke `setup-dstack` explicitly.\n",
                 name="recall",
             )
@@ -121,6 +122,8 @@ class PortabilityAuditTests(unittest.TestCase):
             messages = self.messages(skill)
             self.assertIn("transcript skill must select the canonical repository entry", messages)
             self.assertIn("transcript skill must verify the repository entry identity", messages)
+            self.assertIn("transcript skill must accept linked worktrees via git common directory", messages)
+            self.assertIn("transcript skill must resolve the repository entry with configure.py resolve", messages)
 
     def test_shipped_schema_requires_a_worker_binding(self):
         findings = [finding.message for finding in AUDIT.check_structure()]

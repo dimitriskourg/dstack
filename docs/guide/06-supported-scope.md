@@ -6,7 +6,7 @@ dstack is a curated local workflow pack for Codex, Claude Code, and Cursor. Psta
 
 - Work runs on the user's computer in an active interactive session.
 - Native subagents may parallelize read-only exploration, review, and independent artifacts outside the repository.
-- Repository writers are serialized in the active checkout. Dstack does not create, manage, or clean Git worktrees.
+- Repository writers are serialized in the active checkout. Dstack does not create, manage, or clean Git worktrees. Linked worktrees of a registered checkout reuse that repository entry through `git rev-parse --git-common-dir`; they do not need their own `setup-dstack` pass.
 - Required fan-out runs in bounded waves when the active harness has fewer child slots than requested. Required slices are not dropped.
 - Long-running workflows do not promise scheduled wake, background persistence, or continuation after the active session ends.
 - Opening a pull request or merge request is explicit only. No implementation playbook publishes work automatically.
@@ -115,7 +115,7 @@ Apple development cleanup is a dstack-specific local addition. It is explicit an
 - **Orchestrate.** Excluded with the provider-specific pstack runtime; dstack uses its retained skills and playbooks directly.
 - **Make Bot UI.** Excluded because the source skill is a Cursor Grok Bot webhook, secret-request, and Tailscale workflow.
 
-Git worktrees remain a possible future capability. Add them only when real team usage justifies a complete creation, repository setup, runtime-resource isolation, integration, and cleanup contract across Codex, Claude Code, and Cursor.
+Git worktrees remain a possible future capability for creation, isolation, and cleanup. Add those only when real team usage justifies a complete contract across Codex, Claude Code, and Cursor. Recognizing an existing linked worktree as the same registered repository is already in scope.
 
 ## Document ownership
 

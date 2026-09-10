@@ -12,7 +12,13 @@ Use `~/.dstack/config.json` as the only configuration source. Its location is fi
 
 Map the system-provided product identity to exactly one canonical harness id: Codex is `codex`, Claude Code is `claude`, and Cursor is `cursor`. Never derive the id from repository files, transcript paths, or user-provided aliases. This id is always the configuration key; there is no override. If the product identity is unavailable or is not one of those three, stop and report the observed identity evidence.
 
-Resolve the active repository with `git rev-parse --show-toplevel`, then canonicalize that absolute path by resolving symlinks. This canonical repository root is the repository id. If there is no active Git repository or the root cannot be canonicalized, stop; never reuse another repository entry.
+Resolve the active repository with `git rev-parse --show-toplevel`, then canonicalize that absolute path by resolving symlinks. This canonical repository root is the repository id written by setup. If there is no active Git repository or the root cannot be canonicalized, stop; never reuse another project's repository entry. Linked Git worktrees of an already-registered repository do not need a second setup pass. Consumers resolve them with:
+
+```text
+python3 <setup-dstack-dir>/scripts/configure.py resolve --host <active-harness>
+```
+
+That command selects a registered checkout that shares `git rev-parse --git-common-dir`.
 
 ## 2. Discover models
 

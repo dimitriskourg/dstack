@@ -4,6 +4,8 @@ import contextlib
 import importlib.util
 import io
 import json
+import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -17,6 +19,7 @@ assert SPEC and SPEC.loader
 CONFIGURE = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = CONFIGURE
 SPEC.loader.exec_module(CONFIGURE)
+GIT_TMP = Path(__file__).resolve().parent / ".tmp"
 
 
 class ConfiguratorTests(unittest.TestCase):
@@ -540,6 +543,149 @@ class ConfiguratorTests(unittest.TestCase):
             self.write_json(config, {"schema_version": 2, "hosts": {"codex": entry}})
             checked = CONFIGURE.validate_config(json.loads(config.read_text(encoding="utf-8")))
             self.assertIsNone(checked["hosts"]["codex"]["worker_binding"]["pair_encoding"])
+
+    def git_workspace(self):
+        GIT_TMP.mkdir(exist_ok=True)
+        return tempfile.TemporaryDirectory(dir=str(GIT_TMP))
+
+    def git(self, repo: Path, *arguments: str) -> None:
+        completed = subprocess.run(
+            ["git", *arguments],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+            env={**os.environ, "GIT_CONFIG_NOSYSTEM": "1", "HOME": str(repo)},
+        )
+        if completed.returncode != 0:
+            raise AssertionError(completed.stderr.strip() or completed.stdout)
+
+    def init_repo(self, repo: Path) -> str:
+        repo.mkdir(parents=True)
+        self.git(repo, "init", "--template=", "-b", "main")
+        self.git(repo, "config", "user.email", "test@example.com")
+        self.git(repo, "config", "user.name", "Test")
+        (repo / "README").write_text("repo\n", encoding="utf-8")
+        self.git(repo, "add", "README")
+        self.git(repo, "commit", "-m", "init")
+        return str(repo.resolve())
+
+    def test_resolve_matches_the_registered_checkout(self):
+        with self.git_workspace() as temporary:
+            root = Path(temporary)
+            repo = root / "repo"
+            config = root / "config.json"
+            proposal = root / "proposal.json"
+            repository_root = self.init_repo(repo)
+            self.write_json(
+                proposal,
+                self.proposal("cursor", "live", "/tmp/transcripts", repository_root=repository_root),
+            )
+            self.assertEqual(0, self.apply(config, proposal)[0])
+            status, stdout, stderr = self.run_configurator(
+                ["resolve", "--host", "cursor", "--checkout", repository_root],
+                config,
+            )
+            self.assertEqual(0, status, stderr)
+            selected = json.loads(stdout)
+            self.assertEqual("exact", selected["match"])
+            self.assertEqual(repository_root, selected["repository_root"])
+            self.assertEqual(repository_root, selected["checkout_root"])
+            self.assertEqual("/tmp/transcripts", selected["transcripts_directory"])
+
+    def test_resolve_accepts_a_linked_worktree_of_a_registered_checkout(self):
+        with self.git_workspace() as temporary:
+            root = Path(temporary)
+            repo = root / "repo"
+            worktree = root / "worktree"
+            config = root / "config.json"
+            proposal = root / "proposal.json"
+            repository_root = self.init_repo(repo)
+            self.git(repo, "worktree", "add", "-b", "feature", str(worktree))
+            self.write_json(
+                proposal,
+                self.proposal("cursor", "live", "/tmp/transcripts", repository_root=repository_root),
+            )
+            self.assertEqual(0, self.apply(config, proposal)[0])
+            status, stdout, stderr = self.run_configurator(
+                ["resolve", "--host", "cursor", "--checkout", str(worktree)],
+                config,
+            )
+            self.assertEqual(0, status, stderr)
+            selected = json.loads(stdout)
+            self.assertEqual("linked-worktree", selected["match"])
+            self.assertEqual(repository_root, selected["repository_root"])
+            self.assertEqual(str(worktree.resolve()), selected["checkout_root"])
+            self.assertEqual("/tmp/transcripts", selected["transcripts_directory"])
+
+    def test_resolve_prefers_the_primary_worktree_when_several_checkouts_are_registered(self):
+        with self.git_workspace() as temporary:
+            root = Path(temporary)
+            repo = root / "repo"
+            first = root / "first"
+            second = root / "second"
+            config = root / "config.json"
+            proposal = root / "proposal.json"
+            repository_root = self.init_repo(repo)
+            self.git(repo, "worktree", "add", "-b", "one", str(first))
+            self.git(repo, "worktree", "add", "-b", "two", str(second))
+            self.write_json(
+                proposal,
+                self.proposal("cursor", "main", "/tmp/main-transcripts", repository_root=repository_root),
+            )
+            self.assertEqual(0, self.apply(config, proposal)[0])
+            self.write_json(
+                proposal,
+                self.proposal(
+                    "cursor",
+                    "main",
+                    "/tmp/first-transcripts",
+                    repository_root=str(first.resolve()),
+                ),
+            )
+            self.assertEqual(0, self.apply(config, proposal)[0])
+            status, stdout, stderr = self.run_configurator(
+                ["resolve", "--host", "cursor", "--checkout", str(second)],
+                config,
+            )
+            self.assertEqual(0, status, stderr)
+            selected = json.loads(stdout)
+            self.assertEqual("linked-worktree", selected["match"])
+            self.assertEqual(repository_root, selected["repository_root"])
+            self.assertEqual("/tmp/main-transcripts", selected["transcripts_directory"])
+
+    def test_resolve_rejects_a_different_git_repository(self):
+        with self.git_workspace() as temporary:
+            root = Path(temporary)
+            registered = root / "registered"
+            other = root / "other"
+            config = root / "config.json"
+            proposal = root / "proposal.json"
+            repository_root = self.init_repo(registered)
+            self.init_repo(other)
+            self.write_json(
+                proposal,
+                self.proposal("cursor", "live", "/tmp/transcripts", repository_root=repository_root),
+            )
+            self.assertEqual(0, self.apply(config, proposal)[0])
+            status, stdout, stderr = self.run_configurator(
+                ["resolve", "--host", "cursor", "--checkout", str(other)],
+                config,
+            )
+            self.assertEqual(2, status)
+            self.assertEqual("", stdout)
+            self.assertIn("only registers `{}`".format(repository_root), stderr)
+
+    def test_resolve_requires_an_existing_config(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = root / "config.json"
+            status, stdout, stderr = self.run_configurator(
+                ["resolve", "--host", "cursor"],
+                config,
+            )
+            self.assertEqual(2, status)
+            self.assertEqual("", stdout)
+            self.assertIn("configuration file does not exist: {}".format(config.resolve()), stderr)
 
 
 if __name__ == "__main__":
