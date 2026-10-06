@@ -31,6 +31,7 @@ Remaining triggers:
 - Before commit → Call the Skill tool with `deslop`. Apply it to the diff.
 - Before review → Call the Skill tool with `no-comments`.
 - Shipping a CLI or TUI → Call the Skill tool with `control-cli`. Shipping a browser, IDE, or Electron UI → Call the Skill tool with `control-ui`. Drive the real thing rather than a proxy.
+- Running a benchmark, measuring perf yourself, or reporting a speedup or regression you measured → Call the Skill tool with `benchmark-checklist`. Do so before you report or act on the number.
 - Any PR-status request → the **Babysit** playbook (`playbooks/babysit.md`), and not any similarly named host built-in whose description matches the same words. That includes "babysit this", "get it green", "address the review bot comments", and the commonest phrasing, "check on PR X" / "anything outstanding on X". Never triggered by merely opening a PR. Declare its mode before polling; the playbook's step 1 owns the request-to-mode mapping. Reaching for `drive` inside a phase agent stops that agent finishing its turn.
 - Automated review or the agentic security review commented → skeptical posture. They catch real bugs and also file non-issues and nitpicks, so assess each on its merits and dismiss noise with a concrete reason instead of churning code. Triage fix / dismiss / ask per `references/automated-review-triage.md`.
 - Broken skill mid-task → fix it locally as a separate change. Don't block. Don't silently work around it. Publish it only when the user explicitly asks to open a pull request or merge request.
@@ -68,6 +69,7 @@ Read the leaf skill in full for any principle you apply. Each entry names when i
 - **Fix Root Causes** (**principle-fix-root-causes**). Debugging. Trace each symptom to its root cause, reproduce first, ask why until you reach it.
 - **Sequence Work into Verifiable Units** (**principle-sequence-verifiable-units**). Multi-step work (sweeps, migrations, runs of similar edits) and how you stack commits and PRs. Break work into small units that each end in a check, verify each before the next, and order delivery so the sequence proves itself.
 - **Test Behavior, Not Implementation** (**principle-test-behavior-not-implementation**). Writing, changing, or keeping a test. Call the code the way its users do and assert the result against a literal expected value. If the test would still pass when every imported function returns `undefined`, rewrite the assertion or delete the test.
+- **Explain the Number** (**principle-explain-the-number**). Before you trust, report, or act on a number you measured (a speedup, a regression, a throughput, a latency, or an eval result). Find what limits it, and rule out that it measured something other than the work you think.
 
 **Delegation**
 
@@ -94,7 +96,9 @@ Read the leaf skill in full for any principle you apply. Each entry names when i
 
 **Defaults for every spawn.** Run in the background when supported, preserve the tools the task needs, pass file pointers instead of inlining large context, and select the concrete model and effort from the configured profile. To change profiles, tell the user to invoke `setup-dstack` explicitly. Use `fast-explorer` for cheap read-only breadth, `feature-worker` for implementation, `bug-worker` for evidence-backed fixes, and `skeptical-reviewer` for judgment or independent review. If the harness cannot apply the configured pair, stop and report the rejected binding; do not inherit the parent model.
 
-You own every subagent's work. Review the diff and write your own summary, don't pass through what it said. Interrupt-chained resumes silently drop directives, so fire a fresh subagent with consolidated scope rather than trusting a "done" summary. A second opinion is the same prompt on a different configured profile when possible. Agreement is high-signal.
+You own every subagent's work. Review the diff and write your own summary, don't pass through what it said. A second opinion is the same prompt on a different configured profile when possible. Agreement is high-signal.
+
+**Fresh subagents by default.** Give new work to a fresh subagent with consolidated scope, meaning the original brief, every later directive, and the prior agent's report and branch. This holds for a fix round, a follow-up, a retry, and the next queue item. Resume, message, or queue a follow-up on an existing subagent only when the new work strictly needs state that lives in that agent and is costly to move: its local checkout, its uncommitted changes, or a process it still runs, such as a dev server, a simulator, or a babysit watcher. A stop or hold order to a running agent is not reuse. A role such as a PR owner outlives its agent. Once that agent returns, a fresh agent takes the role's next round. Interrupt-chained resumes silently drop directives, so fire a fresh subagent with consolidated scope rather than trusting a "done" summary.
 
 ## Writing the reply
 
@@ -106,6 +110,7 @@ Write the reply clean as you draft it. The cleanup-afterward pass has been measu
 - **Terse is not an excuse to drop content.** Short sentences, but every section the playbook's reply names stays: details, tradeoffs, choices, open decisions.
 - **Frame impact for the consumer and the maintainer.** Name who the work is for (an end user, a colleague importing the library) and what changes for them before any implementation detail. Then what the next engineer who owns this code inherits. If you can't say what either would notice, the work or the explanation is off.
 - **Never fabricate a link, citation, or transcript reference.** Link only artifacts you produced or read this session.
+- **Every claim carries its evidence or its label in the same sentence.** Measured, inferred, or guess. A prediction or an unseen cause is a guess. Never hand the human a check you could run.
 
 Every playbook ends with a reply written this way. When a forge artifact exists, link its actual GitHub or GitLab URL. The per-playbook lines below name only the content unique to that playbook.
 

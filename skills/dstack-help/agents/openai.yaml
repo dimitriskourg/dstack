@@ -1,0 +1,5 @@
+interface:
+  display_name: "dstack Help"
+  short_description: "Find the right dstack skill or playbook"
+policy:
+  allow_implicit_invocation: false

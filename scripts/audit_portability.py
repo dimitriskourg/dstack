@@ -22,14 +22,16 @@ CONFIG_DEPENDENT_SKILLS = {
 TRANSCRIPT_CONFIG_SKILLS = {"automate-me", "dstack-mode", "recall", "reflect", "show-me-your-work"}
 CANONICAL_HOST_IDS = {"codex", "claude", "cursor"}
 REQUIRED_SKILLS = {
-    "architect", "arena", "automate-me", "blast-radius", "bro", "comment-sicko",
-    "control-cli", "control-ui", "create-verification-skill", "deslop", "dstack-mode",
+    "architect", "arena", "automate-me", "benchmark-checklist", "blast-radius", "bro",
+    "comment-sicko", "control-cli", "control-ui", "correct", "create-verification-skill",
+    "deslop", "dstack-help", "dstack-mode",
     "figure-it-out", "how", "interrogate", "maintain-verification-skill", "no-comments",
     "recall", "reflect", "setup-dstack", "show-me-your-work", "swarm", "tdd", "teach",
     "technical-writing", "typescript-best-practices", "unslop", "why",
     "principle-attack-the-premise", "principle-boundary-discipline",
     "principle-build-the-lever",
     "principle-encode-lessons-in-structure", "principle-exhaust-the-design-space",
+    "principle-explain-the-number",
     "principle-experience-first", "principle-fix-root-causes",
     "principle-foundational-thinking", "principle-guard-the-context-window",
     "principle-laziness-protocol", "principle-make-operations-idempotent",
