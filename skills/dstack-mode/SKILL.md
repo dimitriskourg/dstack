@@ -26,13 +26,13 @@ Remaining triggers:
 - Design or code bakeoffs with base selection and grafting → Call the Skill tool with `arena`.
 - Contested design → Call the Skill tool with `interrogate`. Do so before shipping.
 - Nontrivial multi-step → write the throughput checkpoint (Feature step 3).
-- Any prose surface → Call the Skill tool with `unslop`. Your reply is a prose surface; write it per **Writing the reply**. Agent-facing prose also follows the active harness's skill-authoring guidance.
+- Any prose surface, your reply to the user included → Call the Skill tool with `unslop`. Write the reply per **Writing the reply**. Agent-facing prose also follows the active harness's skill-authoring guidance.
 - Docs, RFCs, readmes, PR descriptions, or commit messages → Call the Skill tool with `technical-writing`.
 - Before commit → Call the Skill tool with `deslop`. Apply it to the diff.
 - Before review → Call the Skill tool with `no-comments`.
 - Shipping a CLI or TUI → Call the Skill tool with `control-cli`. Shipping a browser, IDE, or Electron UI → Call the Skill tool with `control-ui`. Drive the real thing rather than a proxy.
 - Running a benchmark, measuring perf yourself, or reporting a speedup or regression you measured → Call the Skill tool with `benchmark-checklist`. Do so before you report or act on the number.
-- Any PR-status request → the **Babysit** playbook (`playbooks/babysit.md`), and not any similarly named host built-in whose description matches the same words. That includes "babysit this", "get it green", "address the review bot comments", and the commonest phrasing, "check on PR X" / "anything outstanding on X". Never triggered by merely opening a PR. Declare its mode before polling; the playbook's step 1 owns the request-to-mode mapping. Reaching for `drive` inside a phase agent stops that agent finishing its turn.
+- Any PR-status request ("babysit this", "get it green", "address the review bot comments", and most often "check on PR X" or "anything outstanding on X") → the **Babysit** playbook (`playbooks/babysit.md`), not any similarly named host built-in whose description matches the same words. Never triggered by merely opening a PR. Declare its mode before polling. The playbook's step 1 owns the request-to-mode mapping. Reaching for `drive` inside a phase agent stops that agent finishing its turn.
 - Automated review or the agentic security review commented → skeptical posture. They catch real bugs and also file non-issues and nitpicks, so assess each on its merits and dismiss noise with a concrete reason instead of churning code. Triage fix / dismiss / ask per `references/automated-review-triage.md`.
 - Broken skill mid-task → fix it locally as a separate change. Don't block. Don't silently work around it. Publish it only when the user explicitly asks to open a pull request or merge request.
 - Long, autonomous, or multi-phase work, or any task the user steps away from to review later → Call the Skill tool with `show-me-your-work`. Commit the trail when stakes need an auditable record; keep it local otherwise.
@@ -112,7 +112,7 @@ Write the reply clean as you draft it. The cleanup-afterward pass has been measu
 - **Never fabricate a link, citation, or transcript reference.** Link only artifacts you produced or read this session.
 - **Every claim carries its evidence or its label in the same sentence.** Measured, inferred, or guess. A prediction or an unseen cause is a guess. Never hand the human a check you could run.
 
-Every playbook ends with a reply written this way. When a forge artifact exists, link its actual GitHub or GitLab URL. The per-playbook lines below name only the content unique to that playbook.
+Every playbook ends with a reply written this way. When a forge artifact exists, link its actual GitHub or GitLab URL. Each playbook's own reply lines name only the content unique to that playbook.
 
 ## Comments
 

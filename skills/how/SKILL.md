@@ -13,50 +13,31 @@ Before using a profile, map the system-provided product identity to the canonica
 
 Apply the profile through `worker_binding`: pass its exact model and effort for `spawn-arguments`; for `worker-definitions`, spawn `dstack-<profile>` without overrides. Stop if the binding is missing, rejected, or different. Never inherit session effort.
 
-Helpers below are read-only. If your host cannot enforce that, instruct the helper not to write and don't describe the boundary as enforced. Profiles resolve through your configuration and always name a concrete model and effort pair.
+Helpers below are read-only. If your host cannot enforce that, instruct the helper not to write and don't describe the boundary as enforced. Explorers use the configured `fast-explorer` profile. Every explainer uses the configured `skeptical-reviewer` profile.
 
 Spawn helpers with the active harness's native subagent tool. Every supported harness can spawn subagents. If a nested spawn is denied, the current agent performs that pass directly.
 
-## Step 1. Assess Complexity
+## 1. Assess complexity
 
 If the scope is ambiguous, state your interpretation and explore. The user can redirect.
 
-- **Simple** (a single module, a small utility, a narrow question such as "how does function X work"): no explorers. One explainer explores and explains in a single pass. Go to Step 2b.
-- **Complex** (a subsystem spanning multiple files or services, a cross-cutting feature, a full architectural overview): spawn parallel explorers first, then hand off to the explainer. Go to Step 2a.
+- **Simple** (a single module, a small utility, a narrow question such as "how does function X work"): no explorers. Spawn one explainer that explores and explains in one pass, built from `references/explainer-prompt.md` without the explorer-findings section. Go to step 4.
+- **Complex** (a subsystem spanning multiple files or services, a cross-cutting feature, a full architectural overview): go to step 2.
 
 When in doubt, take the simple path.
 
-## Step 2a. Explore (complex questions only)
+## 2. Explore (complex only)
 
-Decompose the question into 2 to 4 exploration angles, each a distinct slice of the subsystem. Spawn all explorers at once:
+Decompose the question into 2 to 4 angles, each a distinct slice of the subsystem. Spawn all explorers in a single message, each with `references/explorer-prompt.md` and its angle filled in.
 
-- helper: a general-purpose subagent, read-only
-- model: your configured `fast-explorer` role
+## 3. Synthesize (complex only)
 
-Each explorer gets the prompt in `references/explorer-prompt.md` with its angle filled in. Then go to Step 3.
+Once all explorers have returned, spawn one explainer with `references/explainer-prompt.md` and every explorer's findings filled in.
 
-## Step 2b. Direct Explain (simple questions)
+## 4. Present
 
-Spawn one subagent that explores and explains in one pass:
+Present the explainer's output. Light edits for clarity or context from the conversation are fine. Do not substantially rewrite it.
 
-- helper: a general-purpose subagent, read-only
-- model: your configured `skeptical-reviewer` role
-
-Build its prompt from `references/explainer-prompt.md` without the explorer-findings section. Go to Step 4.
-
-## Step 3. Synthesize (complex questions only)
-
-Once all explorers have returned, spawn one subagent to synthesize their findings into one explanation:
-
-- helper: a general-purpose subagent, read-only
-- model: your configured `skeptical-reviewer` role
-
-Build its prompt from `references/explainer-prompt.md` with every explorer's findings filled in.
-
-## Step 4. Present
-
-Present the explainer's output to the user. Light edits for clarity or context from the conversation are fine. Do not substantially rewrite it.
-
-## Output Format
+## Output format
 
 The explanation uses the sections defined in `references/explainer-prompt.md`, dropping any that do not apply: Overview, Key Concepts, How It Works, Where Things Live, Gotchas.
