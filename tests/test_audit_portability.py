@@ -140,6 +140,77 @@ class PortabilityAuditTests(unittest.TestCase):
         self.assertEqual(AUDIT.REQUIRED_DSTACK_PLAYBOOKS, actual)
         self.assertFalse(AUDIT.EXCLUDED_DSTACK_PLAYBOOKS & actual)
 
+    def test_kebab_from_title_keeps_hyphens_and_drops_other_punctuation(self):
+        self.assertEqual("laziness-protocol", AUDIT.kebab_from_title("Laziness Protocol"))
+        self.assertEqual("opening-a-pr", AUDIT.kebab_from_title("Opening a PR"))
+        self.assertEqual(
+            "test-behavior-not-implementation",
+            AUDIT.kebab_from_title("Test Behavior, Not Implementation"),
+        )
+        self.assertEqual(
+            "multi-phase-or-multi-request-plan",
+            AUDIT.kebab_from_title("Multi-phase or multi-request plan"),
+        )
+        self.assertEqual(
+            "apple-development-cleanup",
+            AUDIT.kebab_from_title("Apple development cleanup"),
+        )
+        self.assertEqual(
+            "sequence-work-into-verifiable-units",
+            AUDIT.kebab_from_title("Sequence Work into Verifiable Units"),
+        )
+
+    def test_shipped_mode_index_resolves_by_convention(self):
+        findings = [finding.message for finding in AUDIT.check_structure()]
+        self.assertFalse(any("does not resolve" in message for message in findings))
+        self.assertFalse(any("is not referenced by a resolvable title" in message for message in findings))
+        body = (AUDIT.SKILLS / "dstack-mode" / "SKILL.md").read_text(encoding="utf-8")
+        principles = {name: title for title, name, _ in AUDIT.resolve_principle_index(body)}
+        playbooks = {stem: title for title, stem, _ in AUDIT.resolve_playbook_index(body)}
+        self.assertEqual(
+            "principle-laziness-protocol",
+            "principle-" + AUDIT.kebab_from_title(principles["principle-laziness-protocol"]),
+        )
+        self.assertEqual(
+            "Sequence Work into Verifiable Units",
+            principles["principle-sequence-verifiable-units"],
+        )
+        self.assertNotEqual(
+            "principle-sequence-verifiable-units",
+            "principle-" + AUDIT.kebab_from_title(principles["principle-sequence-verifiable-units"]),
+        )
+        self.assertEqual("Investigation", playbooks["investigation"])
+        self.assertEqual("Authoring or modifying a skill", playbooks["authoring-a-skill"])
+        self.assertNotEqual("authoring-a-skill", AUDIT.kebab_from_title(playbooks["authoring-a-skill"]))
+        self.assertEqual("Multi-phase or multi-request plan", playbooks["multi-phase-plan"])
+        self.assertNotEqual("multi-phase-plan", AUDIT.kebab_from_title(playbooks["multi-phase-plan"]))
+        self.assertEqual("Apple development cleanup", playbooks["apple-dev-cleanup"])
+        self.assertNotEqual("apple-dev-cleanup", AUDIT.kebab_from_title(playbooks["apple-dev-cleanup"]))
+        self.assertEqual(AUDIT.REQUIRED_DSTACK_PLAYBOOKS, set(playbooks))
+
+    def test_unresolved_mode_title_fails(self):
+        body = (
+            "## Principles\n\n"
+            "- **Missing Leaf.** A title with no matching skill.\n\n"
+            "## Playbooks\n\n"
+            "- **Ghost Playbook.** A title with no matching file.\n"
+            "- **Shipping.** An excluded playbook referenced by title.\n"
+        )
+        messages = [finding.message for finding in AUDIT.check_mode_index(body, set(), set(), "mode.md")]
+        self.assertIn(
+            "principle title 'Missing Leaf' does not resolve to an existing skill (principle-missing-leaf)",
+            messages,
+        )
+        self.assertIn(
+            "playbook title 'Ghost Playbook' does not resolve to an existing playbook (ghost-playbook)",
+            messages,
+        )
+        self.assertIn(
+            "playbook title 'Shipping' resolves to excluded playbook 'shipping'",
+            messages,
+        )
+        self.assertTrue(any("supported playbook" in message and "is not referenced" in message for message in messages))
+
     def test_config_path_override_fails(self):
         with tempfile.TemporaryDirectory() as temp:
             skill = self.make_skill(Path(temp), "Read `DSTACK_HOME/config.json`.\n")

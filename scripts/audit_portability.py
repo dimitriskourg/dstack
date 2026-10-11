@@ -72,6 +72,13 @@ ASSET_REF = re.compile(r"(?<![A-Za-z0-9_.-])((?:references|scripts|assets)/[A-Za
 MARKDOWN_LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 SIBLING_SKILL_REF = re.compile(r"`(\.\./[a-z0-9-]+/SKILL\.md)`")
 SKILL_CALL = re.compile(r"Call the Skill tool with `([a-z0-9-]+)`\.")
+KEBAB_DROP_PUNCTUATION = re.compile(r"[^A-Za-z0-9\s-]")
+KEBAB_WHITESPACE = re.compile(r"\s+")
+PRINCIPLE_INDEX_ENTRY = re.compile(
+    r"^- \*\*(?P<title>.+?)\.?\*\*(?: \(\*\*(?P<name>[a-z0-9-]+)\*\*\))?\.?"
+)
+PLAYBOOK_INDEX_ENTRY = re.compile(r"^- \*\*(?P<title>.+?)\.\*\*")
+PLAYBOOK_EXPLICIT_FILE = re.compile(r"(?:File:\s+)?`playbooks/([a-z0-9-]+)\.md`")
 LEGACY_SKILL_DIRECTIVE = re.compile(
     r"\b(?:run|apply|invoke|route through|route to|hand to|use)\s+"
     r"(?:the\s+)?(?:\*\*)?(" + "|".join(sorted(REQUIRED_SKILLS, key=len, reverse=True)) + r")"
@@ -89,6 +96,96 @@ class Finding:
     def render(self) -> str:
         location = self.path if self.line is None else "{}:{}".format(self.path, self.line)
         return "ERROR: {}: {}".format(location, self.message)
+
+
+def kebab_from_title(title: str) -> str:
+    """Turn a principle or playbook title into a kebab-case name.
+
+    Hyphens stay. Other punctuation is dropped. Remaining whitespace becomes
+    hyphens. This matches the naming-by-convention instruction in dstack-mode.
+    """
+
+    text = KEBAB_DROP_PUNCTUATION.sub("", title)
+    text = KEBAB_WHITESPACE.sub("-", text.strip())
+    return re.sub(r"-{2,}", "-", text).strip("-").lower()
+
+
+def resolve_principle_index(body: str) -> List[Tuple[str, str, int]]:
+    """Return (title, skill directory name, line number) for each principle entry."""
+
+    entries: List[Tuple[str, str, int]] = []
+    in_principles = False
+    for line_number, line in enumerate(body.splitlines(), 1):
+        if line.startswith("## "):
+            in_principles = line == "## Principles"
+            continue
+        if not in_principles:
+            continue
+        match = PRINCIPLE_INDEX_ENTRY.match(line)
+        if not match:
+            continue
+        title = match.group("title").rstrip(".")
+        name = match.group("name") or "principle-" + kebab_from_title(title)
+        entries.append((title, name, line_number))
+    return entries
+
+
+def check_mode_index(
+    body: str,
+    skill_names: Set[str],
+    playbook_stems: Set[str],
+    path: str,
+) -> List[Finding]:
+    findings: List[Finding] = []
+    for title, name, line_number in resolve_principle_index(body):
+        if name not in skill_names:
+            findings.append(Finding(
+                path,
+                "principle title {!r} does not resolve to an existing skill ({})".format(title, name),
+                line_number,
+            ))
+    resolved_playbooks: Set[str] = set()
+    for title, stem, line_number in resolve_playbook_index(body):
+        resolved_playbooks.add(stem)
+        if stem not in playbook_stems:
+            findings.append(Finding(
+                path,
+                "playbook title {!r} does not resolve to an existing playbook ({})".format(title, stem),
+                line_number,
+            ))
+        if stem in EXCLUDED_DSTACK_PLAYBOOKS:
+            findings.append(Finding(
+                path,
+                "playbook title {!r} resolves to excluded playbook {!r}".format(title, stem),
+                line_number,
+            ))
+    for missing in sorted(REQUIRED_DSTACK_PLAYBOOKS - resolved_playbooks):
+        findings.append(Finding(
+            path,
+            "supported playbook {!r} is not referenced by a resolvable title".format(missing),
+        ))
+    return findings
+
+
+def resolve_playbook_index(body: str) -> List[Tuple[str, str, int]]:
+    """Return (title, playbook stem, line number) for each playbook entry."""
+
+    entries: List[Tuple[str, str, int]] = []
+    in_playbooks = False
+    for line_number, line in enumerate(body.splitlines(), 1):
+        if line.startswith("## "):
+            in_playbooks = line == "## Playbooks"
+            continue
+        if not in_playbooks:
+            continue
+        match = PLAYBOOK_INDEX_ENTRY.match(line)
+        if not match:
+            continue
+        title = match.group("title")
+        explicit = PLAYBOOK_EXPLICIT_FILE.search(line)
+        stem = explicit.group(1) if explicit else kebab_from_title(title)
+        entries.append((title, stem, line_number))
+    return entries
 
 
 def relative(path: Path) -> str:
@@ -297,6 +394,15 @@ def check_structure() -> List[Finding]:
         findings.append(Finding(relative(playbooks / (missing + ".md")), "missing supported dstack-mode playbook"))
     for excluded in sorted(EXCLUDED_DSTACK_PLAYBOOKS & actual_playbooks):
         findings.append(Finding(relative(playbooks / (excluded + ".md")), "excluded dstack-mode playbook must stay absent"))
+
+    mode_skill = SKILLS / "dstack-mode" / "SKILL.md"
+    if mode_skill.is_file():
+        findings.extend(check_mode_index(
+            mode_skill.read_text(encoding="utf-8"),
+            {path.name for path in SKILLS.iterdir() if path.is_dir()},
+            actual_playbooks,
+            relative(mode_skill),
+        ))
 
     unsupported_references = {
         "playbooks/{}.md".format(name) for name in EXCLUDED_DSTACK_PLAYBOOKS
