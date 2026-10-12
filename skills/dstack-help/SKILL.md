@@ -46,7 +46,7 @@ If cost is the worry, say where the tokens go and how to spend fewer. dstack spe
 
 ## Start a task with `/dstack-mode`
 
-`/dstack-mode` matches the task to a playbook, copies the playbook's steps into the todo list, and runs the other skills as the steps need them. A step it skips stays in the list as `skip: <reason>`. A good prompt states the goal and how to tell it's done. It doesn't list skills, because a hand-written sequence tends to drop or reorder steps the playbook would keep. Read [`references/prompting.md`](references/prompting.md) before you help word one. [Guide page 2](references/guide/02-dstack-mode.md) has examples.
+`/dstack-mode` runs in the chat that receives it. That chat matches the task to a playbook, copies the playbook's steps into the todo list, and runs the other skills as the steps need them. Do not spawn a subagent to run the playbook itself. A step it skips stays in the list as `skip: <reason>`. A good prompt states the goal and how to tell it's done. It doesn't list skills, because a hand-written sequence tends to drop or reorder steps the playbook would keep. Read [`references/prompting.md`](references/prompting.md) before you help word one. [Guide page 2](references/guide/02-dstack-mode.md) has examples.
 
 The mode lasts as long as the host keeps it in context. Read its Mode lifetime section before you answer how long it stays on. In a fresh session, after a compaction, or on a new task, start with `/dstack-mode` again. Mid-chat, "new task" makes the mode match a fresh playbook.
 
