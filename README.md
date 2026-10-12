@@ -7,7 +7,7 @@ The project is under active development. Configuration schema version 2 is inten
 ## What ships
 
 - All currently selected pstack-derived skills, renamed only where required: `poteto-mode` becomes `dstack-mode` and `setup-pstack` becomes `setup-dstack`.
-- `ketchup`, a human-only recap of the current chat since the last user message, with an executive summary for each action item.
+- `ketchup`, a human-only recap of the current chat since the last user message, with an executive summary and a before/after visual for each action item.
 - A curated 18-playbook `dstack-mode` focused on ordinary local engineering work.
 - The external `control-cli`, `control-ui`, and `deslop` skills referenced by pstack.
 - Host-neutral subagent instructions for harnesses that provide native subagent spawning.
