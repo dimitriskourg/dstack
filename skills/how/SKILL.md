@@ -13,7 +13,7 @@ Before using a profile, map the system-provided product identity to the canonica
 
 Apply the profile through `worker_binding`: pass its exact model and effort for `spawn-arguments`; for `worker-definitions`, spawn `dstack-<profile>` without overrides. Stop if the binding is missing, rejected, or different. Never inherit session effort.
 
-Helpers below are read-only. If your host cannot enforce that, instruct the helper not to write and don't describe the boundary as enforced. Explorers use the configured `fast-explorer` profile. Every explainer uses the configured `skeptical-reviewer` profile.
+Helpers below are read-only. If your host cannot enforce that, instruct the helper not to write and don't describe the boundary as enforced. Explorers use the configured `fast-explorer` profile. Every explainer uses the configured `skeptical-reviewer` profile. Pick each subagent's configured profile for the job, per the Subagents section of the **dstack-mode** skill.
 
 Spawn helpers with the active harness's native subagent tool. Every supported harness can spawn subagents. If a nested spawn is denied, the current agent performs that pass directly.
 

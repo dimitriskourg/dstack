@@ -21,7 +21,7 @@ Every candidate gets the same prompt, so the prompt is the contract.
 
 1. State the artifact each candidate is producing.
 2. Derive the rubric, 3-6 concrete gradeable criteria for what success looks like on *this* task. It is the picker's tool in Phase D. Candidates only see the task.
-3. Pick the runners. Rotate across `feature-worker`, `bug-worker`, and `fast-explorer` so candidates start from different configured profiles. Repeat a profile when N exceeds three or the work is generation-bound.
+3. Pick the runners. Rotate across `feature-worker`, `bug-worker`, and `fast-explorer` so candidates start from different configured profiles. Repeat a profile when N exceeds three or the work is generation-bound. Pick each subagent's configured profile for the job, per the Subagents section of the **dstack-mode** skill.
 4. Give each candidate its own output path under `/tmp/arena-<slug>/candidate-<n>/`. Candidates may read the repository but write only proposal artifacts to their assigned directories. N candidates writing to the same path is shared mutable state and fails the **separate-before-serializing-shared-state** principle skill test. Arena does not fan out repository writers. The parent applies the selected design serially in the active checkout.
 
 ## Phase B: Fan out

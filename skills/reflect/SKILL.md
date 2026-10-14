@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 Mine the current conversation for durable learnings, then route them into skill edits.
 
-Spawn reviewers with the active harness's native subagent tool. Every supported harness can spawn subagents. If a nested spawn is denied, run the affected review serially and disclose the loss of independence.
+Spawn reviewers with the active harness's native subagent tool. Every supported harness can spawn subagents. If a nested spawn is denied, run the affected review serially and disclose the loss of independence. Pick each subagent's configured profile for the job, per the Subagents section of the **dstack-mode** skill.
 
 ## Configuration
 

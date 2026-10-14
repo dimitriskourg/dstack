@@ -13,7 +13,7 @@ Before using a profile, map the system-provided product identity to the canonica
 
 Apply the profile through `worker_binding`: pass its exact model and effort for `spawn-arguments`; for `worker-definitions`, spawn `dstack-<profile>` without overrides. Stop if the binding is missing, rejected, or different. Never inherit session effort.
 
-Every spawn is a general-purpose subagent with full tool access. **Don't use a restricted read-only mode.** Where a host strips MCP access in that mode it disables MCP-backed investigators and the synthesizer's citation spot-checks. Investigators still shouldn't write anything. Investigators use the configured `fast-explorer` profile. The synthesizer uses the configured `skeptical-reviewer` profile.
+Every spawn is a general-purpose subagent with full tool access. **Don't use a restricted read-only mode.** Where a host strips MCP access in that mode it disables MCP-backed investigators and the synthesizer's citation spot-checks. Investigators still shouldn't write anything. Investigators use the configured `fast-explorer` profile. The synthesizer uses the configured `skeptical-reviewer` profile. Pick each subagent's configured profile for the job, per the Subagents section of the **dstack-mode** skill.
 
 Spawn helpers with the active harness's native subagent tool. Every supported harness can spawn subagents. If a nested spawn is denied, the current agent performs that pass directly.
 

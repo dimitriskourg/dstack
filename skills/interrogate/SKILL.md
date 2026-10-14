@@ -37,7 +37,7 @@ For each reviewer:
 
 When selected profiles resolve to the same concrete binding, disclose the reduced model diversity. Never spawn a reviewer without the exact configured model and effort pair for its named profile.
 
-Read `references/reviewer-prompt.md` and fill in the same template for every reviewer with the stated intent, the diff or file contents, the rubric from `references/rubric.md`, and the code-quality lens from `references/code-quality-review.md`.
+Read `references/reviewer-prompt.md` and fill in the same template for every reviewer with the stated intent, the diff or file contents, the rubric from `references/rubric.md`, and the code-quality lens from `references/code-quality-review.md`. Pick each subagent's configured profile for the job, per the Subagents section of the **dstack-mode** skill.
 
 ## Step 4, Synthesize
 
