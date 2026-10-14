@@ -25,7 +25,7 @@ REQUIRED_SKILLS = {
     "architect", "arena", "automate-me", "benchmark-checklist", "blast-radius", "bro",
     "comment-sicko", "control-cli", "control-ui", "correct", "create-verification-skill",
     "deslop", "dstack-help", "dstack-mode",
-    "figure-it-out", "how", "interrogate", "ketchup", "maintain-verification-skill", "no-comments",
+    "figure-it-out", "how", "in-your-own-words", "interrogate", "ketchup", "maintain-verification-skill", "no-comments",
     "recall", "reflect", "setup-dstack", "show-me-your-work", "swarm", "tdd", "teach",
     "technical-writing", "typescript-best-practices", "unslop", "why",
     "principle-attack-the-premise", "principle-boundary-discipline",

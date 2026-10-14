@@ -30,6 +30,7 @@ All current standalone skills remain supported.
 - `show-me-your-work`
 - `recall`
 - `ketchup`
+- `in-your-own-words`
 - `reflect`
 - `correct`
 
