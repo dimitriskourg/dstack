@@ -17,6 +17,10 @@ Mechanics first, history second. Each skill's report tells you which sources it 
 ```
 
 ```text
+/sharpen <your task>
+```
+
+```text
 /dstack-mode read this thread. restate the underlying issue in your own words, in plain english. don't change any code yet.
 ```
 
