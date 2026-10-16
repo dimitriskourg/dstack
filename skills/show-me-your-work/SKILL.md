@@ -69,7 +69,7 @@ Correct the log, not the story. The audit never edits or removes a row, even an 
 
 ## Cross-model review of the trail
 
-Before handing back, spawn a subagent with the `skeptical-reviewer` profile. When that profile performed the work, use another configured profile so the pass remains independent. The subagent reads the audit trail and the run's transcript, then flags what the user should pay attention to. Not a redo of the work, a scan for what's suboptimal or risky.
+Before handing back, spawn a subagent with the `skeptical-reviewer` profile. When that profile performed the work, use another configured profile so the pass remains independent. The subagent reads the audit trail and the run's transcript, then flags what the user should pay attention to. Not a redo of the work, a scan for what's suboptimal or risky. Pick each subagent's configured profile for the job, per the Subagents section of the **dstack-mode** skill.
 
 - Decisions logged with weak or absent evidence.
 - Verification steps skipped or claimed without proof in the transcript.

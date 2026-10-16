@@ -13,6 +13,14 @@ Mechanics first, history second. Each skill's report tells you which sources it 
 ## Restate a noisy report before touching code
 
 ```text
+/in-your-own-words <long or messy ask>
+```
+
+```text
+/sharpen <your task>
+```
+
+```text
 /dstack-mode read this thread. restate the underlying issue in your own words, in plain english. don't change any code yet.
 ```
 

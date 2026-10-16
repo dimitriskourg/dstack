@@ -1,0 +1,5 @@
+interface:
+  display_name: "Sharpen"
+  short_description: "Aim a task higher before starting"
+policy:
+  allow_implicit_invocation: false

@@ -29,6 +29,9 @@ All current standalone skills remain supported.
 - `interrogate`
 - `show-me-your-work`
 - `recall`
+- `ketchup`
+- `in-your-own-words`
+- `sharpen`
 - `reflect`
 - `correct`
 
