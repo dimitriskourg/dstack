@@ -354,6 +354,46 @@ class PortabilityAuditTests(unittest.TestCase):
             skill = self.make_skill(Path(temp), "Read [the rubric](references/rubric.md).\n")
             self.assertIn("missing markdown link target 'references/rubric.md'", self.messages(skill))
 
+    def test_titled_markdown_link_is_checked(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(Path(temp), 'Read [the rubric](references/rubric.md "Rubric").\n')
+            self.assertIn("missing markdown link target 'references/rubric.md'", self.messages(skill))
+
+    def test_angle_bracket_markdown_link_is_checked(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(Path(temp), "Read [the rubric](<references/rubric.md>).\n")
+            self.assertIn("missing markdown link target 'references/rubric.md'", self.messages(skill))
+
+    def test_unknown_slash_command_in_docs_fails(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "README.md").write_text("Use `/ghost-skill` to start.\n", encoding="utf-8")
+            messages = [finding.message for finding in AUDIT.check_docs_vs_tree(root, {"ketchup"}, set())]
+            self.assertIn("names /ghost-skill, which no dstack skill provides", messages)
+
+    def test_docs_count_claim_must_match_the_tree(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "README.md").write_text("The mode ships 18 playbooks.\n", encoding="utf-8")
+            messages = [
+                finding.message
+                for finding in AUDIT.check_docs_vs_tree(root, {"ketchup"}, {"babysit"})
+            ]
+            self.assertTrue(any("ships 18 playbooks" in message for message in messages))
+
+    def test_docs_anchor_must_exist(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "README.md").write_text("# Title\n\nSee [later](./guide.md#missing).\n", encoding="utf-8")
+            (root / "guide.md").write_text("# Guide\n", encoding="utf-8")
+            (root / "docs" / "guide").mkdir(parents=True)
+            (root / "docs" / "guide" / "page.md").write_text(
+                "See [later](../../guide.md#missing).\n",
+                encoding="utf-8",
+            )
+            messages = [finding.message for finding in AUDIT.check_docs_vs_tree(root, set(), set())]
+            self.assertTrue(any("has no heading with that anchor" in message for message in messages))
+
     def test_missing_sibling_skill_fails(self):
         with tempfile.TemporaryDirectory() as temp:
             skill = self.make_skill(Path(temp), "Read `../missing/SKILL.md`.\n")

@@ -71,7 +71,17 @@ SKILL_NAME = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 MAX_SKILL_NAME_LENGTH = 64
 ASSET_DIRECTORIES = ("references", "scripts", "assets")
 ASSET_REF = re.compile(r"(?<![A-Za-z0-9_.-])((?:references|scripts|assets)/[A-Za-z0-9_./-]+)")
-MARKDOWN_LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
+MARKDOWN_LINK = re.compile(r"\]\(<?([^)\s>]+)>?(?:\s+\"[^\"]*\")?\)")
+DOC_CLAIM = re.compile(
+    r"\b(?:(?P<whole>all|has|of|ships|the|with) )?(?P<word>\d+|[a-z]+(?:-[a-z]+)?) (?P<short>short )?(?P<noun>skills|principles|playbooks)\b",
+    re.I,
+)
+DOC_SLASH = re.compile(r"(?:^|(?<=[\s`(|\"'>]))/([a-z][a-z0-9-]*)(?![\w/<\-])", re.M)
+SMALL_COUNT_WORDS = (
+    "zero one two three four five six seven eight nine ten eleven "
+    "twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen"
+).split()
+TENS_COUNT_WORDS = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"]
 SIBLING_SKILL_REF = re.compile(r"`(\.\./[a-z0-9-]+/SKILL\.md)`")
 SKILL_CALL = re.compile(r"Call the Skill tool with `([a-z0-9-]+)`\.")
 KEBAB_DROP_PUNCTUATION = re.compile(r"[^A-Za-z0-9\s-]")
@@ -98,6 +108,130 @@ class Finding:
     def render(self) -> str:
         location = self.path if self.line is None else "{}:{}".format(self.path, self.line)
         return "ERROR: {}: {}".format(location, self.message)
+
+
+def count_word_to_number(word: str) -> Optional[int]:
+    if word.isdigit():
+        return int(word)
+    parts = word.lower().split("-")
+    if len(parts) == 1 and parts[0] in SMALL_COUNT_WORDS:
+        return SMALL_COUNT_WORDS.index(parts[0])
+    if len(parts) == 2:
+        tens, unit = parts
+        ones = SMALL_COUNT_WORDS.index(unit) if unit in SMALL_COUNT_WORDS else -1
+        if tens in TENS_COUNT_WORDS and TENS_COUNT_WORDS.index(tens) > 1 and 0 <= ones < 10:
+            return TENS_COUNT_WORDS.index(tens) * 10 + ones
+    return None
+
+
+def heading_anchors(text: str) -> Set[str]:
+    seen: Dict[str, int] = {}
+    found: Set[str] = set()
+    fenced = False
+    for line in text.splitlines():
+        if re.match(r"^\s*(```|~~~)", line):
+            fenced = not fenced
+            continue
+        if fenced:
+            continue
+        heading = re.match(r"^#{1,6}\s+(.*?)\s*$", line)
+        if not heading:
+            continue
+        plain = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", heading.group(1))
+        plain = re.sub(r"[`*]", "", plain)
+        slug = re.sub(r"[^\w\s_-]", "", plain.strip().lower(), flags=re.UNICODE)
+        slug = re.sub(r"\s", "-", slug)
+        repeat = seen.get(slug, 0)
+        seen[slug] = repeat + 1
+        found.add("{}-{}".format(slug, repeat) if repeat else slug)
+    return found
+
+
+def documentation_paths(root: Path) -> List[Path]:
+    paths: List[Path] = []
+    readme = root / "README.md"
+    if readme.is_file():
+        paths.append(readme)
+    guide = root / "docs" / "guide"
+    if guide.is_dir():
+        paths.extend(sorted(path for path in guide.rglob("*.md") if path.is_file()))
+    help_root = root / "skills" / "dstack-help"
+    if help_root.is_dir():
+        paths.extend(sorted(path for path in help_root.rglob("*.md") if path.is_file()))
+    return paths
+
+
+def check_docs_vs_tree(
+    root: Path,
+    skill_names: Set[str],
+    playbook_stems: Set[str],
+) -> List[Finding]:
+    """Fail when user-facing docs drift from the skill and playbook tree.
+
+    Adapted from pstack's docs-vs-tree check. dstack has no agent wrappers and
+    no hardcoded model catalog, so those legs are omitted. README is not a
+    full skill catalog, so missing table rows are not errors.
+    """
+
+    principles = {name for name in skill_names if name.startswith("principle-")}
+    commands = skill_names - principles
+    expected = {
+        "skills": {len(skill_names), len(commands)},
+        "principles": {len(principles)},
+        "playbooks": {len(playbook_stems)},
+    }
+    findings: List[Finding] = []
+    for path in documentation_paths(root):
+        text = path.read_text(encoding="utf-8")
+        try:
+            rel = path.relative_to(root).as_posix()
+        except ValueError:
+            rel = path.as_posix()
+        for match in DOC_CLAIM.finditer(text):
+            claimed = count_word_to_number(match.group("word"))
+            kind = "principles" if match.group("short") else match.group("noun").lower()
+            if (match.group("whole") or match.group("short")) and claimed is not None and claimed not in expected[kind]:
+                findings.append(Finding(
+                    rel,
+                    'says "{}", but the tree has {}'.format(
+                        match.group(0),
+                        " or ".join(str(value) for value in sorted(expected[kind])),
+                    ),
+                    text[: match.start()].count("\n") + 1,
+                ))
+        for match in DOC_SLASH.finditer(text):
+            name = match.group(1)
+            if name not in skill_names:
+                findings.append(Finding(
+                    rel,
+                    "names /{}, which no dstack skill provides".format(name),
+                    text[: match.start()].count("\n") + 1,
+                ))
+        for line_number, line in enumerate(text.splitlines(), 1):
+            for reference in MARKDOWN_LINK.findall(line):
+                href = reference
+                if re.match(r"^[a-z][a-z0-9+.-]*:", href, re.I) or href.startswith("#") or href in {"url", "URL", "path"}:
+                    continue
+                target, _, anchor = href.partition("#")
+                if not target:
+                    resolved = path
+                else:
+                    resolved = (path.parent / target).resolve()
+                if not resolved.exists():
+                    findings.append(Finding(rel, "missing markdown link target {!r}".format(href), line_number))
+                    continue
+                if anchor and resolved.suffix.lower() == ".md":
+                    try:
+                        relative_target = resolved.relative_to(root).as_posix()
+                    except ValueError:
+                        relative_target = resolved.as_posix()
+                    if anchor not in heading_anchors(resolved.read_text(encoding="utf-8")):
+                        findings.append(Finding(
+                            rel,
+                            "links to {}, but {} has no heading with that anchor".format(href, relative_target),
+                            line_number,
+                        ))
+    return findings
 
 
 def kebab_from_title(title: str) -> str:
@@ -333,7 +467,7 @@ def check_skill(skill_dir: Path) -> List[Finding]:
                     findings.append(Finding(relative(path), "missing sibling skill {!r}".format(reference), line_number))
             for reference in MARKDOWN_LINK.findall(line):
                 target = reference.split("#", 1)[0]
-                if not target or target.startswith(("http://", "https://", "mailto:", "#")) or "<" in target or target in {"url", "URL", "path"}:
+                if not target or target.startswith(("http://", "https://", "mailto:", "#")) or target in {"url", "URL", "path"}:
                     continue
                 if not (path.parent / target).resolve().exists():
                     findings.append(Finding(relative(path), "missing markdown link target {!r}".format(target), line_number))
@@ -403,13 +537,15 @@ def check_structure() -> List[Finding]:
         findings.append(Finding(relative(playbooks / (excluded + ".md")), "excluded dstack-mode playbook must stay absent"))
 
     mode_skill = SKILLS / "dstack-mode" / "SKILL.md"
+    skill_names = {path.name for path in SKILLS.iterdir() if path.is_dir()}
     if mode_skill.is_file():
         findings.extend(check_mode_index(
             mode_skill.read_text(encoding="utf-8"),
-            {path.name for path in SKILLS.iterdir() if path.is_dir()},
+            skill_names,
             actual_playbooks,
             relative(mode_skill),
         ))
+    findings.extend(check_docs_vs_tree(ROOT, skill_names, actual_playbooks))
 
     unsupported_references = {
         "playbooks/{}.md".format(name) for name in EXCLUDED_DSTACK_PLAYBOOKS
