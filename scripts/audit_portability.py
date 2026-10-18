@@ -67,6 +67,8 @@ LEAKAGE_PATTERNS: Tuple[Tuple[str, re.Pattern[str]], ...] = (
 REQUIRED_FRONTMATTER = {"name", "description"}
 OPTIONAL_FRONTMATTER = {"disable-model-invocation"}
 CODEX_SIDECAR = Path("agents") / "openai.yaml"
+SKILL_NAME = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+MAX_SKILL_NAME_LENGTH = 64
 ASSET_DIRECTORIES = ("references", "scripts", "assets")
 ASSET_REF = re.compile(r"(?<![A-Za-z0-9_.-])((?:references|scripts|assets)/[A-Za-z0-9_./-]+)")
 MARKDOWN_LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
@@ -259,6 +261,11 @@ def check_skill(skill_dir: Path) -> List[Finding]:
         findings.append(Finding(relative(skill_file), "unsupported frontmatter key(s): " + ", ".join(sorted(unsupported))))
     if fields.get("name") != skill_dir.name:
         findings.append(Finding(relative(skill_file), "frontmatter name must match the skill directory"))
+    if not SKILL_NAME.fullmatch(skill_dir.name) or len(skill_dir.name) > MAX_SKILL_NAME_LENGTH:
+        findings.append(Finding(
+            relative(skill_dir),
+            "skill directory must be lowercase words joined by hyphens, at most 64 characters",
+        ))
     if fields.get("disable-model-invocation") not in {None, "true"}:
         findings.append(Finding(relative(skill_file), "disable-model-invocation must be true or omitted"))
     if skill_dir.name in CONFIG_DEPENDENT_SKILLS:

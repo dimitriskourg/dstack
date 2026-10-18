@@ -305,6 +305,23 @@ class PortabilityAuditTests(unittest.TestCase):
             )
             self.assertIn("disable-model-invocation must be true or omitted", self.messages(skill))
 
+    def test_frontmatter_name_must_match_directory(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(Path(temp), "Do the thing.\n", name="sample")
+            (skill / "SKILL.md").write_text(
+                "---\nname: other-name\ndescription: sample skill\n---\n\nDo the thing.\n",
+                encoding="utf-8",
+            )
+            self.assertIn("frontmatter name must match the skill directory", self.messages(skill))
+
+    def test_skill_directory_must_be_agent_skills_name(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(Path(temp), "Do the thing.\n", name="Not A Skill")
+            self.assertIn(
+                "skill directory must be lowercase words joined by hyphens, at most 64 characters",
+                self.messages(skill),
+            )
+
     def test_unsupported_frontmatter_key_fails(self):
         with tempfile.TemporaryDirectory() as temp:
             skill = self.make_skill(Path(temp), "Do the thing.\n", frontmatter="allowed-tools: Bash\n")
