@@ -7,7 +7,7 @@ The project is under active development. Configuration schema version 2 is inten
 ## What ships
 
 - All currently selected pstack-derived skills, renamed only where required: `poteto-mode` becomes `dstack-mode` and `setup-pstack` becomes `setup-dstack`.
-- `ketchup`, a human-only recap of what changed in this chat since the last user message, in a few plain sentences and small visuals.
+- `ketchup`, a human-only recap of what changed in this chat since the last user message, in plain words and small visuals, with every waiting item listed and decidable from the reply alone.
 - `in-your-own-words`, a human-only playback of the user's goals and the problem before work starts.
 - `sharpen`, a human-only pass that aims a task higher before starting: more expert, more outcome-focused, not overspecified.
 - A curated 18-playbook `dstack-mode` focused on ordinary local engineering work.
