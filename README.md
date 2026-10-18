@@ -10,6 +10,7 @@ The project is under active development. Configuration schema version 2 is inten
 - `ketchup`, a human-only recap of what changed in this chat since the last user message, in plain words and small visuals, with every waiting item listed and decidable from the reply alone.
 - `in-your-own-words`, a human-only playback of the user's goals and the problem before work starts.
 - `sharpen`, a human-only pass that aims a task higher before starting: more expert, more outcome-focused, not overspecified.
+- `create-formal-verification-skill`, a human-only generator for a project-local skill that formally verifies one property tests rarely reach.
 - A curated 18-playbook `dstack-mode` focused on ordinary local engineering work.
 - The external `control-cli`, `control-ui`, and `deslop` skills referenced by pstack.
 - Host-neutral subagent instructions for harnesses that provide native subagent spawning.

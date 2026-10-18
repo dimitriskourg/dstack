@@ -82,6 +82,14 @@ The qualifiers do real work. "don't change anything yet" keeps it read-only, and
 
 "if it repros on main" lets the run stop early when the bug is already gone. The video lets you check the fix before you read the diff.
 
+## Formally verify a property tests rarely reach
+
+```text
+/create-formal-verification-skill
+```
+
+The generator picks the tool from the question, proves one property, and leaves a project-local skill the next agent can rerun on every relevant change.
+
 ## Vet a number before you post it
 
 ```text

@@ -49,6 +49,7 @@ All current standalone skills remain supported.
 - `control-cli`
 - `control-ui`
 - `create-verification-skill`
+- `create-formal-verification-skill`
 - `maintain-verification-skill`
 - `tdd`
 - `benchmark-checklist`
