@@ -88,7 +88,7 @@ The qualifiers do real work. "don't change anything yet" keeps it read-only, and
 /create-formal-verification-skill
 ```
 
-The generator picks the tool from the question, proves one property, and leaves a project-local skill the next agent can rerun on every relevant change.
+The generator picks the tool from the question, proves one property, and leaves a project-local skill the next agent can rerun on every relevant change. After merges or refactors in that code, run `/maintain-formal-verification-skill`. It updates the check from the code and says whether a failure is drift or a bug.
 
 ## Vet a number before you post it
 
@@ -147,6 +147,14 @@ You rarely need more words. You need the right name, and [the principles page](.
 ```
 
 That's the whole prompt. [`/bro`](../../../bro/SKILL.md) restates the last message like one human talking to another, no jargon, shorter. Use it when a reply is technically thorough and you still don't know what it said.
+
+## Catch up on a chat you left running
+
+```text
+/ketchup
+```
+
+[`/ketchup`](../../../ketchup/SKILL.md) tells you in plain words what changed since your last message, then lists each call waiting on you with its pick, evidence, and risk. It changes nothing while it reports.
 
 ## The pitfalls
 

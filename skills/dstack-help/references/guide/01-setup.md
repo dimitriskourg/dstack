@@ -29,13 +29,15 @@ Setup records how the harness applies both halves of the pair. When the spawn ca
 
 Run setup in each repository. Transcript consumers select the canonical Git root, or a registered checkout sharing its Git common directory. They never fall back to another repository's transcripts. A missing configuration or required entry stops config-dependent work with an explicit setup instruction.
 
-## Accept the verification offer, or don't
+## Accept the verification offers, or don't
 
 At the end of setup, `/setup-dstack` looks for a way to prove app behavior in your project, either a `verify-*` skill or an existing harness. If it finds neither, it offers once to generate one with [`/create-verification-skill`](../../../create-verification-skill/SKILL.md).
 
 Say yes and it writes a project-local `verify-<app>` skill in the active harness’s discoverable skill directory. It teaches agents to drive your app the way a user does. It proves the skill works once before handing it over. Say no and setup moves on. You can run `/create-verification-skill` yourself any time. [Verify and ship](./06-verify-and-ship.md#create-a-project-verification-skill) covers it in depth.
 
 If you're new to dstack, say yes. An agent that can check its own work keeps going until the check passes. An agent that can't hands every result back to you to check by hand. Of everything in this guide, the verification skill pays off the most.
+
+Then setup offers once to generate a formal verification skill with [`/create-formal-verification-skill`](../../../create-formal-verification-skill/SKILL.md), unless the project already has one. Tests check the cases someone thought to write. A formal verification skill checks one key property of your code, such as "a job never runs twice at once", in every case within a stated scope. Say yes when your code has concurrency, retries, a state machine, or a parser, where a bug is costly and tests rarely reach the case that breaks. Otherwise say no, and run it later if that changes. [Verify and ship](./06-verify-and-ship.md#prove-a-property-with-a-formal-verification-skill) covers it.
 
 After setup, start a new chat if the harness loads generated worker definitions only at startup.
 

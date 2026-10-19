@@ -62,7 +62,15 @@ For a noisy report, such as a long thread or a vague bug, make the restatement t
 /dstack-mode read this thread. restate the underlying issue in your own words, in plain english. don't change any code yet.
 ```
 
-A misreading shows up in the restatement, before any code exists. Correct it there, and it costs you one message instead of one wrong fix.
+A misreading shows up in the restatement, before any code exists. Correct it there, and it costs you one message instead of one wrong fix. For the restatement alone, with no playbook, run [`/in-your-own-words`](../../../in-your-own-words/SKILL.md). It restates what the agent thinks your goals are and what problem you're trying to solve.
+
+When you're unsure whether a task is aimed right, put [`/sharpen`](../../../sharpen/SKILL.md) in front of it:
+
+```text
+/sharpen write a migration guide for the v2 config format.
+```
+
+Before it starts, the agent asks how a top expert would do the task, what you're really after, and whether the ask is over- or underspecified. It drops constraints that don't serve the goal as readily as it adds ones that do, leaves your choices open, and keeps one outside check that the result is right. Then it does the work.
 
 ## Follow up short
 

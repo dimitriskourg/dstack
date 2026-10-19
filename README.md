@@ -11,6 +11,7 @@ The project is under active development. Configuration schema version 2 is inten
 - `in-your-own-words`, a human-only playback of the user's goals and the problem before work starts.
 - `sharpen`, a human-only pass that aims a task higher before starting: more expert, more outcome-focused, not overspecified.
 - `create-formal-verification-skill`, a human-only generator for a project-local skill that formally verifies one property tests rarely reach.
+- `maintain-formal-verification-skill`, a human-only upkeep loop that brings that check back in line after the covered code changes, and says whether a failure is drift or a bug.
 - A curated 18-playbook `dstack-mode` focused on ordinary local engineering work.
 - The external `control-cli`, `control-ui`, and `deslop` skills referenced by pstack.
 - Host-neutral subagent instructions for harnesses that provide native subagent spawning.

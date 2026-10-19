@@ -108,3 +108,5 @@ The command is a no-op for a `spawn-arguments` host. For a `worker-definitions` 
 Return the selected host, configuration path, profile changes, worker binding mechanism, pair encoding, generated worker definitions and their verification result, transcript discovery result, invalid bindings, catalog status, and schema validation result.
 
 If the project lacks a real-app verification harness, offer once to create one. On acceptance, Call the Skill tool with `create-verification-skill`.
+
+If the project lacks a formal verification skill (a project skill that runs a model checker, a proof, or another verifier against the code), offer once: "want a formal verification skill, so agents can prove a key property of your code holds in every case in scope, not only the cases tests reach? I can generate one with create-formal-verification-skill." On yes, tell the user to invoke `create-formal-verification-skill` explicitly. On no, move on without pushing.
