@@ -97,7 +97,6 @@ In the overview, name which dstack-mode non-negotiables the implementer must app
 - the **how** skill over each unfamiliar subsystem before changing it.
 - the **interrogate** skill for adversarial review on contested designs before shipping.
 - Call the Skill tool with `deslop`. Apply it to each diff before commit. Call the Skill tool with `unslop`. Apply it to every prose surface.
-- the **show-me-your-work** skill to keep a decision trail when the plan is large enough to need an auditable record.
 - the **Babysit** playbook (`../playbooks/babysit.md`) after opening the PR.
 
 ## 7. Hand back

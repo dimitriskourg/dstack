@@ -17,16 +17,16 @@ SKILLS = ROOT / "skills"
 PROFILES = {"fast-explorer", "feature-worker", "bug-worker", "skeptical-reviewer"}
 CONFIG_DEPENDENT_SKILLS = {
     "architect", "arena", "automate-me", "dstack-mode", "how", "interrogate",
-    "recall", "reflect", "show-me-your-work", "swarm", "why",
+    "recall", "reflect", "swarm", "why",
 }
-TRANSCRIPT_CONFIG_SKILLS = {"automate-me", "dstack-mode", "recall", "reflect", "show-me-your-work"}
+TRANSCRIPT_CONFIG_SKILLS = {"automate-me", "dstack-mode", "recall", "reflect"}
 CANONICAL_HOST_IDS = {"codex", "claude", "cursor"}
 REQUIRED_SKILLS = {
     "architect", "arena", "automate-me", "benchmark-checklist", "blast-radius", "bro",
     "comment-sicko", "control-cli", "control-ui", "correct", "create-formal-verification-skill", "create-verification-skill", "maintain-formal-verification-skill",
     "deslop", "dstack-help", "dstack-mode",
-    "figure-it-out", "how", "in-your-own-words", "interrogate", "ketchup", "maintain-verification-skill", "no-comments",
-    "recall", "reflect", "setup-dstack", "sharpen", "show-me-your-work", "swarm", "tdd", "teach",
+    "how", "in-your-own-words", "interrogate", "ketchup", "maintain-verification-skill", "no-comments",
+    "recall", "reflect", "setup-dstack", "sharpen", "swarm", "tdd", "teach",
     "technical-writing", "typescript-best-practices", "unslop", "why",
     "principle-attack-the-premise", "principle-boundary-discipline",
     "principle-build-the-lever",

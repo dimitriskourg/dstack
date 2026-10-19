@@ -14,7 +14,7 @@ flowchart TD
     D -->|New behavior| G[Feature]
     D -->|Structure only| H[Refactoring]
     D -->|Measured slowness| I[Perf issue]
-    D -->|Large work or no match| J[figure-it-out]
+    D -->|Large or multi-phase| J[Multi-phase plan]
     E --> K[Verify and report]
     F --> K
     G --> K
@@ -120,7 +120,7 @@ While the active local session can supervise the work, say what done means:
 /dstack-mode im stepping away. keep going until the migration check reports zero old callers. log your decisions.
 ```
 
-Work you'll review later routes through [`/figure-it-out`](../../../figure-it-out/SKILL.md), which designs the run's phases and keeps a [`/show-me-your-work`](../../../show-me-your-work/SKILL.md) decision log. The [mode skill](../../../dstack-mode/SKILL.md#mode-lifetime) defines the active-session boundary, and [`/show-me-your-work`](../../../show-me-your-work/SKILL.md) explains how to audit the decision log.
+Work you'll review later still has to match a playbook, often Multi-phase plan, Feature, or Hillclimb. Keep a local decision log in the prompt if you want one. The [mode skill](../../../dstack-mode/SKILL.md#mode-lifetime) defines the active-session boundary.
 
 **Pitfall:** don't enumerate skills in your prompt ("use /how, then /architect, then /arena..."). The playbook already sequences them, and a hand-written sequence usually reorders or drops steps the playbook would have kept. Name a skill only when you want to override a specific choice.
 

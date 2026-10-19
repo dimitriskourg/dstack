@@ -37,7 +37,6 @@ Remaining triggers:
 - Any PR-status request ("babysit this", "get it green", "address the review bot comments", and most often "check on PR X" or "anything outstanding on X") → the **Babysit** playbook (`playbooks/babysit.md`), not any similarly named host built-in whose description matches the same words. Never triggered by merely opening a PR. Declare its mode before polling. The playbook's step 1 owns the request-to-mode mapping. Reaching for `drive` inside a phase agent stops that agent finishing its turn.
 - Automated review or the agentic security review commented → skeptical posture. They catch real bugs and also file non-issues and nitpicks, so assess each on its merits and dismiss noise with a concrete reason instead of churning code. Triage fix / dismiss / ask per `references/automated-review-triage.md`.
 - Broken skill mid-task → fix it locally as a separate change. Don't block. Don't silently work around it. Publish it only when the user explicitly asks to open a pull request or merge request.
-- Long, autonomous, or multi-phase work, or any task the user steps away from to review later → Call the Skill tool with `show-me-your-work`. Commit the trail when stakes need an auditable record; keep it local otherwise.
 
 ## Principles
 
@@ -126,7 +125,7 @@ Comments follow the same rule as the reply. Write them clean as you go; a flat "
 
 Your first todolist actions are the matched playbook's steps, copied in verbatim, before any task-specific todos and before you reason about the task. The failure mode is reading a playbook then writing a bespoke plan that drops its named steps (`architect`, the throughput checkpoint). A step you choose not to do stays in the list with a one-line `skip: <reason>`; skipping silently is not allowed. Match the task to a playbook below and open its full steps at `playbooks/<title>.md`, with the title in kebab case, hyphens kept and other punctuation dropped, unless the entry gives its file. Copy its steps in verbatim.
 
-A large or cross-cutting effort, or work the user steps away from to trust later, routes to `figure-it-out` even when a narrower playbook fits. Call the Skill tool with `figure-it-out`. A standing project-scale program is out of scope for this pack; scope it down to runs that skill can design.
+A large or cross-cutting effort still matches a playbook below, often Feature, Refactoring, or Multi-phase plan. Split it into playbook-sized units. A standing project-scale program is out of scope for this pack.
 
 - **Investigation.** Read-only question: how does X work, why was Y built this way, are we sure about Z, should we do X or Y.
 - **Bug fix.** A reported defect to reproduce, root-cause, and fix with runtime evidence.

@@ -15,7 +15,7 @@ dstack is a curated local workflow pack for Codex, Claude Code, and Cursor. Upst
 
 ## Retained skills
 
-All current standalone skills remain supported.
+The skills below remain supported. This keep-set will shrink further; `figure-it-out` and `show-me-your-work` are already out.
 
 ### Workflow and orchestration
 
@@ -23,11 +23,9 @@ All current standalone skills remain supported.
 - `dstack-help`
 - `setup-dstack`
 - `automate-me`
-- `figure-it-out`
 - `arena`
 - `swarm`
 - `interrogate`
-- `show-me-your-work`
 - `recall`
 - `ketchup`
 - `in-your-own-words`
@@ -123,6 +121,8 @@ Apple development cleanup is a dstack-specific local addition. It is explicit an
 - **Worktree cleanup.** Excluded because dstack does not currently create or manage worktrees.
 - **Orchestrate.** Excluded with the provider-specific upstream runtime; dstack uses its retained skills and playbooks directly.
 - **Make Bot UI.** Excluded because the source skill is a provider-specific bot webhook, secret-request, and Tailscale workflow.
+- **figure-it-out.** Dropped from the everyday keep-set. Large or cross-cutting work matches a retained playbook, or is split into playbook-sized units.
+- **show-me-your-work.** Dropped from the everyday keep-set. Hillclimb still keeps a local `decision.tsv`; there is no separate decision-trail skill.
 
 Git worktrees remain a possible future capability for creation, isolation, and cleanup. Add those only when real team usage justifies a complete contract across Codex, Claude Code, and Cursor. Recognizing an existing linked worktree as the same registered repository is already in scope.
 
