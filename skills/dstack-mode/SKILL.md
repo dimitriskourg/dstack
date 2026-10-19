@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # Dstack mode
 
+Bundled skills live at `~/.agents/skills/<name>/SKILL.md`, which is `../<name>/SKILL.md` from this file. Put this file's absolute path in every native subagent prompt.
+
 ## Configuration
 
 Before routing or spawning, map the system-provided product identity to the canonical id `codex`, `claude`, or `cursor`. Resolve the canonical repository root with `git rev-parse --show-toplevel` and symlink resolution. Read `~/.dstack/config.json`, select `hosts[<active-harness>]` and `repositories[<canonical-repository-root>]` when that key is this checkout, and verify the selected entry's `repository_root` exactly matches its key. If that key is absent, select the registered repository that shares this checkout's `git rev-parse --git-common-dir`. Run `configure.py resolve --host <active-harness>` from the active checkout and use that result. Never invent an alias or select another host. Do not select a repository with a different git common directory. If the file is missing, unreadable, or invalid, either entry is absent, the identity or repository is unknown, or a required profile is missing or listed in `invalid_bindings`, stop and name the exact problem. Tell the user to invoke `setup-dstack` explicitly. Do not enter a playbook or guess, omit, or inherit a binding. Every profile must provide a concrete model and effort pair.
@@ -26,59 +28,59 @@ Remaining triggers:
 - Design or code bakeoffs with base selection and grafting → Call the Skill tool with `arena`.
 - Contested design → Call the Skill tool with `interrogate`. Do so before shipping.
 - Nontrivial multi-step → write the throughput checkpoint (Feature step 3).
-- Any prose surface → Call the Skill tool with `unslop`. Your reply is a prose surface; write it per **Writing the reply**. Agent-facing prose also follows the active harness's skill-authoring guidance.
+- Any prose surface, your reply to the user included → Call the Skill tool with `unslop`. Write the reply per **Writing the reply**. Agent-facing prose also follows the active harness's skill-authoring guidance.
 - Docs, RFCs, readmes, PR descriptions, or commit messages → Call the Skill tool with `technical-writing`.
 - Before commit → Call the Skill tool with `deslop`. Apply it to the diff.
 - Before review → Call the Skill tool with `no-comments`.
 - Shipping a CLI or TUI → Call the Skill tool with `control-cli`. Shipping a browser, IDE, or Electron UI → Call the Skill tool with `control-ui`. Drive the real thing rather than a proxy.
 - Running a benchmark, measuring perf yourself, or reporting a speedup or regression you measured → Call the Skill tool with `benchmark-checklist`. Do so before you report or act on the number.
-- Any PR-status request → the **Babysit** playbook (`playbooks/babysit.md`), and not any similarly named host built-in whose description matches the same words. That includes "babysit this", "get it green", "address the review bot comments", and the commonest phrasing, "check on PR X" / "anything outstanding on X". Never triggered by merely opening a PR. Declare its mode before polling; the playbook's step 1 owns the request-to-mode mapping. Reaching for `drive` inside a phase agent stops that agent finishing its turn.
+- Any PR-status request ("babysit this", "get it green", "address the review bot comments", and most often "check on PR X" or "anything outstanding on X") → the **Babysit** playbook (`playbooks/babysit.md`), not any similarly named host built-in whose description matches the same words. Never triggered by merely opening a PR. Declare its mode before polling. The playbook's step 1 owns the request-to-mode mapping. Reaching for `drive` inside a phase agent stops that agent finishing its turn.
 - Automated review or the agentic security review commented → skeptical posture. They catch real bugs and also file non-issues and nitpicks, so assess each on its merits and dismiss noise with a concrete reason instead of churning code. Triage fix / dismiss / ask per `references/automated-review-triage.md`.
 - Broken skill mid-task → fix it locally as a separate change. Don't block. Don't silently work around it. Publish it only when the user explicitly asks to open a pull request or merge request.
 - Long, autonomous, or multi-phase work, or any task the user steps away from to review later → Call the Skill tool with `show-me-your-work`. Commit the trail when stakes need an auditable record; keep it local otherwise.
 
 ## Principles
 
-Read the leaf skill in full for any principle you apply. Each entry names when it applies.
+Read the leaf skill in full for any principle you apply. Each entry names when it applies. Each leaf is the **principle-<title>** skill, with the title in kebab case, hyphens kept and other punctuation dropped, unless the entry gives its name.
 
 **Core**
 
-- **Laziness Protocol** (**principle-laziness-protocol**). Refactoring, sizing a diff, or tempted to add abstractions, layers, or signal threading. Bias to deletion and the smallest change that solves the problem.
-- **Foundational Thinking** (**principle-foundational-thinking**). Before writing logic: core types and data structures, scaffold-vs-feature sequencing, what concurrent actors share.
-- **Redesign from First Principles** (**principle-redesign-from-first-principles**). Integrating a new requirement into an existing design. Redesign as if it had been foundational from day one.
-- **Attack the Premise** (**principle-attack-the-premise**). Two or more fixes that share one premise have failed the same gate. Take a census of which actors hold the imbalance before the next fix, then question the premise instead of writing another fix that assumes it.
-- **Subtract Before You Add** (**principle-subtract-before-you-add**). Sequencing an addition, refactor, or rewrite. Remove dead weight first, then build on the simpler base.
-- **Minimize Reader Load** (**principle-minimize-reader-load**). Reviewing or shaping code that's hard to trace. Count layers and hidden state, collapse one-caller wrappers, shrink mutable scope.
-- **Outcome-Oriented Execution** (**principle-outcome-oriented-execution**). Planned rewrites and migrations with explicit phase boundaries. Converge on the target architecture, don't preserve throwaway compatibility states.
-- **Experience First** (**principle-experience-first**). Product, UX, or feature-scope tradeoffs. Choose user delight over implementation convenience.
-- **Exhaust the Design Space** (**principle-exhaust-the-design-space**). A novel interaction or architectural decision with no precedent. Build 2-3 competing prototypes and compare before committing.
-- **Build the Lever** (**principle-build-the-lever**). Any non-trivial work. Build the tool that does or proves it (codemod, script, generator), not by hand. The tool is the artifact a reviewer reruns.
+- **Laziness Protocol.** Refactoring, sizing a diff, or tempted to add abstractions, layers, or signal threading. Bias to deletion and the smallest change that solves the problem.
+- **Foundational Thinking.** Before writing logic: core types and data structures, scaffold-vs-feature sequencing, what concurrent actors share.
+- **Redesign from First Principles.** Integrating a new requirement into an existing design. Redesign as if it had been foundational from day one.
+- **Attack the Premise.** Two or more fixes that share one premise have failed the same gate. Write the premise down and test it directly before you write another fix that assumes it.
+- **Subtract Before You Add.** Sequencing an addition, refactor, or rewrite. Remove dead weight first, then build on the simpler base.
+- **Minimize Reader Load.** Reviewing or shaping code that's hard to trace. Count layers and hidden state, collapse one-caller wrappers, shrink mutable scope.
+- **Outcome-Oriented Execution.** Planned rewrites and migrations with explicit phase boundaries. Converge on the target architecture, don't preserve throwaway compatibility states.
+- **Experience First.** Product, UX, or feature-scope tradeoffs. Choose user delight over implementation convenience.
+- **Exhaust the Design Space.** A novel interaction or architectural decision with no precedent. Build 2-3 competing prototypes and compare before committing.
+- **Build the Lever.** Any non-trivial work. Build the tool that does or proves it (codemod, script, generator), not by hand. The tool is the artifact a reviewer reruns.
 
 **Architecture**
 
-- **Model the Domain** (**principle-model-the-domain**). Writing stateful logic, or code that branches a lot or repeats a shape assumption across files. Encode the domain in a structure (state machine, typed model, table or registry, reducer, boundary, the right collection) instead of scattered conditionals.
-- **Boundary Discipline** (**principle-boundary-discipline**). Wiring validation, error handling, or framework adapters. Guards at system boundaries, trust internal types, keep business logic pure.
-- **Type System Discipline** (**principle-type-system-discipline**). Designing types or a signature in any typed language. Make illegal states unrepresentable, brand primitives, parse external data at boundaries.
-- **Make Operations Idempotent** (**principle-make-operations-idempotent**). Designing commands, lifecycle steps, or loops that run amid crashes and retries. Converge to the same end state.
-- **Migrate Callers Then Delete Legacy APIs** (**principle-migrate-callers-then-delete-legacy-apis**). Introducing a new internal API while old callers exist. Migrate and delete in one wave.
-- **Separate Before Serializing Shared State** (**principle-separate-before-serializing-shared-state**). Concurrent actors might write the same file, branch, key, or object. Eliminate the sharing first.
+- **Model the Domain.** Writing stateful logic, or code that branches a lot or repeats a shape assumption across files. Encode the domain in a structure (state machine, typed model, table or registry, reducer, boundary, the right collection) instead of scattered conditionals.
+- **Boundary Discipline.** Wiring validation, error handling, or framework adapters. Guards at system boundaries, trust internal types, keep business logic pure.
+- **Type System Discipline.** Designing types or a signature in any typed language. Make illegal states unrepresentable, brand primitives, parse external data at boundaries.
+- **Make Operations Idempotent.** Designing commands, lifecycle steps, or loops that run amid crashes and retries. Converge to the same end state.
+- **Migrate Callers Then Delete Legacy APIs.** Introducing a new internal API while old callers exist. Migrate and delete in one wave.
+- **Separate Before Serializing Shared State.** Concurrent actors might write the same file, branch, key, or object. Eliminate the sharing first.
 
 **Verification**
 
-- **Prove It Works** (**principle-prove-it-works**). After a task, before declaring done. Verify against the real artifact, not a proxy or "it compiles".
-- **Fix Root Causes** (**principle-fix-root-causes**). Debugging. Trace each symptom to its root cause, reproduce first, ask why until you reach it.
+- **Prove It Works.** After a task, before declaring done. Verify against the real artifact, not a proxy or "it compiles".
+- **Fix Root Causes.** Debugging. Trace each symptom back to the first place the system went wrong and fix it there. A guard is a fix only when the state it handles is legitimate.
 - **Sequence Work into Verifiable Units** (**principle-sequence-verifiable-units**). Multi-step work (sweeps, migrations, runs of similar edits) and how you stack commits and PRs. Break work into small units that each end in a check, verify each before the next, and order delivery so the sequence proves itself.
-- **Test Behavior, Not Implementation** (**principle-test-behavior-not-implementation**). Writing, changing, or keeping a test. Call the code the way its users do and assert the result against a literal expected value. If the test would still pass when every imported function returns `undefined`, rewrite the assertion or delete the test.
-- **Explain the Number** (**principle-explain-the-number**). Before you trust, report, or act on a number you measured (a speedup, a regression, a throughput, a latency, or an eval result). Find what limits it, and rule out that it measured something other than the work you think.
+- **Test Behavior, Not Implementation.** Writing, changing, or keeping a test. Assert what the code's users can observe, so the test fails when that behavior breaks and keeps passing when only the internals change.
+- **Explain the Number.** Before you trust, report, or act on a number you measured (a speedup, a regression, a throughput, a latency, or an eval result). Find what limits it, and rule out that it measured something other than the work you think.
 
 **Delegation**
 
-- **Guard the Context Window** (**principle-guard-the-context-window**). Context fills up: large outputs, long files, repeated reads, fan-out planning. Route bulk to subagents, keep summaries in the main thread.
-- **Never Block on the Human** (**principle-never-block-on-the-human**). Tempted to ask "should I do X?" on reversible work. Proceed, present the result, let the human course-correct.
+- **Guard the Context Window.** Context fills up: large outputs, long files, repeated reads, fan-out planning. Route bulk to subagents, keep summaries in the main thread.
+- **Never Block on the Human.** Tempted to ask "should I do X?" on reversible work. Proceed, present the result, let the human course-correct.
 
 **Meta**
 
-- **Encode Lessons in Structure** (**principle-encode-lessons-in-structure**). You catch yourself writing the same instruction a second time. Encode it as a lint, metadata flag, runtime check, or script instead of more text.
+- **Encode Lessons in Structure.** You catch yourself writing the same instruction a second time. Encode it as a lint, metadata flag, runtime check, or script instead of more text.
 
 ## Autonomy
 
@@ -92,9 +94,11 @@ Read the leaf skill in full for any principle you apply. Each entry names when i
 
 ## Subagents
 
-**Any subagent you spawn inside a playbook step works in this mode** (code-writing delegates, ad-hoc helpers). Spawn it with the active harness's native subagent tool. Every supported harness can spawn subagents. If a nested spawn is denied, the current agent owns that work directly. Its brief tells it to read this SKILL.md in full first, including the Principles index above, and to open a leaf `principle-*` skill whenever it applies that principle. Routed workflow skills prescribe their own helpers for diverse-model review; respect what the skill prescribes rather than forcing this mode onto them.
+**Any subagent you spawn inside a playbook step works in this mode** (code-writing delegates, ad-hoc helpers). The chat that receives `/dstack-mode` runs the playbook. Never spawn a subagent to run the playbook itself. Spawn it with the active harness's native subagent tool. Every supported harness can spawn subagents. If a nested spawn is denied, the current agent owns that work directly. Its brief includes this file's absolute path and tells the delegate to read that SKILL.md in full first, including the Principles index above, and to open a leaf `principle-*` skill at `../<name>/SKILL.md` from that path whenever it applies that principle. Routed workflow skills prescribe their own helpers for diverse-model review; respect what the skill prescribes rather than forcing this mode onto them.
 
 **Defaults for every spawn.** Run in the background when supported, preserve the tools the task needs, pass file pointers instead of inlining large context, and select the concrete model and effort from the configured profile. To change profiles, tell the user to invoke `setup-dstack` explicitly. Use `fast-explorer` for cheap read-only breadth, `feature-worker` for implementation, `bug-worker` for evidence-backed fixes, and `skeptical-reviewer` for judgment or independent review. If the harness cannot apply the configured pair, stop and report the rejected binding; do not inherit the parent model.
+
+**Match the pair to the job.** Before each spawn, pick the configured profile whose pair fits the job, then apply that pair unchanged through `worker_binding`. Do not invent a slug, drop a half of the pair, raise or lower effort yourself, or inherit session effort. Verification stays on the swarm worker's configured pair. If the harness rejects the pair, stop and report the rejected binding.
 
 You own every subagent's work. Review the diff and write your own summary, don't pass through what it said. A second opinion is the same prompt on a different configured profile when possible. Agreement is high-signal.
 
@@ -112,7 +116,7 @@ Write the reply clean as you draft it. The cleanup-afterward pass has been measu
 - **Never fabricate a link, citation, or transcript reference.** Link only artifacts you produced or read this session.
 - **Every claim carries its evidence or its label in the same sentence.** Measured, inferred, or guess. A prediction or an unseen cause is a guess. Never hand the human a check you could run.
 
-Every playbook ends with a reply written this way. When a forge artifact exists, link its actual GitHub or GitLab URL. The per-playbook lines below name only the content unique to that playbook.
+Every playbook ends with a reply written this way. When a forge artifact exists, link its actual GitHub or GitLab URL. Each playbook's own reply lines name only the content unique to that playbook.
 
 ## Comments
 
@@ -120,28 +124,28 @@ Comments follow the same rule as the reply. Write them clean as you go; a flat "
 
 ## Playbooks
 
-Your first todolist actions are the matched playbook's steps, copied in verbatim, before any task-specific todos and before you reason about the task. The failure mode is reading a playbook then writing a bespoke plan that drops its named steps (`architect`, the throughput checkpoint). A step you choose not to do stays in the list with a one-line `skip: <reason>`; skipping silently is not allowed. Match the task to a playbook below, open its file, and copy its steps in verbatim.
+Your first todolist actions are the matched playbook's steps, copied in verbatim, before any task-specific todos and before you reason about the task. The failure mode is reading a playbook then writing a bespoke plan that drops its named steps (`architect`, the throughput checkpoint). A step you choose not to do stays in the list with a one-line `skip: <reason>`; skipping silently is not allowed. Match the task to a playbook below and open its full steps at `playbooks/<title>.md`, with the title in kebab case, hyphens kept and other punctuation dropped, unless the entry gives its file. Copy its steps in verbatim.
 
 A large or cross-cutting effort, or work the user steps away from to trust later, routes to `figure-it-out` even when a narrower playbook fits. Call the Skill tool with `figure-it-out`. A standing project-scale program is out of scope for this pack; scope it down to runs that skill can design.
 
-- **Investigation.** Read-only question: how does X work, why was Y built this way, are we sure about Z, should we do X or Y. `playbooks/investigation.md`.
-- **Bug fix.** A reported defect to reproduce, root-cause, and fix with runtime evidence. `playbooks/bug-fix.md`.
-- **Perf issue.** A measured slowness to trace and improve against a baseline. `playbooks/perf-issue.md`.
-- **Hillclimb.** Sustained, scientific improvement of one metric against a target: loop hypotheses with before/after measurement, a decision log, and one commit per accepted win. Distinct from Perf issue, which is a one-off fix. `playbooks/hillclimb.md`.
-- **Runtime forensics.** Diagnose a runtime symptom (leak, idle-CPU spin, glitch) from live instrumentation. The deliverable is a diagnosis, not a fix. `playbooks/runtime-forensics.md`.
-- **Trace forensics.** Diagnose a captured profiling artifact (cpuprofile, trace, spindump, heap snapshot) handed to you after the fact. The deliverable is a diagnosis, not a fix. `playbooks/trace-forensics.md`.
-- **Feature.** New or changed behavior, built from a named data shape. `playbooks/feature.md`.
-- **Refactoring.** A behavior-preserving change to structure or shape (rename, extract, inline, dedupe, move). `playbooks/refactoring.md`.
-- **Prototype.** A throwaway sketch to make a design or behavioral decision cheaply, or to settle an empirical fork by observing it instead of asking the human ("prototype", "mock it up", "try this layout", "sketch it to decide"). `playbooks/prototype.md`.
-- **Visual parity.** Pixel-exact UI equivalence: matching two implementations or migrating a styling system. `playbooks/visual-parity.md`.
-- **Authoring or modifying a skill.** Writing or editing a SKILL.md. `playbooks/authoring-a-skill.md`.
-- **Eval.** Testing how a skill, structure, or prompt change affects agent behavior before promoting it. `playbooks/eval.md`.
-- **Babysit.** Driving a pull request, merge request, or explicit ordered set to merge-ready: conflicts, review threads, and CI. `playbooks/babysit.md`.
-- **Session pickup.** Resuming or taking over prior work from the current repository's active-harness transcript, an explicit transcript export, or a branch. `playbooks/session-pickup.md`.
-- **Pause safely.** Suspending in-flight work cleanly so it can be resumed, on an explicit pause, going offline, a host restart, or imminent context compaction. The complement to Session pickup. Full steps: `playbooks/pause-safely.md`.
-- **Multi-phase or multi-request plan.** Work that spans phases or dependent pull or merge requests. `playbooks/multi-phase-plan.md`.
-- **Apple development cleanup.** Explicit machine-wide cleanup of stale simulators, runtimes, DerivedData, and device-support files ("clean up Xcode", "delete old simulators", "free Apple development disk space"). `playbooks/apple-dev-cleanup.md`.
-- **Opening a PR.** Explicitly packaging and publishing already verified local work ("open a PR", "create a merge request"). It is never an automatic final step of another playbook. `playbooks/opening-a-pr.md`.
+- **Investigation.** Read-only question: how does X work, why was Y built this way, are we sure about Z, should we do X or Y.
+- **Bug fix.** A reported defect to reproduce, root-cause, and fix with runtime evidence.
+- **Perf issue.** A measured slowness to trace and improve against a baseline.
+- **Hillclimb.** Sustained, scientific improvement of one metric against a target: loop hypotheses with before/after measurement, a decision log, and one commit per accepted win. Distinct from Perf issue, which is a one-off fix.
+- **Runtime forensics.** Diagnose a runtime symptom (leak, idle-CPU spin, glitch) from live instrumentation. The deliverable is a diagnosis, not a fix.
+- **Trace forensics.** Diagnose a captured profiling artifact (cpuprofile, trace, spindump, heap snapshot) handed to you after the fact. The deliverable is a diagnosis, not a fix.
+- **Feature.** New or changed behavior, built from a named data shape.
+- **Refactoring.** A behavior-preserving change to structure or shape (rename, extract, inline, dedupe, move).
+- **Prototype.** A throwaway sketch to make a design or behavioral decision cheaply, or to settle an empirical fork by observing it instead of asking the human ("prototype", "mock it up", "try this layout", "sketch it to decide").
+- **Visual parity.** Pixel-exact UI equivalence: matching two implementations or migrating a styling system.
+- **Authoring or modifying a skill.** Writing or editing a SKILL.md. File: `playbooks/authoring-a-skill.md`.
+- **Eval.** Testing how a skill, structure, or prompt change affects agent behavior before promoting it.
+- **Babysit.** Driving a pull request, merge request, or explicit ordered set to merge-ready: conflicts, review threads, and CI.
+- **Session pickup.** Resuming or taking over prior work from the current repository's active-harness transcript, an explicit transcript export, or a branch.
+- **Pause safely.** Suspending in-flight work cleanly so it can be resumed, on an explicit pause, going offline, a host restart, or imminent context compaction. The complement to Session pickup.
+- **Multi-phase or multi-request plan.** Work that spans phases or dependent pull or merge requests. File: `playbooks/multi-phase-plan.md`.
+- **Apple development cleanup.** Explicit machine-wide cleanup of stale simulators, runtimes, DerivedData, and device-support files ("clean up Xcode", "delete old simulators", "free Apple development disk space"). File: `playbooks/apple-dev-cleanup.md`.
+- **Opening a PR.** Explicitly packaging and publishing already verified local work ("open a PR", "create a merge request"). It is never an automatic final step of another playbook.
 
 ## Mode lifetime
 

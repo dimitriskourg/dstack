@@ -23,10 +23,10 @@ TRANSCRIPT_CONFIG_SKILLS = {"automate-me", "dstack-mode", "recall", "reflect", "
 CANONICAL_HOST_IDS = {"codex", "claude", "cursor"}
 REQUIRED_SKILLS = {
     "architect", "arena", "automate-me", "benchmark-checklist", "blast-radius", "bro",
-    "comment-sicko", "control-cli", "control-ui", "correct", "create-verification-skill",
+    "comment-sicko", "control-cli", "control-ui", "correct", "create-formal-verification-skill", "create-verification-skill",
     "deslop", "dstack-help", "dstack-mode",
-    "figure-it-out", "how", "interrogate", "maintain-verification-skill", "no-comments",
-    "recall", "reflect", "setup-dstack", "show-me-your-work", "swarm", "tdd", "teach",
+    "figure-it-out", "how", "in-your-own-words", "interrogate", "ketchup", "maintain-verification-skill", "no-comments",
+    "recall", "reflect", "setup-dstack", "sharpen", "show-me-your-work", "swarm", "tdd", "teach",
     "technical-writing", "typescript-best-practices", "unslop", "why",
     "principle-attack-the-premise", "principle-boundary-discipline",
     "principle-build-the-lever",
@@ -67,11 +67,30 @@ LEAKAGE_PATTERNS: Tuple[Tuple[str, re.Pattern[str]], ...] = (
 REQUIRED_FRONTMATTER = {"name", "description"}
 OPTIONAL_FRONTMATTER = {"disable-model-invocation"}
 CODEX_SIDECAR = Path("agents") / "openai.yaml"
+SKILL_NAME = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+MAX_SKILL_NAME_LENGTH = 64
 ASSET_DIRECTORIES = ("references", "scripts", "assets")
 ASSET_REF = re.compile(r"(?<![A-Za-z0-9_.-])((?:references|scripts|assets)/[A-Za-z0-9_./-]+)")
-MARKDOWN_LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
+MARKDOWN_LINK = re.compile(r"\]\(<?([^)\s>]+)>?(?:\s+\"[^\"]*\")?\)")
+DOC_CLAIM = re.compile(
+    r"\b(?:(?P<whole>all|has|of|ships|the|with) )?(?P<word>\d+|[a-z]+(?:-[a-z]+)?) (?P<short>short )?(?P<noun>skills|principles|playbooks)\b",
+    re.I,
+)
+DOC_SLASH = re.compile(r"(?:^|(?<=[\s`(|\"'>]))/([a-z][a-z0-9-]*)(?![\w/<\-])", re.M)
+SMALL_COUNT_WORDS = (
+    "zero one two three four five six seven eight nine ten eleven "
+    "twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen"
+).split()
+TENS_COUNT_WORDS = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"]
 SIBLING_SKILL_REF = re.compile(r"`(\.\./[a-z0-9-]+/SKILL\.md)`")
 SKILL_CALL = re.compile(r"Call the Skill tool with `([a-z0-9-]+)`\.")
+KEBAB_DROP_PUNCTUATION = re.compile(r"[^A-Za-z0-9\s-]")
+KEBAB_WHITESPACE = re.compile(r"\s+")
+PRINCIPLE_INDEX_ENTRY = re.compile(
+    r"^- \*\*(?P<title>.+?)\.?\*\*(?: \(\*\*(?P<name>[a-z0-9-]+)\*\*\))?\.?"
+)
+PLAYBOOK_INDEX_ENTRY = re.compile(r"^- \*\*(?P<title>.+?)\.\*\*")
+PLAYBOOK_EXPLICIT_FILE = re.compile(r"(?:File:\s+)?`playbooks/([a-z0-9-]+)\.md`")
 LEGACY_SKILL_DIRECTIVE = re.compile(
     r"\b(?:run|apply|invoke|route through|route to|hand to|use)\s+"
     r"(?:the\s+)?(?:\*\*)?(" + "|".join(sorted(REQUIRED_SKILLS, key=len, reverse=True)) + r")"
@@ -89,6 +108,220 @@ class Finding:
     def render(self) -> str:
         location = self.path if self.line is None else "{}:{}".format(self.path, self.line)
         return "ERROR: {}: {}".format(location, self.message)
+
+
+def count_word_to_number(word: str) -> Optional[int]:
+    if word.isdigit():
+        return int(word)
+    parts = word.lower().split("-")
+    if len(parts) == 1 and parts[0] in SMALL_COUNT_WORDS:
+        return SMALL_COUNT_WORDS.index(parts[0])
+    if len(parts) == 2:
+        tens, unit = parts
+        ones = SMALL_COUNT_WORDS.index(unit) if unit in SMALL_COUNT_WORDS else -1
+        if tens in TENS_COUNT_WORDS and TENS_COUNT_WORDS.index(tens) > 1 and 0 <= ones < 10:
+            return TENS_COUNT_WORDS.index(tens) * 10 + ones
+    return None
+
+
+def heading_anchors(text: str) -> Set[str]:
+    seen: Dict[str, int] = {}
+    found: Set[str] = set()
+    fenced = False
+    for line in text.splitlines():
+        if re.match(r"^\s*(```|~~~)", line):
+            fenced = not fenced
+            continue
+        if fenced:
+            continue
+        heading = re.match(r"^#{1,6}\s+(.*?)\s*$", line)
+        if not heading:
+            continue
+        plain = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", heading.group(1))
+        plain = re.sub(r"[`*]", "", plain)
+        slug = re.sub(r"[^\w\s_-]", "", plain.strip().lower(), flags=re.UNICODE)
+        slug = re.sub(r"\s", "-", slug)
+        repeat = seen.get(slug, 0)
+        seen[slug] = repeat + 1
+        found.add("{}-{}".format(slug, repeat) if repeat else slug)
+    return found
+
+
+def documentation_paths(root: Path) -> List[Path]:
+    paths: List[Path] = []
+    readme = root / "README.md"
+    if readme.is_file():
+        paths.append(readme)
+    guide = root / "docs" / "guide"
+    if guide.is_dir():
+        paths.extend(sorted(path for path in guide.rglob("*.md") if path.is_file()))
+    help_root = root / "skills" / "dstack-help"
+    if help_root.is_dir():
+        paths.extend(sorted(path for path in help_root.rglob("*.md") if path.is_file()))
+    return paths
+
+
+def check_docs_vs_tree(
+    root: Path,
+    skill_names: Set[str],
+    playbook_stems: Set[str],
+) -> List[Finding]:
+    """Fail when user-facing docs drift from the skill and playbook tree.
+
+    Adapted from pstack's docs-vs-tree check. dstack has no agent wrappers and
+    no hardcoded model catalog, so those legs are omitted. README is not a
+    full skill catalog, so missing table rows are not errors.
+    """
+
+    principles = {name for name in skill_names if name.startswith("principle-")}
+    commands = skill_names - principles
+    expected = {
+        "skills": {len(skill_names), len(commands)},
+        "principles": {len(principles)},
+        "playbooks": {len(playbook_stems)},
+    }
+    findings: List[Finding] = []
+    for path in documentation_paths(root):
+        text = path.read_text(encoding="utf-8")
+        try:
+            rel = path.relative_to(root).as_posix()
+        except ValueError:
+            rel = path.as_posix()
+        for match in DOC_CLAIM.finditer(text):
+            claimed = count_word_to_number(match.group("word"))
+            kind = "principles" if match.group("short") else match.group("noun").lower()
+            if (match.group("whole") or match.group("short")) and claimed is not None and claimed not in expected[kind]:
+                findings.append(Finding(
+                    rel,
+                    'says "{}", but the tree has {}'.format(
+                        match.group(0),
+                        " or ".join(str(value) for value in sorted(expected[kind])),
+                    ),
+                    text[: match.start()].count("\n") + 1,
+                ))
+        for match in DOC_SLASH.finditer(text):
+            name = match.group(1)
+            if name not in skill_names:
+                findings.append(Finding(
+                    rel,
+                    "names /{}, which no dstack skill provides".format(name),
+                    text[: match.start()].count("\n") + 1,
+                ))
+        for line_number, line in enumerate(text.splitlines(), 1):
+            for reference in MARKDOWN_LINK.findall(line):
+                href = reference
+                if re.match(r"^[a-z][a-z0-9+.-]*:", href, re.I) or href.startswith("#") or href in {"url", "URL", "path"}:
+                    continue
+                target, _, anchor = href.partition("#")
+                if not target:
+                    resolved = path
+                else:
+                    resolved = (path.parent / target).resolve()
+                if not resolved.exists():
+                    findings.append(Finding(rel, "missing markdown link target {!r}".format(href), line_number))
+                    continue
+                if anchor and resolved.suffix.lower() == ".md":
+                    try:
+                        relative_target = resolved.relative_to(root).as_posix()
+                    except ValueError:
+                        relative_target = resolved.as_posix()
+                    if anchor not in heading_anchors(resolved.read_text(encoding="utf-8")):
+                        findings.append(Finding(
+                            rel,
+                            "links to {}, but {} has no heading with that anchor".format(href, relative_target),
+                            line_number,
+                        ))
+    return findings
+
+
+def kebab_from_title(title: str) -> str:
+    """Turn a principle or playbook title into a kebab-case name.
+
+    Hyphens stay. Other punctuation is dropped. Remaining whitespace becomes
+    hyphens. This matches the naming-by-convention instruction in dstack-mode.
+    """
+
+    text = KEBAB_DROP_PUNCTUATION.sub("", title)
+    text = KEBAB_WHITESPACE.sub("-", text.strip())
+    return re.sub(r"-{2,}", "-", text).strip("-").lower()
+
+
+def resolve_principle_index(body: str) -> List[Tuple[str, str, int]]:
+    """Return (title, skill directory name, line number) for each principle entry."""
+
+    entries: List[Tuple[str, str, int]] = []
+    in_principles = False
+    for line_number, line in enumerate(body.splitlines(), 1):
+        if line.startswith("## "):
+            in_principles = line == "## Principles"
+            continue
+        if not in_principles:
+            continue
+        match = PRINCIPLE_INDEX_ENTRY.match(line)
+        if not match:
+            continue
+        title = match.group("title").rstrip(".")
+        name = match.group("name") or "principle-" + kebab_from_title(title)
+        entries.append((title, name, line_number))
+    return entries
+
+
+def check_mode_index(
+    body: str,
+    skill_names: Set[str],
+    playbook_stems: Set[str],
+    path: str,
+) -> List[Finding]:
+    findings: List[Finding] = []
+    for title, name, line_number in resolve_principle_index(body):
+        if name not in skill_names:
+            findings.append(Finding(
+                path,
+                "principle title {!r} does not resolve to an existing skill ({})".format(title, name),
+                line_number,
+            ))
+    resolved_playbooks: Set[str] = set()
+    for title, stem, line_number in resolve_playbook_index(body):
+        resolved_playbooks.add(stem)
+        if stem not in playbook_stems:
+            findings.append(Finding(
+                path,
+                "playbook title {!r} does not resolve to an existing playbook ({})".format(title, stem),
+                line_number,
+            ))
+        if stem in EXCLUDED_DSTACK_PLAYBOOKS:
+            findings.append(Finding(
+                path,
+                "playbook title {!r} resolves to excluded playbook {!r}".format(title, stem),
+                line_number,
+            ))
+    for missing in sorted(REQUIRED_DSTACK_PLAYBOOKS - resolved_playbooks):
+        findings.append(Finding(
+            path,
+            "supported playbook {!r} is not referenced by a resolvable title".format(missing),
+        ))
+    return findings
+
+
+def resolve_playbook_index(body: str) -> List[Tuple[str, str, int]]:
+    """Return (title, playbook stem, line number) for each playbook entry."""
+
+    entries: List[Tuple[str, str, int]] = []
+    in_playbooks = False
+    for line_number, line in enumerate(body.splitlines(), 1):
+        if line.startswith("## "):
+            in_playbooks = line == "## Playbooks"
+            continue
+        if not in_playbooks:
+            continue
+        match = PLAYBOOK_INDEX_ENTRY.match(line)
+        if not match:
+            continue
+        title = match.group("title")
+        explicit = PLAYBOOK_EXPLICIT_FILE.search(line)
+        stem = explicit.group(1) if explicit else kebab_from_title(title)
+        entries.append((title, stem, line_number))
+    return entries
 
 
 def relative(path: Path) -> str:
@@ -162,6 +395,11 @@ def check_skill(skill_dir: Path) -> List[Finding]:
         findings.append(Finding(relative(skill_file), "unsupported frontmatter key(s): " + ", ".join(sorted(unsupported))))
     if fields.get("name") != skill_dir.name:
         findings.append(Finding(relative(skill_file), "frontmatter name must match the skill directory"))
+    if not SKILL_NAME.fullmatch(skill_dir.name) or len(skill_dir.name) > MAX_SKILL_NAME_LENGTH:
+        findings.append(Finding(
+            relative(skill_dir),
+            "skill directory must be lowercase words joined by hyphens, at most 64 characters",
+        ))
     if fields.get("disable-model-invocation") not in {None, "true"}:
         findings.append(Finding(relative(skill_file), "disable-model-invocation must be true or omitted"))
     if skill_dir.name in CONFIG_DEPENDENT_SKILLS:
@@ -229,7 +467,7 @@ def check_skill(skill_dir: Path) -> List[Finding]:
                     findings.append(Finding(relative(path), "missing sibling skill {!r}".format(reference), line_number))
             for reference in MARKDOWN_LINK.findall(line):
                 target = reference.split("#", 1)[0]
-                if not target or target.startswith(("http://", "https://", "mailto:", "#")) or "<" in target or target in {"url", "URL", "path"}:
+                if not target or target.startswith(("http://", "https://", "mailto:", "#")) or target in {"url", "URL", "path"}:
                     continue
                 if not (path.parent / target).resolve().exists():
                     findings.append(Finding(relative(path), "missing markdown link target {!r}".format(target), line_number))
@@ -297,6 +535,17 @@ def check_structure() -> List[Finding]:
         findings.append(Finding(relative(playbooks / (missing + ".md")), "missing supported dstack-mode playbook"))
     for excluded in sorted(EXCLUDED_DSTACK_PLAYBOOKS & actual_playbooks):
         findings.append(Finding(relative(playbooks / (excluded + ".md")), "excluded dstack-mode playbook must stay absent"))
+
+    mode_skill = SKILLS / "dstack-mode" / "SKILL.md"
+    skill_names = {path.name for path in SKILLS.iterdir() if path.is_dir()}
+    if mode_skill.is_file():
+        findings.extend(check_mode_index(
+            mode_skill.read_text(encoding="utf-8"),
+            skill_names,
+            actual_playbooks,
+            relative(mode_skill),
+        ))
+    findings.extend(check_docs_vs_tree(ROOT, skill_names, actual_playbooks))
 
     unsupported_references = {
         "playbooks/{}.md".format(name) for name in EXCLUDED_DSTACK_PLAYBOOKS

@@ -17,7 +17,7 @@
 1. **Frame.** State what variant is under test and what behavior counts as success. Write the rubric (3-6 concrete criteria) for the judge only. Hold it back from candidates.
 2. **Set up sanitized environments.** Per-candidate working dir with the variant in place. Plant any context an organic task would have: a project skeleton, the skills the candidate would naturally read.
 3. **Author one organic prompt.** What a user would type. No leakage of what's being measured.
-4. **Spawn N parallel candidates** across the configured profiles per the **arena** skill's Phase B. Each works in its own sanitized dir. Same prompt to each.
+4. **Spawn N parallel candidates** across the configured profiles per the **arena** skill's Phase B. Each works in its own sanitized dir. Same prompt to each. Pick each subagent's configured profile for the job, per the Subagents section.
 5. **Spawn one blinded judge** with the `skeptical-reviewer` profile per the **arena** skill's Phase C. Judge sees outputs by sanitized label and the rubric, never a profile name.
 6. **Verify the chain from transcripts, not self-report.** Use the selected repository entry's configured `transcripts_directory`, already loaded by dstack-mode from `~/.dstack/config.json`. Do not search again or use another repository entry. When it is `null` or the directory is unreadable, grade only from the resulting code and say the chain check was not possible. Look at which files each candidate actually opened. Grade chain-following from the files each candidate actually read plus the shape of the code, never from the candidate's own claims.
 7. **Read every candidate output yourself** end to end. Compare to the judge's verdict. Disagreement means a model is biased or the rubric is ambiguous. Synthesize.

@@ -140,6 +140,77 @@ class PortabilityAuditTests(unittest.TestCase):
         self.assertEqual(AUDIT.REQUIRED_DSTACK_PLAYBOOKS, actual)
         self.assertFalse(AUDIT.EXCLUDED_DSTACK_PLAYBOOKS & actual)
 
+    def test_kebab_from_title_keeps_hyphens_and_drops_other_punctuation(self):
+        self.assertEqual("laziness-protocol", AUDIT.kebab_from_title("Laziness Protocol"))
+        self.assertEqual("opening-a-pr", AUDIT.kebab_from_title("Opening a PR"))
+        self.assertEqual(
+            "test-behavior-not-implementation",
+            AUDIT.kebab_from_title("Test Behavior, Not Implementation"),
+        )
+        self.assertEqual(
+            "multi-phase-or-multi-request-plan",
+            AUDIT.kebab_from_title("Multi-phase or multi-request plan"),
+        )
+        self.assertEqual(
+            "apple-development-cleanup",
+            AUDIT.kebab_from_title("Apple development cleanup"),
+        )
+        self.assertEqual(
+            "sequence-work-into-verifiable-units",
+            AUDIT.kebab_from_title("Sequence Work into Verifiable Units"),
+        )
+
+    def test_shipped_mode_index_resolves_by_convention(self):
+        findings = [finding.message for finding in AUDIT.check_structure()]
+        self.assertFalse(any("does not resolve" in message for message in findings))
+        self.assertFalse(any("is not referenced by a resolvable title" in message for message in findings))
+        body = (AUDIT.SKILLS / "dstack-mode" / "SKILL.md").read_text(encoding="utf-8")
+        principles = {name: title for title, name, _ in AUDIT.resolve_principle_index(body)}
+        playbooks = {stem: title for title, stem, _ in AUDIT.resolve_playbook_index(body)}
+        self.assertEqual(
+            "principle-laziness-protocol",
+            "principle-" + AUDIT.kebab_from_title(principles["principle-laziness-protocol"]),
+        )
+        self.assertEqual(
+            "Sequence Work into Verifiable Units",
+            principles["principle-sequence-verifiable-units"],
+        )
+        self.assertNotEqual(
+            "principle-sequence-verifiable-units",
+            "principle-" + AUDIT.kebab_from_title(principles["principle-sequence-verifiable-units"]),
+        )
+        self.assertEqual("Investigation", playbooks["investigation"])
+        self.assertEqual("Authoring or modifying a skill", playbooks["authoring-a-skill"])
+        self.assertNotEqual("authoring-a-skill", AUDIT.kebab_from_title(playbooks["authoring-a-skill"]))
+        self.assertEqual("Multi-phase or multi-request plan", playbooks["multi-phase-plan"])
+        self.assertNotEqual("multi-phase-plan", AUDIT.kebab_from_title(playbooks["multi-phase-plan"]))
+        self.assertEqual("Apple development cleanup", playbooks["apple-dev-cleanup"])
+        self.assertNotEqual("apple-dev-cleanup", AUDIT.kebab_from_title(playbooks["apple-dev-cleanup"]))
+        self.assertEqual(AUDIT.REQUIRED_DSTACK_PLAYBOOKS, set(playbooks))
+
+    def test_unresolved_mode_title_fails(self):
+        body = (
+            "## Principles\n\n"
+            "- **Missing Leaf.** A title with no matching skill.\n\n"
+            "## Playbooks\n\n"
+            "- **Ghost Playbook.** A title with no matching file.\n"
+            "- **Shipping.** An excluded playbook referenced by title.\n"
+        )
+        messages = [finding.message for finding in AUDIT.check_mode_index(body, set(), set(), "mode.md")]
+        self.assertIn(
+            "principle title 'Missing Leaf' does not resolve to an existing skill (principle-missing-leaf)",
+            messages,
+        )
+        self.assertIn(
+            "playbook title 'Ghost Playbook' does not resolve to an existing playbook (ghost-playbook)",
+            messages,
+        )
+        self.assertIn(
+            "playbook title 'Shipping' resolves to excluded playbook 'shipping'",
+            messages,
+        )
+        self.assertTrue(any("supported playbook" in message and "is not referenced" in message for message in messages))
+
     def test_config_path_override_fails(self):
         with tempfile.TemporaryDirectory() as temp:
             skill = self.make_skill(Path(temp), "Read `DSTACK_HOME/config.json`.\n")
@@ -234,6 +305,23 @@ class PortabilityAuditTests(unittest.TestCase):
             )
             self.assertIn("disable-model-invocation must be true or omitted", self.messages(skill))
 
+    def test_frontmatter_name_must_match_directory(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(Path(temp), "Do the thing.\n", name="sample")
+            (skill / "SKILL.md").write_text(
+                "---\nname: other-name\ndescription: sample skill\n---\n\nDo the thing.\n",
+                encoding="utf-8",
+            )
+            self.assertIn("frontmatter name must match the skill directory", self.messages(skill))
+
+    def test_skill_directory_must_be_agent_skills_name(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(Path(temp), "Do the thing.\n", name="Not A Skill")
+            self.assertIn(
+                "skill directory must be lowercase words joined by hyphens, at most 64 characters",
+                self.messages(skill),
+            )
+
     def test_unsupported_frontmatter_key_fails(self):
         with tempfile.TemporaryDirectory() as temp:
             skill = self.make_skill(Path(temp), "Do the thing.\n", frontmatter="allowed-tools: Bash\n")
@@ -265,6 +353,46 @@ class PortabilityAuditTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             skill = self.make_skill(Path(temp), "Read [the rubric](references/rubric.md).\n")
             self.assertIn("missing markdown link target 'references/rubric.md'", self.messages(skill))
+
+    def test_titled_markdown_link_is_checked(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(Path(temp), 'Read [the rubric](references/rubric.md "Rubric").\n')
+            self.assertIn("missing markdown link target 'references/rubric.md'", self.messages(skill))
+
+    def test_angle_bracket_markdown_link_is_checked(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(Path(temp), "Read [the rubric](<references/rubric.md>).\n")
+            self.assertIn("missing markdown link target 'references/rubric.md'", self.messages(skill))
+
+    def test_unknown_slash_command_in_docs_fails(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "README.md").write_text("Use `/ghost-skill` to start.\n", encoding="utf-8")
+            messages = [finding.message for finding in AUDIT.check_docs_vs_tree(root, {"ketchup"}, set())]
+            self.assertIn("names /ghost-skill, which no dstack skill provides", messages)
+
+    def test_docs_count_claim_must_match_the_tree(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "README.md").write_text("The mode ships 18 playbooks.\n", encoding="utf-8")
+            messages = [
+                finding.message
+                for finding in AUDIT.check_docs_vs_tree(root, {"ketchup"}, {"babysit"})
+            ]
+            self.assertTrue(any("ships 18 playbooks" in message for message in messages))
+
+    def test_docs_anchor_must_exist(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "README.md").write_text("# Title\n\nSee [later](./guide.md#missing).\n", encoding="utf-8")
+            (root / "guide.md").write_text("# Guide\n", encoding="utf-8")
+            (root / "docs" / "guide").mkdir(parents=True)
+            (root / "docs" / "guide" / "page.md").write_text(
+                "See [later](../../guide.md#missing).\n",
+                encoding="utf-8",
+            )
+            messages = [finding.message for finding in AUDIT.check_docs_vs_tree(root, set(), set())]
+            self.assertTrue(any("has no heading with that anchor" in message for message in messages))
 
     def test_missing_sibling_skill_fails(self):
         with tempfile.TemporaryDirectory() as temp:

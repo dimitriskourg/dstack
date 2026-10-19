@@ -7,6 +7,10 @@ The project is under active development. Configuration schema version 2 is inten
 ## What ships
 
 - All currently selected pstack-derived skills, renamed only where required: `poteto-mode` becomes `dstack-mode` and `setup-pstack` becomes `setup-dstack`.
+- `ketchup`, a human-only recap of what changed in this chat since the last user message, in plain words and small visuals, with every waiting item listed and decidable from the reply alone.
+- `in-your-own-words`, a human-only playback of the user's goals and the problem before work starts.
+- `sharpen`, a human-only pass that aims a task higher before starting: more expert, more outcome-focused, not overspecified.
+- `create-formal-verification-skill`, a human-only generator for a project-local skill that formally verifies one property tests rarely reach.
 - A curated 18-playbook `dstack-mode` focused on ordinary local engineering work.
 - The external `control-cli`, `control-ui`, and `deslop` skills referenced by pstack.
 - Host-neutral subagent instructions for harnesses that provide native subagent spawning.
@@ -21,7 +25,7 @@ dstack has no capability matrix or provider adapter layer. Skills call other ski
 Call the Skill tool with `skill-name`.
 ```
 
-Skills spawn helpers through the active harness's native subagent tool. If a nested spawn is denied, the current agent owns that work directly and reports the loss of independence or parallelism.
+`/dstack-mode` runs in the chat that receives it. That chat owns the playbook, the todo list, and every subagent spawn. Do not spawn a subagent to run the playbook itself. Skills spawn helpers through the active harness's native subagent tool. If a nested spawn is denied, the current agent owns that work directly and reports the loss of independence or parallelism.
 
 Read-only exploration, review, and independent artifacts outside the repository may fan out in bounded waves. Repository writers are serialized. Dstack does not create or manage worktrees, promise unattended persistence, automate merges, or require Graphite. Opening a pull request or merge request is explicit only.
 

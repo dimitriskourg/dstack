@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 Mine the current conversation for durable learnings, then route them into skill edits.
 
-Spawn reviewers with the active harness's native subagent tool. Every supported harness can spawn subagents. If a nested spawn is denied, run the affected review serially and disclose the loss of independence.
+Spawn reviewers with the active harness's native subagent tool. Every supported harness can spawn subagents. If a nested spawn is denied, run the affected review serially and disclose the loss of independence. Pick each subagent's configured profile for the job, per the Subagents section of the **dstack-mode** skill.
 
 ## Configuration
 
@@ -16,13 +16,9 @@ Before locating the transcript or using a profile, map the system-provided produ
 
 Apply the profile through `worker_binding`: pass its exact model and effort for `spawn-arguments`; for `worker-definitions`, spawn `dstack-<profile>` without overrides. Stop if the binding is missing, rejected, or different. Never inherit session effort.
 
-## When to invoke
-
 Invoke when the user says "reflect" or "/reflect". Skip when the conversation is trivial, off-topic, or already covered by an existing skill the parent followed correctly. One-offs are not learnings.
 
-## Process
-
-### 1. Locate the active transcript
+## 1. Locate the active transcript
 
 Use the selected repository entry's configured `transcripts_directory`. Do not search again here. When it is `null` or the directory is unreadable, skip to the digest fallback below.
 
@@ -34,7 +30,7 @@ Hosts differ in layout. Flat (`<id>.jsonl`), nested (`<id>/<id>.jsonl`), and sub
 
 For each candidate, read the first line and check that its message text contains the conversation's opening user prompt. Take the matching path. If no path resolves, write a tight digest of the session and pass that instead.
 
-### 2. Run three reviewers
+## 2. Run three reviewers
 
 Launch three general-purpose subagents in bounded waves that fit the active harness's available child capacity, each on a different configured profile, with full tool access. **Don't use a restricted read-only mode.** Reviewers need MCP access for context lookups (tickets, chat threads, observability traces referenced in the transcript). The prompt forbids file writes. The parent applies edits. Every required reviewer runs even when the first wave cannot hold all three.
 
@@ -46,30 +42,30 @@ Launch three general-purpose subagents in bounded waves that fit the active harn
 
 Pass each template verbatim, substituting the transcript path or digest where marked. Reviewers return findings in their response body.
 
-### 3. Synthesize
+## 3. Synthesize
 
-One general-purpose subagent on your configured `skeptical-reviewer` role, with full tool access. The synthesizer's quality check includes spot-verifying citations, which can require MCP access. A restricted read-only mode strips that on some hosts. Use `references/synthesizer.md` verbatim, with each reviewer's full output inlined where marked. The synthesizer returns a structured Accepted / Rejected / Backlog list.
+One general-purpose subagent on your configured `skeptical-reviewer` role, with full tool access. It spot-verifies citations through MCP, and a restricted read-only mode strips that on some hosts. Pass `references/synthesizer.md` verbatim, with each reviewer's full output inlined where marked. It returns an Accepted / Rejected / Backlog list.
 
-### 4. Structural enforcement check
+## 4. Structural enforcement check
 
-Sanity-check the synthesizer's Accepted list. For any item that would be enforced more reliably by a lint rule, script, metadata flag, or runtime check, move it from Accepted to Backlog. See the **encode-lessons-in-structure** principle skill.
+Move any Accepted item that a lint rule, script, metadata flag, or runtime check would enforce more reliably to Backlog. See the **encode-lessons-in-structure** principle skill.
 
-### 5. Apply
+## 5. Apply
 
-Before applying any Accepted edit or filing any Backlog item, present the synthesizer's full Accepted/Rejected/Backlog output to the user and wait for explicit approval. The user picks which subsets to apply or file and may redirect routings. Skill changes affect every future agent in the org, and tracker writes mutate external state. Do not perform either automatically.
+Present the synthesizer's full Accepted / Rejected / Backlog output and wait for explicit approval before applying any Accepted edit or filing any Backlog item. The user picks the subset and may redirect routings. Skill changes affect every future agent in the org, and tracker writes mutate external state. Do not perform either automatically.
 
 When approved Backlog items have no configured tracker or the requested write is unavailable, keep them in the in-chat result without blocking approved skill edits.
 
-For each approved Accepted item, follow the Routing field exactly:
+Follow each approved row's Routing exactly:
 
-- Trivial existing-skill edit (a one-line bullet, a tightened sentence, a stale fact corrected): parent does directly.
+- Trivial existing-skill edit (a one-line bullet, a tightened sentence, a stale fact corrected): the parent does it directly.
 - Substantive existing-skill edit (a new section, a new pattern table, more than ~10 lines): hand to your host's skill-authoring skill and run its draft / test / iterate loop.
 - `tune description: <skill path>` (the skill exists but didn't trigger when it should have): hand to the authoring skill and run its description-optimization loop.
 - `new skill: <kebab-name>`: hand creation to the authoring skill. Do not invent the shape ad hoc.
 
-If your environment ships a SKILL.md validator, run it on every touched skill before declaring done. Skip this step if it doesn't.
+If your environment ships a SKILL.md validator, run it on every touched skill before declaring done.
 
-### 6. Summarize for the user
+## 6. Summarize for the user
 
 Short list, no preamble:
 
