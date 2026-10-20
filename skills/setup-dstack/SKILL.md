@@ -44,9 +44,9 @@ The four profiles are:
 
 ## 3. Shape each profile for the spawn call
 
-Each profile holds exactly what the host's native spawn call takes, so setup never generates worker definitions. On `codex` and `claude`, the pair hosts, a profile is `{"model": "<model-id>", "effort": "<effort>"}`, passed as separate spawn arguments, and neither value may contain brackets. On `cursor`, the single-id host, a profile is `{"model": "<spawn-model-id>"}` with no `effort` field, passed as the spawn model, and the id must carry the effort: either `<model-id>[effort=<effort>]` or a listed spawn identifier that encodes the effort.
+Each profile holds exactly what the host's native spawn call takes, so setup never generates worker definitions. On `codex` and `claude`, the pair hosts, a profile is `{"model": "<model-id>", "effort": "<effort>"}`, passed as separate spawn arguments, and neither value may contain brackets. On `cursor`, the single-id host, a profile is `{"model": "<spawn-model-id>"}` with no `effort` field, passed as the spawn model. The id must be a listed spawn identifier that already encodes the effort, with no brackets. Do not store `<model-id>[effort=<effort>]`; live spawn rejects it.
 
-On the single-id host, inspect the live spawn operation's schema before choosing between those two forms. If it says the model must resolve to a listed identifier, store a listed identifier that encodes the chosen effort. Use the bracket form only when the spawn operation documents or accepts it. Never store an id that carries no effort, because the worker would then run at the session effort.
+On the single-id host, inspect the live spawn operation's listed identifiers and store one that encodes the chosen effort. Never store an id that carries no effort, because the worker would then run at the session effort.
 
 `auto`, `inherit`, `inherit-parent`, an omitted model, an omitted effort on a pair host, and an id without effort on the single-id host are invalid profile values.
 

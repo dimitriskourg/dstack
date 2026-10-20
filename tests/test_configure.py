@@ -26,7 +26,7 @@ class ConfiguratorTests(unittest.TestCase):
     def profiles(self, prefix: str, host: str = "codex"):
         if host == "cursor":
             return {
-                profile: {"model": "{}-{}[effort=medium]".format(prefix, profile)}
+                profile: {"model": "{}-{}-medium".format(prefix, profile)}
                 for profile in CONFIGURE.PROFILES
             }
         return {
@@ -393,7 +393,7 @@ class ConfiguratorTests(unittest.TestCase):
                 saved["hosts"]["claude"]["profiles"]["fast-explorer"],
             )
             self.assertEqual(
-                {"model": "gamma-fast-explorer[effort=medium]"},
+                {"model": "gamma-fast-explorer-medium"},
                 saved["hosts"]["cursor"]["profiles"]["fast-explorer"],
             )
             for host in ("codex", "claude", "cursor"):
@@ -473,17 +473,18 @@ class ConfiguratorTests(unittest.TestCase):
             self.assertIn("proposal.profiles.bug-worker has unknown keys: effort", stderr)
             self.assertFalse(config.exists())
 
-    def test_cursor_model_must_be_concrete_and_use_only_the_effort_bracket(self):
+    def test_cursor_model_must_be_concrete_and_must_not_contain_brackets(self):
         cases = (
             ("auto", "must be a concrete value"),
             ("inherit", "must be a concrete value"),
             ("inherit-parent", "must be a concrete value"),
-            ("auto[effort=high]", "must be a concrete value"),
-            ("vendor-model[effort=inherit]", "must be a concrete value"),
-            ("vendor-model[]", "brackets must be exactly [effort=<value>]"),
-            ("vendor-model[fast=false]", "brackets must be exactly [effort=<value>]"),
-            ("vendor-model[effort=high,context=300k]", "brackets must be exactly [effort=<value>]"),
-            ("vendor-model[effort=]", "brackets must be exactly [effort=<value>]"),
+            ("vendor-model[effort=medium]", "must not contain brackets"),
+            ("auto[effort=high]", "must not contain brackets"),
+            ("vendor-model[effort=inherit]", "must not contain brackets"),
+            ("vendor-model[]", "must not contain brackets"),
+            ("vendor-model[fast=false]", "must not contain brackets"),
+            ("vendor-model[effort=high,context=300k]", "must not contain brackets"),
+            ("vendor-model[effort=]", "must not contain brackets"),
             ("vendor model", "without whitespace"),
         )
         with tempfile.TemporaryDirectory() as temporary:
@@ -505,7 +506,7 @@ class ConfiguratorTests(unittest.TestCase):
             root = Path(temporary)
             config = root / "config.json"
             proposal = root / "proposal.json"
-            retired = [{"model": "retired-model[effort=high]"}]
+            retired = [{"model": "retired-model-high"}]
             self.write_json(proposal, self.proposal("cursor", "current", invalid_bindings=retired))
             self.assertEqual(0, self.apply(config, proposal)[0])
             self.assertEqual(

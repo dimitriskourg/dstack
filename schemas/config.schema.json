@@ -25,11 +25,6 @@
       "pattern": "^[^\\[\\]\\s]+$",
       "not": { "enum": ["inherit-parent", "inherit", "auto"] }
     },
-    "cursorModel": {
-      "type": "string",
-      "pattern": "^[^\\[\\]\\s]+(\\[effort=[^\\[\\]\\s,=]+\\])?$",
-      "not": { "pattern": "^(?:auto|inherit|inherit-parent)(?:\\[|$)|\\[effort=(?:auto|inherit|inherit-parent)\\]$" }
-    },
     "pairBinding": {
       "type": "object",
       "required": ["model", "effort"],
@@ -43,7 +38,7 @@
       "type": "object",
       "required": ["model"],
       "properties": {
-        "model": { "$ref": "#/$defs/cursorModel" }
+        "model": { "$ref": "#/$defs/modelIdentifier" }
       },
       "additionalProperties": false
     },

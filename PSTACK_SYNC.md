@@ -75,7 +75,3 @@ Exit 0: run the `AGENTS.md` gates and commit. Exit 1: the report shows, for each
 - Any change to a skill owned by dstack.
 
 Everything else applies automatically.
-
-## Open
-
-- Cursor bracket form (`id[effort=value]`) on `Task.model` is documented only for subagent frontmatter, so live proof that its effort sticks is still open.
