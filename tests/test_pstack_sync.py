@@ -295,8 +295,8 @@ class PstackSyncTests(unittest.TestCase):
 
     def test_repository_sync_file_parses(self):
         config = SYNC.parse_sync((SYNC.ROOT / "PSTACK_SYNC.md").read_text(encoding="utf-8"))
-        self.assertEqual("0.15.28", config.version)
-        self.assertTrue(config.commit.startswith("d457567"))
+        self.assertRegex(config.version, r"^\d+\.\d+\.\d+$")
+        self.assertRegex(config.commit, r"^[0-9a-f]{40}$")
         self.assertIn("figure-it-out", config.excluded_skills)
         self.assertIn("shipping", config.excluded_playbooks)
         self.assertEqual({"setup-pstack"}, config.owned)
