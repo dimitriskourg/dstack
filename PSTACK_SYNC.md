@@ -75,7 +75,3 @@ Exit 0: run the `AGENTS.md` gates and commit. Exit 1: the report shows, for each
 - Any change to a skill owned by dstack.
 
 Everything else applies automatically.
-
-## Verified
-
-- Cursor `Task.model` accepts listed catalog slugs only, including effort-encoding suffixes; `id[effort=value]` is rejected at spawn. Subagent replies name a family, not which encoded effort physically ran.
