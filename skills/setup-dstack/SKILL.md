@@ -58,7 +58,7 @@ If no scoped directory can be confirmed, store `null` and say transcript-backed 
 
 ## 5. Reconcile and confirm
 
-Run the configurator's `show` command. Preserve other hosts. For the active host, when the catalog is complete, preserve model-effort pairs still present in the catalog, put unavailable former pairs in `invalid_bindings`, require a concrete replacement for every affected profile, and remove pairs that become valid again. When the catalog is partial, preserve existing concrete bindings and do not mark them invalid from the session spawn list alone. Never write a profile binding rejected by a complete catalog.
+Run the configurator's `show` command. The configuration uses `schema_version` 3. If `show` reports an old schema version 2 config, stop and relay that error: do not migrate or rewrite the file yourself. The user deletes or rewrites `~/.dstack/config.json`, then reruns `setup-dstack`. Preserve other hosts. For the active host, when the catalog is complete, preserve model-effort pairs still present in the catalog, put unavailable former pairs in `invalid_bindings`, require a concrete replacement for every affected profile, and remove pairs that become valid again. When the catalog is partial, preserve existing concrete bindings and do not mark them invalid from the session spawn list alone. Never write a profile binding rejected by a complete catalog.
 
 Show the current and proposed value for all four profiles, the active repository root and its transcript directory, invalid bindings, catalog status (`complete` or `partial`), and canonical harness id. Preserve every other harness and repository entry. Ask only about actual preferences. Do not write before the user confirms.
 

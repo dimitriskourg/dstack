@@ -45,7 +45,7 @@ class UninstallerTests(unittest.TestCase):
             (claude / name).symlink_to(skill, target_is_directory=True)
         dstack_home.mkdir()
         (dstack_home / "config.json").write_text(
-            json.dumps({"schema_version": 2, "hosts": {}}),
+            json.dumps({"schema_version": 3, "hosts": {}}),
             encoding="utf-8",
         )
         (dstack_home / "keep-for-skills-only.txt").write_text("config", encoding="utf-8")

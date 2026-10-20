@@ -2,7 +2,7 @@
 
 dstack is a curated local adaptation of [pstack](https://github.com/cursor/plugins/tree/main/pstack) for Codex, Claude Code, and Cursor. It keeps retained skills and playbooks close to their source while excluding workflows that do not fit the team's local engineering practice.
 
-The project is under active development. Configuration schema version 2 is intentionally stable while the pre-release shape changes.
+The project is under active development. Configuration schema version 3 is intentionally stable while the pre-release shape changes. A version 2 config from before the per-host profile shapes is not migrated: delete or rewrite `~/.dstack/config.json`, then rerun `setup-dstack`.
 
 ## What ships
 

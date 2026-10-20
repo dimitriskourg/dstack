@@ -305,20 +305,48 @@ class ConfiguratorTests(unittest.TestCase):
                     self.assertIn("must be a concrete value", stderr)
                     self.assertFalse(config.exists())
 
-    def test_schema_version_stays_two_and_unsupported_version_is_preserved(self):
+    def test_schema_version_is_three_and_unsupported_version_is_preserved(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             config = root / "config.json"
             proposal = root / "proposal.json"
             existing = CONFIGURE.default_config()
-            existing["schema_version"] = 3
+            existing["schema_version"] = 4
             self.write_json(config, existing)
             original = config.read_bytes()
             self.write_json(proposal, self.proposal("codex", "candidate"))
             status, _, stderr = self.apply(config, proposal)
             self.assertEqual(2, status)
-            self.assertIn("config.schema_version must be 2; found 3", stderr)
+            self.assertIn("config.schema_version must be 3; found 4", stderr)
             self.assertEqual(original, config.read_bytes())
+
+    def test_old_v2_config_fails_with_rerun_setup_guidance(self):
+        old_entry = {
+            "profiles": self.profiles("old"),
+            "invalid_bindings": [],
+            "worker_binding": {"mechanism": "spawn-arguments", "definitions_directory": None, "pair_encoding": None},
+            "repositories": {},
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = root / "config.json"
+            proposal = root / "proposal.json"
+            self.write_json(config, {"schema_version": 2, "hosts": {"codex": old_entry}})
+            original = config.read_bytes()
+            self.write_json(proposal, self.proposal("codex", "candidate"))
+            for arguments in (
+                ["apply", "--proposal", str(proposal)],
+                ["resolve", "--host", "codex"],
+                ["validate"],
+                ["show"],
+            ):
+                with self.subTest(command=arguments[0]):
+                    status, stdout, stderr = self.run_configurator(arguments, config)
+                    self.assertEqual(2, status)
+                    self.assertEqual("", stdout)
+                    self.assertIn("old schema_version 2 config from the worker binding era", stderr)
+                    self.assertIn("delete or rewrite ~/.dstack/config.json, then rerun setup-dstack", stderr)
+                    self.assertEqual(original, config.read_bytes())
 
     def test_replace_failure_preserves_previous_file_and_removes_temporary_file(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -412,7 +440,7 @@ class ConfiguratorTests(unittest.TestCase):
                 "worker_binding": invalid["worker_binding"],
                 "repositories": {},
             }
-            self.write_json(config, {"schema_version": 2, "hosts": {"codex": stored}})
+            self.write_json(config, {"schema_version": 3, "hosts": {"codex": stored}})
             status, _, stderr = self.run_configurator(["validate"], config)
             self.assertEqual(2, status)
             self.assertIn("config.hosts.codex has unknown keys: worker_binding", stderr)

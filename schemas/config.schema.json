@@ -5,7 +5,7 @@
   "type": "object",
   "required": ["schema_version", "hosts"],
   "properties": {
-    "schema_version": { "const": 2 },
+    "schema_version": { "const": 3 },
     "hosts": {
       "type": "object",
       "propertyNames": {

@@ -15,7 +15,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
+RETIRED_SCHEMA_VERSIONS = {2}
 CONFIG_PATH = Path("~/.dstack/config.json").expanduser()
 CONFIG_DISPLAY = "~/.dstack/config.json"
 PROFILES = ("fast-explorer", "feature-worker", "bug-worker", "skeptical-reviewer")
@@ -163,6 +164,12 @@ def validate_repositories(value: Any, location: str) -> Dict[str, Dict[str, Opti
 
 def validate_config(value: Any) -> Dict[str, Any]:
     config = require_object(value, "config")
+    version = config.get("schema_version")
+    if version in RETIRED_SCHEMA_VERSIONS and not isinstance(version, bool):
+        raise ConfigError(
+            "{} is an old schema_version {} config from the worker binding era and is not migrated; "
+            "delete or rewrite {}, then rerun setup-dstack".format(CONFIG_DISPLAY, version, CONFIG_DISPLAY)
+        )
     require_exact_keys(config, ("schema_version", "hosts"), (), "config")
     if config["schema_version"] != SCHEMA_VERSION or isinstance(config["schema_version"], bool):
         raise ConfigError("config.schema_version must be {}; found {}".format(SCHEMA_VERSION, config["schema_version"]))

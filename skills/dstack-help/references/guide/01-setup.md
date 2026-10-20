@@ -21,7 +21,7 @@ Run:
 /setup-dstack
 ```
 
-[`/setup-dstack`](../../../setup-dstack/SKILL.md) detects the active harness, reads its model catalog, confirms four concrete model-and-effort profiles, and records this repository's transcript directory in `~/.dstack/config.json`.
+[`/setup-dstack`](../../../setup-dstack/SKILL.md) detects the active harness, reads its model catalog, confirms four concrete model-and-effort profiles, and records this repository's transcript directory in `~/.dstack/config.json` (schema version 3). An older version 2 file is not migrated: delete or rewrite it, then rerun setup.
 
 The profiles are `fast-explorer`, `feature-worker`, `bug-worker`, and `skeptical-reviewer`. Pick cheaper models or lower efforts where the work allows it. Every pair must be supported by the active harness; `auto`, `inherit`, and `inherit-parent` are not profile values.
 

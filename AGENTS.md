@@ -2,7 +2,7 @@
 
 Read `DIFFERENCES.md` before changing skills, installation, model profiles, transcript handling, or upstream parity.
 
-This project is under development. Keep schema version 2 unless the user explicitly asks for a compatibility boundary.
+This project is under development. Keep schema version 3 unless the user explicitly asks for a compatibility boundary. Version 2 (the `worker_binding` era) is retired: configs on it fail with an instruction to delete or rewrite `~/.dstack/config.json` and rerun `setup-dstack`, with no automatic migration.
 
 - Treat `/Users/kourgia/projects/plugins/pstack` and sibling plugin folders as immutable inputs.
 - Keep skills harness-neutral and close to pstack with the smallest justified edits.

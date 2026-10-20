@@ -2,7 +2,7 @@
 
 Skills are canonical under `~/.agents/skills`. Portable instructions live with each skill. There is no adapter or capability layer.
 
-When one skill invokes another, it says: Call the Skill tool with `skill-name`. When a workflow delegates, it uses the active harness's native subagent tool. Model and effort selection comes from one of four profiles in the fixed file `~/.dstack/config.json`.
+When one skill invokes another, it says: Call the Skill tool with `skill-name`. When a workflow delegates, it uses the active harness's native subagent tool. Model and effort selection comes from one of four profiles in the fixed file `~/.dstack/config.json`, which uses schema version 3. A version 2 file is not migrated; delete or rewrite it, then rerun `setup-dstack`.
 
 Transcript-backed skills map the system-provided product identity to `codex`, `claude`, or `cursor`, derive the canonical Git repository root, and read that repository entry's `transcripts_directory`. If the current checkout is a linked Git worktree, they select a registered checkout that shares `git rev-parse --git-common-dir` instead of requiring a second `setup-dstack` pass. The selected entry repeats its `repository_root`; a mismatch fails closed. Setup discovers and confirms the path once per harness and repository.
 

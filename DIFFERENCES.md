@@ -1,6 +1,6 @@
 # dstack differences from pstack
 
-Durable contract for absorbing pstack. Pair this file with `AGENTS.md`. Do not infer live-host proof from static validation. Schema version stays 2 unless a compatibility boundary is requested.
+Durable contract for absorbing pstack. Pair this file with `AGENTS.md`. Do not infer live-host proof from static validation. Schema version stays 3 unless a compatibility boundary is requested.
 
 Local comparison tree: `/Users/kourgia/projects/pstack` (plugin 0.15.28, commit `d457567332aa6989e753ea289f30ea2bfbc80bc0`). Upstream: <https://github.com/cursor/plugins/tree/main/pstack>. `/Users/kourgia/projects/plugins/pstack` and sibling plugin folders are immutable inputs.
 
@@ -21,7 +21,7 @@ Renames, no aliases: `poteto-mode` → `dstack-mode`, `setup-pstack` → `setup-
 ## What must stay different
 
 - Names above. Personal config is only `~/.dstack/config.json`. No environment or command-line override.
-- Schema version 2. Host keys are exactly `codex`, `claude`, `cursor`.
+- Schema version 3, the compatibility boundary for removing `worker_binding`. A version 2 config fails with an instruction to delete or rewrite `~/.dstack/config.json` and rerun `setup-dstack`; there is no automatic migration. Host keys are exactly `codex`, `claude`, `cursor`.
 - Four profiles only: `fast-explorer`, `feature-worker`, `bug-worker`, `skeptical-reviewer`. Every profile is a concrete model **and** effort pair. `auto`, `inherit`, and `inherit-parent` are invalid. No parent-model inheritance and no automatic aliases.
 - Each host's profiles hold exactly what that host's native spawn call takes. A host entry is only `profiles`, `invalid_bindings`, and `repositories`; `invalid_bindings` entries use the same shape as that host's profiles.
   - `codex`, `claude`: `{"model": "<id>", "effort": "<effort>"}`, passed as separate spawn arguments (Claude `Agent` model and effort; Codex `spawn_agent` model and `reasoning_effort`). Neither value may contain brackets.
