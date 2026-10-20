@@ -23,7 +23,7 @@ TRANSCRIPT_CONFIG_SKILLS = {"dstack-mode", "recall", "reflect"}
 CANONICAL_HOST_IDS = {"codex", "claude", "cursor"}
 REQUIRED_SKILLS = {
     "architect", "arena", "benchmark-checklist", "blast-radius", "bro",
-    "comment-sicko", "control-cli", "control-ui", "correct", "create-formal-verification-skill", "create-verification-skill", "maintain-formal-verification-skill",
+    "comment-sicko", "control-ui", "correct", "create-formal-verification-skill", "create-verification-skill", "maintain-formal-verification-skill",
     "deslop", "dstack-help", "dstack-mode",
     "how", "in-your-own-words", "interrogate", "ketchup", "maintain-verification-skill", "no-comments",
     "recall", "reflect", "setup-dstack", "sharpen", "swarm", "tdd", "teach",

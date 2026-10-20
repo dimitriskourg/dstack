@@ -99,7 +99,7 @@ Close calls:
 
 Bundled alongside the retained skills:
 
-- `/deslop`, `control-cli`, and `control-ui` ship with dstack.
+- `/deslop` and `control-ui` ship with dstack.
 - Autonomous runs, autopilot, shipping, and worktree management are excluded. See [Supported scope](references/guide/06-supported-scope.md).
 
 ## Playbooks and principles

@@ -15,7 +15,7 @@ dstack is a curated local workflow pack for Codex, Claude Code, and Cursor. Upst
 
 ## Retained skills
 
-The skills below remain supported. This keep-set will shrink further; `figure-it-out`, `show-me-your-work`, and `automate-me` are already out.
+The skills below remain supported. This keep-set will shrink further; `figure-it-out`, `show-me-your-work`, `automate-me`, and `control-cli` are already out.
 
 ### Workflow and orchestration
 
@@ -43,7 +43,6 @@ The skills below remain supported. This keep-set will shrink further; `figure-it
 
 ### Verification and language guidance
 
-- `control-cli`
 - `control-ui`
 - `create-verification-skill`
 - `create-formal-verification-skill`
@@ -116,6 +115,7 @@ The skills below remain supported. This keep-set will shrink further; `figure-it
 - **figure-it-out.** Dropped from the everyday keep-set. Large or cross-cutting work matches a retained playbook, or is split into playbook-sized units.
 - **show-me-your-work.** Dropped from the everyday keep-set. There is no separate decision-trail skill.
 - **automate-me.** Dropped from the everyday keep-set. Personal mode generation is out of this pack.
+- **control-cli.** Dropped from the everyday keep-set. There is no bundled CLI/TUI harness; `control-ui` still covers browser, IDE, and Electron surfaces.
 - **Hillclimb.** Dropped from the everyday keep-set. One-off measured slowness stays on Perf issue.
 - **Runtime forensics.** Dropped from the everyday keep-set. Live-instrumentation diagnosis is out; Bug fix and Perf issue still own defects and measured slowness.
 - **Trace forensics.** Dropped from the everyday keep-set. Captured-artifact diagnosis is out; Bug fix and Perf issue still own defects and measured slowness.
