@@ -4,7 +4,7 @@ Read `PSTACK_SYNC.md` before changing skills or absorbing pstack. Absorb upstrea
 
 This project is under development. Keep schema version 3 unless the user explicitly asks for a compatibility boundary. Version 2 (the `worker_binding` era) is retired: configs on it fail with an instruction to delete or rewrite `~/.dstack/config.json` and rerun `setup-dstack`, with no automatic migration.
 
-- Treat `/Users/kourgia/projects/plugins/pstack` and sibling plugin folders as immutable inputs.
+- Never edit pstack. Its upstream is [`cursor/plugins`](https://github.com/cursor/plugins/tree/main/pstack), subpath `pstack/`; `scripts/pstack_sync.py` fetches it read-only.
 - Keep skills harness-neutral and close to pstack with the smallest justified edits.
 - Use this exact instruction whenever one skill invokes another: Call the Skill tool with `skill-name`.
 - Spawn subagents with the active harness's native subagent tool. If a nested spawn is denied, complete the pass in the current agent and disclose the degradation.

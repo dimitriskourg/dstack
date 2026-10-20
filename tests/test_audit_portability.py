@@ -414,7 +414,8 @@ class PortabilityAuditTests(unittest.TestCase):
     def sync_text(self, playbooks=None, skills=("figure-it-out",)):
         playbooks = sorted(AUDIT.EXCLUDED_DSTACK_PLAYBOOKS if playbooks is None else playbooks)
         return (
-            "Pinned: pstack 1.0.0, commit `{}`.\n\n## Excluded skills\n\n".format("a" * 40)
+            "Pinned: pstack 1.0.0, commit `{}`.\n\n".format("a" * 40)
+            + "Upstream: repository `cursor/plugins`, subpath `pstack/`.\n\n## Excluded skills\n\n"
             + "".join("- `{}`: out.\n".format(name) for name in skills)
             + "\n## Excluded playbooks\n\n"
             + "".join("- `{}`: out.\n".format(name) for name in playbooks)

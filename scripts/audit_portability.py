@@ -564,6 +564,8 @@ def check_sync_file(root: Path) -> List[Finding]:
     findings: List[Finding] = []
     if not SYNC_PIN.search(text):
         findings.append(Finding("PSTACK_SYNC.md", "must pin a pstack version and full commit"))
+    if not re.search(r"^Upstream: repository `cursor/plugins`, subpath `pstack/`", text, re.M):
+        findings.append(Finding("PSTACK_SYNC.md", "must record upstream repository cursor/plugins and subpath pstack/"))
     if sync_section(text, "Excluded playbooks") != EXCLUDED_DSTACK_PLAYBOOKS:
         findings.append(Finding("PSTACK_SYNC.md", "excluded playbooks disagree with the audit"))
     for skill in sorted(sync_section(text, "Excluded skills") & {path.name for path in (root / "skills").iterdir()}):

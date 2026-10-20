@@ -2,7 +2,7 @@
 
 Pinned: pstack 0.15.28, commit `d457567332aa6989e753ea289f30ea2bfbc80bc0`.
 
-Upstream: <https://github.com/cursor/plugins/tree/main/pstack>. `scripts/pstack_sync.py` reads the pin and the lists below.
+Upstream: repository `cursor/plugins`, subpath `pstack/` (<https://github.com/cursor/plugins/tree/main/pstack>). Never edit pstack. `scripts/pstack_sync.py` shallow-fetches the pinned and target commits itself and reads the pin and the lists below.
 
 ## Excluded skills
 
@@ -50,13 +50,19 @@ The script applies these on every absorb, to the pinned and target pstack text a
 4. Frontmatter: drop the Cursor-only `disable-model-invocation`, `paths`, `icon`, and `color` keys. dstack keeps its own frontmatter.
 5. Config: a skill keeps its one line "Call the Skill tool with `dstack-config`." where dstack placed it. A result that loses that line needs a decision.
 
-## Weekly procedure
+## Run it (weekly)
 
-1. Update the read-only pstack checkout: `git -C <pstack> fetch` and pick the target commit.
-2. Run `python3 scripts/pstack_sync.py <pstack> <commit> --dry-run` and read the report.
-3. Run it again without `--dry-run`. Clean changes land in the working tree.
-4. Exit 0 moves the pin. Run the `AGENTS.md` gates and commit.
-5. Exit 1 leaves the pin. Settle each needs-decision item with Dimitris, edit by hand, then rerun with `--decided` to move the pin.
+From the repository root, on a clean working tree:
+
+```bash
+python3 scripts/pstack_sync.py --dry-run           # report only; target is origin main
+python3 scripts/pstack_sync.py                     # write clean changes; moves the pin on exit 0
+python3 scripts/pstack_sync.py <commit> --decided  # after hand fixes; moves the pin to <commit>
+```
+
+The target may be a branch, tag, or commit; pass the same one to every run of a sync. `--pstack-dir <folder>` reads a local pstack folder instead of fetching, for offline use only.
+
+Exit 0: run the `AGENTS.md` gates and commit. Exit 1: hand the needs-decision report to an agent to propose a fix per item, get the owner's approval, apply the approved fixes, then rerun with `--decided` and the exact target commit from the report.
 
 ## Stop and ask
 

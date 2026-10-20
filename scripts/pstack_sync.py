@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Absorb upstream pstack changes into dstack's kept skills.
 
-Reads the pin and the exclusion lists from PSTACK_SYNC.md, diffs the pinned
-pstack commit against a target commit, and three-way merges each kept file
+Reads the upstream repository, the pin, and the exclusion lists from
+PSTACK_SYNC.md, shallow-fetches the pinned and target commits from that
+repository (or reads a local --pstack-dir offline), diffs them, and three-way merges each kept file
 after the mechanical rewrites. Anything matching a stop-and-ask rule is
 reported instead of written. Exit status 1 means a decision is pending.
 """
@@ -10,6 +11,7 @@ reported instead of written. Exit status 1 means a decision is pending.
 from __future__ import annotations
 
 import argparse
+import os
 import difflib
 import fnmatch
 import importlib.util
@@ -25,6 +27,8 @@ from typing import Iterable, List, Optional, Pattern, Sequence, Set, Tuple
 ROOT = Path(__file__).resolve().parents[1]
 SYNC_FILE = "PSTACK_SYNC.md"
 PIN = re.compile(r"^Pinned: pstack (?P<version>\S+), commit `(?P<commit>[0-9a-f]{7,40})`\.$", re.M)
+UPSTREAM = re.compile(r"^Upstream: repository `(?P<repo>[\w.-]+/[\w.-]+)`, subpath `(?P<subpath>[^`]*)`", re.M)
+DEFAULT_TARGET = "main"
 BULLET = re.compile(r"^- `([^`]+)`", re.M)
 MODE = "poteto-mode"
 SKILL_RENAMES = {"poteto-mode": "dstack-mode", "setup-pstack": "setup-dstack", "poteto-help": "dstack-help"}
@@ -64,6 +68,8 @@ HOST_PATTERNS: Tuple[Pattern[str], ...] = tuple(
 
 @dataclass
 class SyncConfig:
+    repository: str
+    subpath: str
     version: str
     commit: str
     excluded_skills: Set[str]
@@ -91,8 +97,8 @@ class Report:
         lines = [
             "# pstack sync report",
             "",
-            "- Pinned: {} (`{}`)".format(self.pinned_version, self.pinned[:7]),
-            "- Target: {} (`{}`)".format(self.target_version, self.target[:7]),
+            "- Pinned: {} (`{}`)".format(self.pinned_version, self.pinned),
+            "- Target: {} (`{}`)".format(self.target_version, self.target),
             "- Mode: {}".format("dry run" if self.dry_run else "write"),
             "- Result: {}".format(result),
         ]
@@ -112,7 +118,12 @@ def parse_sync(text: str) -> SyncConfig:
     pin = PIN.search(text)
     if not pin:
         raise SystemExit("{} has no 'Pinned: pstack <version>, commit `<sha>`.' line".format(SYNC_FILE))
+    upstream = UPSTREAM.search(text)
+    if not upstream:
+        raise SystemExit("{} has no 'Upstream: repository `<owner/repo>`, subpath `<dir>/`' line".format(SYNC_FILE))
     return SyncConfig(
+        repository=upstream.group("repo"),
+        subpath=upstream.group("subpath"),
         version=pin.group("version"),
         commit=pin.group("commit"),
         excluded_skills=set(section_bullets(text, "Excluded skills")),
@@ -152,18 +163,29 @@ def frontmatter_keys(text: str) -> Set[str]:
     return {line.split(":", 1)[0].strip() for line in lines if line and not line[0].isspace() and ":" in line}
 
 
-def strip_cursor_frontmatter(text: str) -> str:
+def take_cursor_frontmatter(text: str) -> Tuple[str, List[str]]:
     lines, rest = split_frontmatter(text)
     if not lines:
-        return text
+        return text, []
     kept: List[str] = []
+    taken: List[str] = []
     dropping = False
     for line in lines:
         if line and not line[0].isspace() and not line.startswith("- "):
             dropping = line.split(":", 1)[0].strip() in CURSOR_ONLY_FRONTMATTER
-        if not dropping:
-            kept.append(line)
-    return "---\n" + "\n".join(kept) + rest
+        (taken if dropping else kept).append(line)
+    return "---\n" + "\n".join(kept) + rest, taken
+
+
+def strip_cursor_frontmatter(text: str) -> str:
+    return take_cursor_frontmatter(text)[0]
+
+
+def restore_frontmatter(text: str, lines: List[str]) -> str:
+    current, rest = split_frontmatter(text)
+    if not lines or not current:
+        return text
+    return "---\n" + "\n".join(current + lines) + rest
 
 
 def rewrite(text: str, callable_skills: Set[str]) -> str:
@@ -210,29 +232,61 @@ def merge(ours: str, base: str, theirs: str) -> Tuple[str, bool]:
     return result.stdout, result.returncode > 0
 
 
+def run_git(*args: str, cwd: Optional[Path] = None) -> subprocess.CompletedProcess:
+    command = ["git", "-c", "core.fsmonitor=false"] + (["-C", str(cwd)] if cwd else []) + list(args)
+    return subprocess.run(command, capture_output=True)
+
+
+def default_cache_dir() -> Path:
+    base = os.environ.get("XDG_CACHE_HOME") or str(Path.home() / ".cache")
+    return Path(base) / "dstack" / "pstack-sync"
+
+
 class Upstream:
-    def __init__(self, checkout: Path):
-        checkout = checkout.resolve()
-        for candidate in (checkout, checkout / "pstack"):
+    """Read-only view of pstack at two commits, in a fetched cache or a local folder."""
+
+    def __init__(self, git_dir: Path, prefix: str, remote: Optional[str] = None):
+        self.dir = git_dir
+        self.prefix = prefix
+        self.remote = remote
+
+    @classmethod
+    def fetched(cls, url: str, subpath: str, cache_dir: Path) -> "Upstream":
+        repo = cache_dir / re.sub(r"[^A-Za-z0-9._-]+", "-", url).strip("-")
+        if not (repo / "HEAD").is_file():
+            repo.mkdir(parents=True, exist_ok=True)
+            result = run_git("init", "--bare", "-q", str(repo))
+            if result.returncode != 0:
+                raise SystemExit("git init failed: " + result.stderr.decode().strip())
+        return cls(repo, subpath, url)
+
+    @classmethod
+    def local(cls, folder: Path) -> "Upstream":
+        folder = folder.resolve()
+        for candidate in (folder, folder / "pstack"):
             if (candidate / "plugin.json").is_file() and (candidate / "skills").is_dir():
-                self.dir = candidate
-                break
-        else:
-            raise SystemExit("{} is not a pstack checkout (no plugin.json and skills/)".format(checkout))
-        self.prefix = self.git("rev-parse", "--show-prefix").strip()
+                prefix = run_git("rev-parse", "--show-prefix", cwd=candidate)
+                if prefix.returncode != 0:
+                    raise SystemExit("{} is not inside a git repository".format(candidate))
+                return cls(candidate, prefix.stdout.decode().strip())
+        raise SystemExit("{} is not a pstack folder (no plugin.json and skills/)".format(folder))
 
     def git(self, *args: str) -> str:
-        result = subprocess.run(["git", "-c", "core.fsmonitor=false", "-C", str(self.dir), *args], capture_output=True, text=True)
+        result = run_git(*args, cwd=self.dir)
         if result.returncode != 0:
-            raise SystemExit("git {} failed: {}".format(" ".join(args), result.stderr.strip()))
-        return result.stdout
+            raise SystemExit("git {} failed: {}".format(" ".join(args), result.stderr.decode().strip()))
+        return result.stdout.decode()
 
     def commit(self, ref: str) -> str:
-        return self.git("rev-parse", "--verify", ref + "^{commit}").strip()
+        if self.remote is None:
+            return self.git("rev-parse", "--verify", ref + "^{commit}").strip()
+        if re.fullmatch(r"[0-9a-f]{40}", ref) and run_git("cat-file", "-e", ref + "^{commit}", cwd=self.dir).returncode == 0:
+            return ref
+        self.git("fetch", "--quiet", "--depth=1", "--no-tags", self.remote, ref)
+        return self.git("rev-parse", "--verify", "FETCH_HEAD^{commit}").strip()
 
     def show(self, commit: str, path: str) -> Optional[str]:
-        result = subprocess.run(
-            ["git", "-c", "core.fsmonitor=false", "-C", str(self.dir), "show", "{}:{}{}".format(commit, self.prefix, path)], capture_output=True)
+        result = run_git("show", "{}:{}{}".format(commit, self.prefix, path), cwd=self.dir)
         if result.returncode != 0:
             return None
         return result.stdout.decode("utf-8")
@@ -243,21 +297,32 @@ class Upstream:
         return match.group(1) if match else "unknown"
 
     def changes(self, old: str, new: str) -> List[Tuple[str, str]]:
-        output = self.git("diff", "--relative", "--no-renames", "--name-status", old, new)
-        return [tuple(line.split("\t", 1)) for line in output.splitlines() if line]  # type: ignore[misc]
+        output = self.git("diff", "--no-renames", "--name-status", old, new)
+        changes: List[Tuple[str, str]] = []
+        for line in output.splitlines():
+            status, _, path = line.partition("\t")
+            if path.startswith(self.prefix):
+                changes.append((status, path[len(self.prefix):]))
+        return changes
 
 
 def sync(
-    checkout: Path,
-    target_ref: str,
+    target_ref: str = DEFAULT_TARGET,
     dstack_root: Path = ROOT,
+    pstack_dir: Optional[Path] = None,
+    repo_url: Optional[str] = None,
+    cache_dir: Optional[Path] = None,
     dry_run: bool = False,
     decided: bool = False,
 ) -> Report:
     sync_path = dstack_root / SYNC_FILE
     sync_text = sync_path.read_text(encoding="utf-8")
     config = parse_sync(sync_text)
-    upstream = Upstream(checkout)
+    if pstack_dir is not None:
+        upstream = Upstream.local(pstack_dir)
+    else:
+        url = repo_url or "https://github.com/{}.git".format(config.repository)
+        upstream = Upstream.fetched(url, config.subpath, cache_dir or default_cache_dir())
     pinned = upstream.commit(config.commit)
     target = upstream.commit(target_ref)
     report = Report(pinned, target, config.version, upstream.version(target), dry_run)
@@ -377,14 +442,20 @@ def sync(
 
 def main(argv: Sequence[str] = sys.argv[1:]) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("pstack", type=Path, help="pstack checkout (the plugin folder or the plugins repository)")
-    parser.add_argument("target", help="target pstack commit")
+    parser.add_argument("target", nargs="?", default=DEFAULT_TARGET,
+                        help="target branch, tag, or commit in the upstream repository (default: main)")
+    parser.add_argument("--pstack-dir", type=Path, help="offline only: read a local pstack folder instead of fetching")
     parser.add_argument("--dry-run", action="store_true", help="write nothing and leave the pin")
     parser.add_argument("--decided", action="store_true", help="every pending decision was settled by hand; move the pin")
     parser.add_argument("--report", type=Path, help="also write the report to this file")
+    parser.add_argument("--cache-dir", type=Path, help="fetch cache (default: ~/.cache/dstack/pstack-sync)")
+    parser.add_argument("--repo-url", help=argparse.SUPPRESS)
     parser.add_argument("--dstack-root", type=Path, default=ROOT, help=argparse.SUPPRESS)
     args = parser.parse_args(list(argv))
-    report = sync(args.pstack, args.target, args.dstack_root, args.dry_run, args.decided)
+    report = sync(
+        args.target, args.dstack_root, pstack_dir=args.pstack_dir, repo_url=args.repo_url,
+        cache_dir=args.cache_dir, dry_run=args.dry_run, decided=args.decided,
+    )
     text = report.render()
     sys.stdout.write(text)
     if args.report:

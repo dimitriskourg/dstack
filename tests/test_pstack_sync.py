@@ -23,6 +23,8 @@ SYNC_DOC = """# pstack sync
 
 Pinned: pstack 1.0.0, commit `{commit}`.
 
+Upstream: repository `cursor/plugins`, subpath `pstack/`.
+
 ## Excluded skills
 
 - `figure-it-out`: out.
@@ -57,7 +59,9 @@ class PstackSyncTests(unittest.TestCase):
             "pstack/skills/figure-it-out/SKILL.md": "---\nname: figure-it-out\ndescription: x\n---\n\n" + BODY,
             "pstack/skills/setup-pstack/SKILL.md": "---\nname: setup-pstack\ndescription: x\n---\n\n" + BODY,
         })
-        self.git("init", "-q")
+        self.cache = root / "cache"
+        self.git("init", "-q", "-b", "main")
+        self.git("config", "uploadpack.allowAnySHA1InWant", "true")
         self.pinned = self.commit("pinned")
         self.local = {
             "skills/how/SKILL.md": HOW.replace("disable-model-invocation: true\n", "").replace(
@@ -101,11 +105,14 @@ class PstackSyncTests(unittest.TestCase):
         return self.commit("target")
 
     def run_sync(self, target, **options):
-        return SYNC.sync(self.upstream, target, self.dstack, **options)
+        return SYNC.sync(target, self.dstack, repo_url=self.upstream.as_uri(), cache_dir=self.cache, **options)
 
     def main(self, *args):
         with contextlib.redirect_stdout(io.StringIO()):
-            return SYNC.main([str(self.upstream), *args, "--dstack-root", str(self.dstack)])
+            return SYNC.main([
+                *args, "--repo-url", self.upstream.as_uri(), "--cache-dir", str(self.cache),
+                "--dstack-root", str(self.dstack),
+            ])
 
     def read(self, path):
         return (self.dstack / path).read_text(encoding="utf-8")
@@ -250,6 +257,33 @@ class PstackSyncTests(unittest.TestCase):
         report = self.run_sync(target)
         self.assertEqual([("skills/how/SKILL.md", "already in dstack")], report.skipped)
 
+    def test_default_target_is_the_latest_main(self):
+        target = self.upstream_change({"pstack/skills/how/SKILL.md": HOW.replace("Line 9.", "Line nine.")})
+        report = SYNC.sync(dstack_root=self.dstack, repo_url=self.upstream.as_uri(), cache_dir=self.cache)
+        self.assertEqual(target, report.target)
+        self.assertEqual(target, self.pin())
+
+    def test_tag_target_and_shallow_cache(self):
+        self.upstream_change({"pstack/skills/how/SKILL.md": HOW.replace("Line 9.", "Line nine.")})
+        self.git("tag", "v2")
+        tagged = self.git("rev-parse", "v2")
+        self.upstream_change({"pstack/skills/how/SKILL.md": HOW.replace("Line 9.", "Line 9, later.")})
+        report = self.run_sync("v2", dry_run=True)
+        self.assertEqual(tagged, report.target)
+        caches = list(self.cache.iterdir())
+        self.assertEqual(1, len(caches))
+        self.assertTrue((caches[0] / "shallow").is_file())
+
+    def test_local_pstack_dir_reads_without_fetching(self):
+        target = self.upstream_change({"pstack/skills/how/SKILL.md": HOW.replace("Line 9.", "Line nine.")})
+        report = SYNC.sync(target, self.dstack, pstack_dir=self.upstream, dry_run=True)
+        self.assertEqual(["skills/how/SKILL.md"], [path for path, _ in report.applied])
+        self.assertFalse(self.cache.exists())
+
+    def test_sync_file_must_name_the_upstream_repository(self):
+        with self.assertRaises(SystemExit):
+            SYNC.parse_sync("Pinned: pstack 1.0.0, commit `{}`.\n".format("a" * 40))
+
     def test_repository_sync_file_parses(self):
         config = SYNC.parse_sync((SYNC.ROOT / "PSTACK_SYNC.md").read_text(encoding="utf-8"))
         self.assertEqual("0.15.28", config.version)
@@ -257,6 +291,7 @@ class PstackSyncTests(unittest.TestCase):
         self.assertIn("figure-it-out", config.excluded_skills)
         self.assertIn("shipping", config.excluded_playbooks)
         self.assertEqual({"setup-pstack"}, config.owned)
+        self.assertEqual(("cursor/plugins", "pstack/"), (config.repository, config.subpath))
 
 
 if __name__ == "__main__":
