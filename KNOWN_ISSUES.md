@@ -34,17 +34,16 @@ Static validation is not live-host proof. When an item changes runtime behavior,
 
 ### [ ] 16. Treat a fused or picker-capped spawn catalog as partial
 
-**Failure:** Some hosts expose spawn model identifiers that already include effort, or only the model-and-effort values currently selected in the picker. Treating that list as a complete catalog drops entitled pairs, stores a fused string as `model`, or writes a sibling `effort` field the host ignores.
+**Failure:** Some hosts expose spawn model identifiers that already include effort, or only the model-and-effort values currently selected in the picker. Treating that list as a complete catalog drops entitled pairs, stores a fused string as a pair host's `model`, or stores a `cursor` id the spawn call does not honor.
 
-**Affected areas:** `skills/setup-dstack/SKILL.md`, `worker_binding.pair_encoding`, generated worker definitions, invalid-binding reconciliation, tests, and Cursor live proof.
+**Affected areas:** `skills/setup-dstack/SKILL.md`, the per-host profile shape, invalid-binding reconciliation, tests, and Cursor live proof.
 
 **Done when:**
 
 - a fused or picker-capped spawn list is recorded as a partial catalog and cannot alone mark existing pairs invalid;
-- stored profiles remain a separate model identifier and effort;
-- `worker-definitions` hosts pin the pair with the encoding their definition schema accepts (`sibling-fields` or `model-brackets`);
-- a host whose spawn call already carries both halves still uses `spawn-arguments` and is not rewritten onto worker files;
-- live proof on a `model-brackets` host confirms a profile effort other than the current picker value still sticks.
+- `codex` and `claude` profiles remain a separate model identifier and effort;
+- `cursor` profiles store one `Task.model` id that carries effort, and no worker definition files are generated;
+- live proof on `cursor` confirms that a `Task.model` effort, in bracket form and as an effort-encoding slug, sticks when it differs from the current picker value. The static evidence is in `DIFFERENCES.md` under Cursor spawn evidence.
 
 ## P1: Parallel read-only fan-out
 
@@ -104,7 +103,7 @@ These static results do not prove skill discovery, nested invocation, model/effo
 ## Completion order
 
 1. Live nested invocation and Codex spawn-operation profile validation.
-2. Partial-catalog handling and pair encoding on worker-definition hosts.
+2. Partial-catalog handling and live proof of effort-carrying `cursor` spawn ids.
 3. Bounded fan-out across every retained caller.
 4. GitHub and GitLab request-flow proof.
 5. Installation discovery proof.

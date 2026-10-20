@@ -14,7 +14,7 @@ dstack ships 54 skills and 10 `dstack-mode` playbooks. The keep-set is closed.
 
 **Kept playbooks.** Authoring a skill, Babysit, Bug fix, Feature, Investigation, Opening a PR, Pause safely, Prototype, Refactoring, Session pickup.
 
-**Out (do not copy back).** Skills: `automate-me`, `benchmark-checklist`, `figure-it-out`, `make-bot-ui`, `show-me-your-work`. Playbooks: `autonomous-run`, `autopilot-full`, `autopilot-stack`, `eval`, `hillclimb`, `multi-phase-plan`, `orchestrate`, `perf-issue`, `runtime-forensics`, `shipping`, `trace-forensics`, `visual-parity`, `worktree-cleanup`. Also out: `control-cli` (no bundled CLI/TUI harness), Apple development cleanup (never a pstack 0.15.28 playbook), `watch-pr`, `bootstrap.ts`, Bun lockfile, `bugbot-triage.md`, `references/plan.md`, `check-plan.mjs`, `worktree-audit.sh`, `scripts/orch/`.
+**Out (do not copy back).** Skills: `automate-me`, `benchmark-checklist`, `figure-it-out`, `make-bot-ui`, `show-me-your-work`. Playbooks: `autonomous-run`, `autopilot-full`, `autopilot-stack`, `eval`, `hillclimb`, `multi-phase-plan`, `orchestrate`, `perf-issue`, `runtime-forensics`, `shipping`, `trace-forensics`, `visual-parity`, `worktree-cleanup`. Also out: `control-cli` (no bundled CLI/TUI harness), Apple development cleanup (never a pstack 0.15.28 playbook), `watch-pr`, `bootstrap.ts`, Bun lockfile, `bugbot-triage.md`, `references/plan.md`, `check-plan.mjs`, `worktree-audit.sh`, `scripts/orch/`, `worker_bindings.py`, and generated worker definitions.
 
 Renames, no aliases: `poteto-mode` → `dstack-mode`, `setup-pstack` → `setup-dstack`, `poteto-help` → `dstack-help`.
 
@@ -22,13 +22,16 @@ Renames, no aliases: `poteto-mode` → `dstack-mode`, `setup-pstack` → `setup-
 
 - Names above. Personal config is only `~/.dstack/config.json`. No environment or command-line override.
 - Schema version 2. Host keys are exactly `codex`, `claude`, `cursor`.
-- Four profiles only: `fast-explorer`, `feature-worker`, `bug-worker`, `skeptical-reviewer`. Every profile is a concrete model **and** effort pair. `auto` and `inherit-parent` are invalid. No parent-model inheritance and no automatic aliases.
-- Both halves of a pair reach the worker through that host entry's `worker_binding` (`spawn-arguments` or `worker-definitions`). A worker never inherits session effort. `dstack-<profile>` names exist only for `worker-definitions` hosts.
+- Four profiles only: `fast-explorer`, `feature-worker`, `bug-worker`, `skeptical-reviewer`. Every profile is a concrete model **and** effort pair. `auto`, `inherit`, and `inherit-parent` are invalid. No parent-model inheritance and no automatic aliases.
+- Each host's profiles hold exactly what that host's native spawn call takes. A host entry is only `profiles`, `invalid_bindings`, and `repositories`; `invalid_bindings` entries use the same shape as that host's profiles.
+  - `codex`, `claude`: `{"model": "<id>", "effort": "<effort>"}`, passed as separate spawn arguments (Claude `Agent` model and effort; Codex `spawn_agent` model and `reasoning_effort`). Neither value may contain brackets.
+  - `cursor`: `{"model": "<cursor-form id>"}` with no `effort` field, passed as `Task.model`. The id carries the effort: `id[effort=value]` (exactly one `effort` option) or a catalog slug that encodes effort.
+- No `worker_binding`, `definitions_directory`, `pair_encoding`, `spawn-arguments` / `worker-definitions` mechanisms, or generated `dstack-<profile>` worker files. A worker never inherits session effort.
 - Config-dependent skills read the file themselves, map the system-provided product identity to those three host ids, and stop with an explicit `setup-dstack` instruction on failure. Transcript consumers also select and verify `repositories[<canonical-repository-root>]`, or a registered checkout that shares `git rev-parse --git-common-dir`.
-- Full resolve text lives in `dstack-mode` and `setup-dstack`. Other config-dependent skills point at that section and keep one `worker_binding` sentence (transcript skills also keep the repository-resolve strings the audit requires).
+- Full resolve text lives in `dstack-mode` and `setup-dstack`. Other config-dependent skills point at that section and keep one spawn-shape sentence (transcript skills also keep the repository-resolve strings the audit requires).
 - Spawn uses the active harness's native subagent tool. A denied nested spawn collapses onto the current agent and is disclosed. The chat that receives `/dstack-mode` runs the playbook and never spawns a subagent to run the playbook itself.
 - Skill-to-skill instruction is exact: Call the Skill tool with `skill-name`.
-- No adapters, capability files, provider-specific rules, `poteto-agent`, `Task` tool, or `subagent_type`.
+- No adapters, capability files, provider-specific rules, `poteto-agent`, or `subagent_type`. Skills say "native spawn call"; only this file names `Task`, `Agent`, or `spawn_agent`.
 - Bundled as ordinary skills so the workflow is complete: `control-ui`, `deslop`, `comment-sicko`. `no-comments` tells a native subagent to Call the Skill tool with `comment-sicko`.
 - Installer is `install.py` / `uninstall.py`, not a plugin package. No `plugin.json`, marketplace install, or generated-tree adapters.
 - Opening a PR is explicit only. GitHub uses `gh`, GitLab uses `glab`. Babysit is a separate explicit follow-up and stops at merge-ready. Repository writers serialize in the active checkout. No Graphite, Origin, worktrees, built-in PR-tool rule, `/loop`, or `/visualize`.
@@ -46,6 +49,14 @@ For keep-set skills and playbooks, copy pstack and apply only these standard tok
 Keep only the harness-neutral substitutions listed under **What must stay different**. Do not add paraphrase around those substitutions. Do not restore dropped skills or playbooks in order to make a retained file match.
 
 Do not restore `disable-model-invocation` on Skill-tool callees (`how`, `why`, `unslop`, `technical-writing`, `typescript-best-practices`, and any other skill a playbook or skill calls through the Skill tool).
+
+## Cursor spawn evidence (static)
+
+Recorded 2026-10-20 from documentation and an inspected tool schema. This is static evidence, not live-host proof.
+
+- [Cursor subagents docs](https://cursor.com/docs/subagents), "Model parameters": square-bracket `id=value` options (`claude-opus-5[effort=high]`, `composer-2.5[fast=false]`) are documented for the custom-subagent frontmatter `model` field. The same page says the parent "can name a model when it launches a subagent" but says nothing about bracket options on that launch-time model.
+- `Task` tool schema in a Cursor cloud-agent session: `model` is an optional string that "must resolve to one of the available model slugs"; an invalid slug fails the call with the allowed list; omitting it uses the parent model, and the description recommends `inherit`. The listed slugs encode effort as a suffix (for example `claude-opus-5-5-high`, `gpt-5.6-sol-xhigh`); some, such as `composer-2.5`, carry none.
+- Result: a listed effort-encoding slug is the documented `Task.model` form. Bracket form on `Task.model` is neither documented nor ruled out. The config accepts both, and `setup-dstack` stores a listed slug when the spawn schema requires listed slugs. `inherit` is rejected as a profile value. A live spawn that proves a bracket-form effort sticks is still open (`KNOWN_ISSUES.md` item 16).
 
 ## How to absorb a new pstack version
 
