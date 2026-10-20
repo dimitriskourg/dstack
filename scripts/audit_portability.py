@@ -45,14 +45,14 @@ REQUIRED_SKILLS = {
     "principle-type-system-discipline",
 }
 REQUIRED_DSTACK_PLAYBOOKS = {
-    "apple-dev-cleanup", "authoring-a-skill", "babysit", "bug-fix", "eval",
+    "authoring-a-skill", "babysit", "bug-fix", "eval",
     "feature", "investigation", "multi-phase-plan", "opening-a-pr",
-    "pause-safely", "perf-issue", "prototype", "refactoring", "runtime-forensics",
-    "session-pickup", "trace-forensics", "visual-parity",
+    "pause-safely", "perf-issue", "prototype", "refactoring",
+    "session-pickup",
 }
 EXCLUDED_DSTACK_PLAYBOOKS = {
-    "autonomous-run", "autopilot-full", "autopilot-stack", "hillclimb", "shipping",
-    "worktree-cleanup",
+    "apple-dev-cleanup", "autonomous-run", "autopilot-full", "autopilot-stack", "hillclimb",
+    "runtime-forensics", "shipping", "trace-forensics", "visual-parity", "worktree-cleanup",
 }
 LEAKAGE_PATTERNS: Tuple[Tuple[str, re.Pattern[str]], ...] = (
     ("provider name", re.compile(r"\b(?:Cursor|Codex|Claude Code)\b", re.I)),

@@ -1,6 +1,6 @@
 # Route work through `/dstack-mode`
 
-`/dstack-mode` is the front door. You give it a goal, it matches one of seventeen playbooks, copies that playbook's steps into the todo list, and calls the other skills as the steps need them. In this page you learn what a good prompt looks like, and how little of one you actually need.
+`/dstack-mode` is the front door. You give it a goal, it matches one of thirteen playbooks, copies that playbook's steps into the todo list, and calls the other skills as the steps need them. In this page you learn what a good prompt looks like, and how little of one you actually need.
 
 ## What happens to your prompt
 
@@ -23,7 +23,7 @@ flowchart TD
     J --> K
 ```
 
-The diagram shows the common routes. There are also playbooks for diagnosing runtime symptoms and captured traces, prototypes, visual parity, authoring and evaluating skills, babysitting a PR or merge request to merge-ready, explicitly opening a request, session pickup, pausing safely, multi-phase plans, and Apple development cleanup. The [playbook directory](../../../dstack-mode/playbooks/) has the full set.
+The diagram shows the common routes. There are also playbooks for prototypes, authoring and evaluating skills, babysitting a PR or merge request to merge-ready, explicitly opening a request, session pickup, pausing safely, and multi-phase plans. The [playbook directory](../../../dstack-mode/playbooks/) has the full set.
 
 ## Say the goal, not the ceremony
 

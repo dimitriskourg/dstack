@@ -130,19 +130,15 @@ A large or cross-cutting effort still matches a playbook below, often Feature, R
 - **Investigation.** Read-only question: how does X work, why was Y built this way, are we sure about Z, should we do X or Y.
 - **Bug fix.** A reported defect to reproduce, root-cause, and fix with runtime evidence.
 - **Perf issue.** A measured slowness to trace and improve against a baseline.
-- **Runtime forensics.** Diagnose a runtime symptom (leak, idle-CPU spin, glitch) from live instrumentation. The deliverable is a diagnosis, not a fix.
-- **Trace forensics.** Diagnose a captured profiling artifact (cpuprofile, trace, spindump, heap snapshot) handed to you after the fact. The deliverable is a diagnosis, not a fix.
 - **Feature.** New or changed behavior, built from a named data shape.
 - **Refactoring.** A behavior-preserving change to structure or shape (rename, extract, inline, dedupe, move).
 - **Prototype.** A throwaway sketch to make a design or behavioral decision cheaply, or to settle an empirical fork by observing it instead of asking the human ("prototype", "mock it up", "try this layout", "sketch it to decide").
-- **Visual parity.** Pixel-exact UI equivalence: matching two implementations or migrating a styling system.
 - **Authoring or modifying a skill.** Writing or editing a SKILL.md. File: `playbooks/authoring-a-skill.md`.
 - **Eval.** Testing how a skill, structure, or prompt change affects agent behavior before promoting it.
 - **Babysit.** Driving a pull request, merge request, or explicit ordered set to merge-ready: conflicts, review threads, and CI.
 - **Session pickup.** Resuming or taking over prior work from the current repository's active-harness transcript, an explicit transcript export, or a branch.
 - **Pause safely.** Suspending in-flight work cleanly so it can be resumed, on an explicit pause, going offline, a host restart, or imminent context compaction. The complement to Session pickup.
 - **Multi-phase or multi-request plan.** Work that spans phases or dependent pull or merge requests. File: `playbooks/multi-phase-plan.md`.
-- **Apple development cleanup.** Explicit machine-wide cleanup of stale simulators, runtimes, DerivedData, and device-support files ("clean up Xcode", "delete old simulators", "free Apple development disk space"). File: `playbooks/apple-dev-cleanup.md`.
 - **Opening a PR.** Explicitly packaging and publishing already verified local work ("open a PR", "create a merge request"). It is never an automatic final step of another playbook.
 
 ## Mode lifetime

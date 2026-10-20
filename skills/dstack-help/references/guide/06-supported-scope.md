@@ -93,12 +93,9 @@ The skills below remain supported. This keep-set will shrink further; `figure-it
 - Investigation
 - Bug fix
 - Performance issue
-- Runtime forensics
-- Trace forensics
 - Feature
 - Refactoring
 - Prototype
-- Visual parity
 - Authoring or modifying a skill
 - Eval
 - Babysit
@@ -106,9 +103,6 @@ The skills below remain supported. This keep-set will shrink further; `figure-it
 - Pause safely
 - Multi-phase or multi-request plan
 - Opening a PR
-- Apple development cleanup
-
-Apple development cleanup is a dstack-specific local addition. It is explicit and machine-scoped, with an audit and approval gate before deleting simulator, runtime, Xcode build, or device-support state.
 
 ## Intentional exclusions
 
@@ -123,6 +117,10 @@ Apple development cleanup is a dstack-specific local addition. It is explicit an
 - **show-me-your-work.** Dropped from the everyday keep-set. There is no separate decision-trail skill.
 - **automate-me.** Dropped from the everyday keep-set. Personal mode generation is out of this pack.
 - **Hillclimb.** Dropped from the everyday keep-set. One-off measured slowness stays on Perf issue.
+- **Runtime forensics.** Dropped from the everyday keep-set. Live-instrumentation diagnosis is out; Bug fix and Perf issue still own defects and measured slowness.
+- **Trace forensics.** Dropped from the everyday keep-set. Captured-artifact diagnosis is out; Bug fix and Perf issue still own defects and measured slowness.
+- **Visual parity.** Dropped from the everyday keep-set. Pixel-exact matching is out; Prototype and `control-ui` still cover driving a UI.
+- **Apple development cleanup.** Dropped from the everyday keep-set. Machine-wide Apple simulator and runtime cleanup is out.
 
 Git worktrees remain a possible future capability for creation, isolation, and cleanup. Add those only when real team usage justifies a complete contract across Codex, Claude Code, and Cursor. Recognizing an existing linked worktree as the same registered repository is already in scope.
 
