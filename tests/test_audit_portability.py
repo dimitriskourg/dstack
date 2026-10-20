@@ -398,13 +398,47 @@ class PortabilityAuditTests(unittest.TestCase):
             root = Path(temp)
             (root / "README.md").write_text("# Title\n\nSee [later](./guide.md#missing).\n", encoding="utf-8")
             (root / "guide.md").write_text("# Guide\n", encoding="utf-8")
-            (root / "docs" / "guide").mkdir(parents=True)
-            (root / "docs" / "guide" / "page.md").write_text(
+            (root / "skills" / "dstack-help").mkdir(parents=True)
+            (root / "skills" / "dstack-help" / "page.md").write_text(
                 "See [later](../../guide.md#missing).\n",
                 encoding="utf-8",
             )
             messages = [finding.message for finding in AUDIT.check_docs_vs_tree(root, set(), set())]
             self.assertTrue(any("has no heading with that anchor" in message for message in messages))
+
+    def make_sync_root(self, root: Path, sync_text: str) -> Path:
+        (root / "skills" / "how").mkdir(parents=True)
+        (root / "PSTACK_SYNC.md").write_text(sync_text, encoding="utf-8")
+        return root
+
+    def sync_text(self, playbooks=None, skills=("figure-it-out",)):
+        playbooks = sorted(AUDIT.EXCLUDED_DSTACK_PLAYBOOKS if playbooks is None else playbooks)
+        return (
+            "Pinned: pstack 1.0.0, commit `{}`.\n\n## Excluded skills\n\n".format("a" * 40)
+            + "".join("- `{}`: out.\n".format(name) for name in skills)
+            + "\n## Excluded playbooks\n\n"
+            + "".join("- `{}`: out.\n".format(name) for name in playbooks)
+        )
+
+    def test_sync_file_contract_passes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = self.make_sync_root(Path(temp), self.sync_text())
+            self.assertEqual([], AUDIT.check_sync_file(root))
+
+    def test_sync_file_must_match_audit_and_tree(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = self.make_sync_root(Path(temp), self.sync_text(playbooks={"eval"}, skills=("how",)))
+            (root / "KNOWN_ISSUES.md").write_text("old\n", encoding="utf-8")
+            messages = [finding.message for finding in AUDIT.check_sync_file(root)]
+            self.assertIn("excluded playbooks disagree with the audit", messages)
+            self.assertIn("excluded pstack skill must stay absent", messages)
+            self.assertTrue(any(message.startswith("retired document must stay absent") for message in messages))
+
+    def test_missing_sync_file_fails(self):
+        with tempfile.TemporaryDirectory() as temp:
+            (Path(temp) / "skills").mkdir()
+            messages = [finding.message for finding in AUDIT.check_sync_file(Path(temp))]
+            self.assertEqual(["missing pstack sync contract"], messages)
 
     def test_missing_sibling_skill_fails(self):
         with tempfile.TemporaryDirectory() as temp:

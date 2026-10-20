@@ -59,6 +59,8 @@ REQUIRED_DSTACK_PLAYBOOKS = {
     "pause-safely", "prototype", "refactoring",
     "session-pickup",
 }
+REMOVED_DOCS = ("DIFFERENCES.md", "KNOWN_ISSUES.md", "docs")
+SYNC_PIN = re.compile(r"^Pinned: pstack \S+, commit `[0-9a-f]{40}`\.$", re.M)
 EXCLUDED_DSTACK_PLAYBOOKS = {
     "autonomous-run", "autopilot-full", "autopilot-stack", "eval",
     "hillclimb", "multi-phase-plan", "orchestrate", "perf-issue", "runtime-forensics", "shipping",
@@ -169,9 +171,6 @@ def documentation_paths(root: Path) -> List[Path]:
     readme = root / "README.md"
     if readme.is_file():
         paths.append(readme)
-    guide = root / "docs" / "guide"
-    if guide.is_dir():
-        paths.extend(sorted(path for path in guide.rglob("*.md") if path.is_file()))
     help_root = root / "skills" / "dstack-help"
     if help_root.is_dir():
         paths.extend(sorted(path for path in help_root.rglob("*.md") if path.is_file()))
@@ -552,8 +551,31 @@ def schema_findings(value: Dict) -> List[str]:
     return messages
 
 
-def check_structure() -> List[Finding]:
+def sync_section(text: str, heading: str) -> Set[str]:
+    match = re.search(r"^## {}\n(.*?)(?=^## |\Z)".format(re.escape(heading)), text, re.M | re.S)
+    return set(re.findall(r"^- `([^`]+)`", match.group(1), re.M)) if match else set()
+
+
+def check_sync_file(root: Path) -> List[Finding]:
+    path = root / "PSTACK_SYNC.md"
+    if not path.is_file():
+        return [Finding("PSTACK_SYNC.md", "missing pstack sync contract")]
+    text = path.read_text(encoding="utf-8")
     findings: List[Finding] = []
+    if not SYNC_PIN.search(text):
+        findings.append(Finding("PSTACK_SYNC.md", "must pin a pstack version and full commit"))
+    if sync_section(text, "Excluded playbooks") != EXCLUDED_DSTACK_PLAYBOOKS:
+        findings.append(Finding("PSTACK_SYNC.md", "excluded playbooks disagree with the audit"))
+    for skill in sorted(sync_section(text, "Excluded skills") & {path.name for path in (root / "skills").iterdir()}):
+        findings.append(Finding("skills/" + skill, "excluded pstack skill must stay absent"))
+    for removed in REMOVED_DOCS:
+        if (root / removed).exists():
+            findings.append(Finding(removed, "retired document must stay absent; PSTACK_SYNC.md, README.md, and dstack-help replace it"))
+    return findings
+
+
+def check_structure() -> List[Finding]:
+    findings: List[Finding] = check_sync_file(ROOT)
     for removed in ("adapters", "contracts"):
         if (ROOT / removed).exists() and any((ROOT / removed).iterdir()):
             findings.append(Finding(removed, "removed portability layer must stay absent"))

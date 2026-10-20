@@ -127,5 +127,4 @@ Git worktrees remain a possible future capability for creation, isolation, and c
 ## Document ownership
 
 - This file defines what dstack supports.
-- [`DIFFERENCES.md`](https://github.com/dimitriskourg/dstack/blob/main/DIFFERENCES.md) records how that scope and retained source differ from upstream.
-- [`KNOWN_ISSUES.md`](https://github.com/dimitriskourg/dstack/blob/main/KNOWN_ISSUES.md) tracks unresolved defects inside this supported scope. Excluded features are not backlog items.
+- [`PSTACK_SYNC.md`](https://github.com/dimitriskourg/dstack/blob/main/PSTACK_SYNC.md) records the pinned upstream version, the exclusions, and how upstream changes are absorbed.

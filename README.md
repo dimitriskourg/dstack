@@ -1,97 +1,30 @@
 # dstack
 
-dstack is a curated local adaptation of [pstack](https://github.com/cursor/plugins/tree/main/pstack) for Codex, Claude Code, and Cursor. It keeps retained skills and playbooks close to their source while excluding workflows that do not fit the team's local engineering practice.
+dstack is a local adaptation of [pstack](https://github.com/cursor/plugins/tree/main/pstack) for Codex, Claude Code, and Cursor. It keeps a closed set of pstack skills and `dstack-mode` playbooks close to upstream, with harness-neutral wording: one skill calls another with "Call the Skill tool with `skill-name`.", and helpers spawn through the active harness's native subagent tool. [`PSTACK_SYNC.md`](PSTACK_SYNC.md) lists what is excluded and how weekly upstream changes are absorbed.
 
-The project is under active development. Configuration schema version 3 is intentionally stable while the pre-release shape changes. A version 2 config from before the per-host profile shapes is not migrated: delete or rewrite `~/.dstack/config.json`, then rerun `setup-dstack`.
-
-## What ships
-
-- All currently selected pstack-derived skills, renamed only where required: `poteto-mode` becomes `dstack-mode` and `setup-pstack` becomes `setup-dstack`.
-- `ketchup`, a human-only recap of what changed in this chat since the last user message, in plain words and small visuals, with every waiting item listed and decidable from the reply alone.
-- `in-your-own-words`, a human-only playback of the user's goals and the problem before work starts.
-- `sharpen`, a human-only pass that aims a task higher before starting: more expert, more outcome-focused, not overspecified.
-- `create-formal-verification-skill`, a human-only generator for a project-local skill that formally verifies one property tests rarely reach.
-- `maintain-formal-verification-skill`, a human-only upkeep loop that brings that check back in line after the covered code changes, and says whether a failure is drift or a bug.
-- A curated 10-playbook `dstack-mode` focused on ordinary local engineering work.
-- The external `control-ui` and `deslop` skills referenced by pstack.
-- Host-neutral subagent instructions for harnesses that provide native subagent spawning.
-- Four configurable profiles: `fast-explorer`, `feature-worker`, `bug-worker`, and `skeptical-reviewer`.
-- Concrete model-and-effort bindings only; there is no parent-model or automatic fallback profile value.
-- Transcript-backed workflows scoped to the canonical harness id and current repository root.
-- A collision-safe installer and an atomic setup helper.
-
-dstack has no capability matrix or provider adapter layer. Skills call other skills with this instruction:
-
-```text
-Call the Skill tool with `skill-name`.
-```
-
-`/dstack-mode` runs in the chat that receives it. That chat owns the playbook, the todo list, and every subagent spawn. Do not spawn a subagent to run the playbook itself. Skills spawn helpers through the active harness's native subagent tool. If a nested spawn is denied, the current agent owns that work directly and reports the loss of independence or parallelism.
-
-Read-only exploration, review, and independent artifacts outside the repository may fan out in bounded waves. Repository writers are serialized. Dstack does not create or manage worktrees, promise unattended persistence, automate merges, or require Graphite. Opening a pull request or merge request is explicit only.
-
-## Layout
-
-```text
-skills/                 Portable skill packages
-schemas/config.schema.json
-install.py              Installer and managed update path
-uninstall.py            Ownership-safe skills or full removal path
-scripts/audit_portability.py
-tests/
-DIFFERENCES.md          Exact differences from pstack
-```
-
-Personal configuration lives at the fixed path `~/.dstack/config.json`. There is no environment or command-line override. Skills install canonically under `~/.agents/skills`. Claude Code requires the managed compatibility links under `~/.claude/skills`; Codex and Cursor use the canonical installation.
+The project is under active development. Configuration is schema version 3; a version 2 file is not migrated, so delete or rewrite `~/.dstack/config.json` and rerun `setup-dstack`.
 
 ## Install
 
-Preview first:
+Skills install canonically under `~/.agents/skills`. Preview, then install:
 
 ```bash
 python3 install.py --dry-run
-```
-
-Install:
-
-```bash
 python3 install.py
 ```
 
-For Claude Code use, install the required managed compatibility links:
+Claude Code also needs the managed compatibility links under `~/.claude/skills`:
 
 ```bash
 python3 install.py --with-claude-links
 ```
 
-Then explicitly invoke `setup-dstack` in the harness where you will use dstack. Setup maps the product identity to `codex`, `claude`, or `cursor`, discovers the current model catalog when possible, asks you to confirm the four profiles, stores each profile in the shape that harness's spawn call takes, and saves the transcript directory beneath the canonical active-repository root.
+To remove dstack, run `python3 uninstall.py --skills-only` to keep `~/.dstack`, or `python3 uninstall.py --all` to remove it too. Add `--dry-run` to preview. Unrelated skills are preserved.
 
-Any skill that needs profiles or transcripts calls the `dstack-config` skill, which alone reads that file. It maps the system-provided product identity to the fixed host id `codex`, `claude`, or `cursor`; aliases and host overrides are rejected. For transcripts it also derives the canonical Git repository root and selects that repository entry, or a registered checkout that shares its `git` common directory. If the file is missing or invalid, either identity is unavailable, or a required entry is absent, it stops and tells you to run `setup-dstack`; it never falls back to a different Git repository or silently inherits an unconfigured model or session effort. On `codex` and `claude`, a profile is a `model` and `effort` passed as separate spawn arguments. On `cursor`, a profile is one `model` id that carries the effort, passed as the spawn model. Setup writes no worker definition files.
+## Set up
 
-## Uninstall
+Invoke `setup-dstack` explicitly in each harness and repository where you use dstack. It maps the harness to `codex`, `claude`, or `cursor`, asks you to confirm four profiles (`fast-explorer`, `feature-worker`, `bug-worker`, `skeptical-reviewer`), each a concrete model and effort, and records this repository's transcript directory in `~/.dstack/config.json`. There is no environment or command-line override for that path.
 
-Remove only dstack skill packages and Claude compatibility links while preserving `~/.dstack`:
+Skills read the file only through the `dstack-config` skill, which stops and asks you to rerun `setup-dstack` when anything is missing.
 
-```bash
-python3 uninstall.py --skills-only
-```
-
-Remove those skills plus the complete `~/.dstack` directory:
-
-```bash
-python3 uninstall.py --all
-```
-
-Add `--dry-run` to either command to preview every removal. The uninstaller checks all discovered artifacts before deleting anything and stops if a same-named skill or Claude entry cannot be verified as dstack-owned. Unrelated skills are preserved.
-
-## Validate
-
-```bash
-python3 scripts/audit_portability.py
-python3 -m unittest discover -s tests -v
-python3 -m json.tool schemas/config.schema.json >/dev/null
-```
-
-Validate every changed skill with Skill Creator's `quick_validate.py`. These are static checks. They do not prove browser, native, live-host, or multi-agent behavior.
-
-See [the guide](docs/guide/README.md), [Supported scope](docs/guide/06-supported-scope.md), and [DIFFERENCES.md](DIFFERENCES.md) for usage and upstream alignment.
+Then start a task with `/dstack-mode`, a goal, and a check that can pass or fail. `/dstack-help` explains the rest of the pack.
