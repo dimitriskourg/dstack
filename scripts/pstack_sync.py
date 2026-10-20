@@ -394,7 +394,9 @@ def sync(
         else:
             report.decisions.append((report_path, "dstack has no copy of this upstream file"))
             continue
-        merged, conflict = merge(ours, base, theirs)
+        ours_body, ours_frontmatter = take_cursor_frontmatter(ours)
+        merged, conflict = merge(ours_body, base, theirs)
+        merged = restore_frontmatter(merged, ours_frontmatter)
         if not conflict and merged == ours:
             report.skipped.append((report_path, "already in dstack"))
             continue

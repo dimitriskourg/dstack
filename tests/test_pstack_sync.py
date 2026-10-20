@@ -200,6 +200,15 @@ class PstackSyncTests(unittest.TestCase):
         self.assertIn("new frontmatter key(s): metadata", report.decisions[0][1])
         self.assertNotIn("paths", report.decisions[0][1])
 
+    def test_description_change_next_to_kept_dstack_frontmatter_applies(self):
+        local = self.local["skills/how/SKILL.md"].replace(
+            "description: Explain code.\n", "description: Explain code.\ndisable-model-invocation: true\n")
+        (self.dstack / "skills/how/SKILL.md").write_text(local, encoding="utf-8")
+        target = self.upstream_change({"pstack/skills/how/SKILL.md": HOW.replace("Explain code.", "Explain any code.")})
+        report = self.run_sync(target)
+        self.assertEqual([], report.decisions)
+        self.assertEqual(local.replace("Explain code.", "Explain any code."), self.read("skills/how/SKILL.md"))
+
     def test_skill_directive_becomes_the_exact_phrase(self):
         target = self.upstream_change({
             "pstack/skills/how/SKILL.md": HOW.replace("Line 9.", "Line 9. Run the **poteto-mode** skill."),
