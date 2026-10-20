@@ -118,12 +118,14 @@ class Report:
             if not items:
                 lines.append("None.")
             for path, reason in items:
+                if lines[-1].startswith("  `"):
+                    lines.append("")
                 lines.append("- `{}`: {}".format(path, reason))
                 for label, language, body in self.details.get(path, []):
                     fence = "`" * max(3, longest_backtick_run(body) + 1)
                     lines += ["", "  " + label + ":", "", "  " + fence + language]
                     lines += [("  " + line).rstrip() for line in body.splitlines()]
-                    lines += ["  " + fence, ""]
+                    lines.append("  " + fence)
         lines += ["", "## Pin", "", self.pin_note]
         return "\n".join(lines) + "\n"
 
