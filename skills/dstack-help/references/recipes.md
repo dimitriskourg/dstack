@@ -5,7 +5,7 @@ Swap in the real paths, skills, and done checks. Informal wording works.
 ## Understand
 
 - `/dstack-mode read <thread>. restate the underlying issue in your own words, in plain english.`
-- `/sharpen <your task>`
+- `/sharpen <the prompt you're about to send>`
 - `/dstack-mode investigate why <symptom>. give me what we know, what data you used, and your best hypotheses. don't change any code yet.`
 - `use /how to understand <subsystem>. then use /why to find out why it broke recently.`
 - `/recall my work on <topic> from last week, then read <issue>.`
@@ -20,7 +20,6 @@ Swap in the real paths, skills, and done checks. Informal wording works.
 - Bug with a cheap test: `/dstack-mode repro <bug> first. if there's a cheap test path, /tdd it. then fix and rerun.`
 - Feature: `/dstack-mode add <behavior>. <current output> stays byte-identical. verify both.`
 - Refactor: `/dstack-mode move <code> into one module, zero behavior change. record the current output first and prove it's unchanged after.`
-- Perf: `/dstack-mode <operation> takes <time> on <fixture>. trace it, fix the measured cause, show me before and after.`
 
 ## Design and plan
 
@@ -28,8 +27,6 @@ Swap in the real paths, skills, and done checks. Informal wording works.
 - `/dstack-mode we need <feature>. /architect it first, and answer open questions with prototypes. let me review before proceeding.`
 - `/dstack-mode write a tutorial for how i would use <new package> first. then /teach me why it beats the current one.`
 - `ask /arena for a second opinion on this thread and our approach.`
-- `/dstack-mode turn this design into a plan. small verifiable PRs, each with its own verification steps.`
-- `/dstack-mode plan the migration of <library> to <target>. small verifiable PRs. the result must match the original exactly, bugs included.`
 
 ## Review and ship
 
@@ -42,7 +39,6 @@ Swap in the real paths, skills, and done checks. Informal wording works.
 ## Away and back
 
 - `/dstack-mode im going to bed. <goal>. done means <checks>. keep a decision log. don't ask me before committing. if you're truly stuck after a few hours, stop and write up why.`
-- `/show-me-your-work catch me up on what you did last night.` Read its Attention section first.
 - `/ketchup` catches you up on this chat since your last message and lists every call that waits on you.
 - `/reflect capture what we learned so the next run doesn't repeat it.` Approve only edits that change a future decision.
 - `/bro` restates the last reply in plain words.

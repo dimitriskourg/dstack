@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import importlib.util
+import json
 import sys
 import tempfile
 import unittest
@@ -57,82 +58,97 @@ class PortabilityAuditTests(unittest.TestCase):
             self.assertIn("provider name", messages)
             self.assertIn("provider helper schema", messages)
 
-    def test_config_dependent_skill_requires_fixed_fail_closed_contract(self):
-        with tempfile.TemporaryDirectory() as temp:
-            skill = self.make_skill(Path(temp), "Use the configured profiles.\n", name="arena")
-            messages = self.messages(skill)
-            self.assertIn("config-dependent skill must name the fixed config path", messages)
-            self.assertIn("config-dependent skill must select the active harness entry directly", messages)
-            self.assertIn("config-dependent skill must derive a canonical harness id", messages)
-            self.assertIn("config-dependent skill must reject harness aliases", messages)
-            self.assertIn("config-dependent skill must fail closed with setup-dstack guidance", messages)
-            self.assertIn("profile-consuming skill must require a concrete model and effort pair", messages)
-            self.assertIn("profile-consuming skill must name the worker_binding mechanisms", messages)
-            self.assertIn("profile-consuming skill must forbid inheriting session effort", messages)
+    CONFIG_BODY = (
+        "Map the system-provided product identity to `codex`, `claude`, or `cursor`; never invent an alias. "
+        "Read `~/.dstack/config.json` and select `hosts[<active-harness>]` and `repositories[<canonical-repository-root>]`, "
+        "and verify its `repository_root` exactly matches; if that key is absent, use `git rev-parse --git-common-dir`. "
+        "Run `configure.py resolve`; on failure, stop and name the exact problem. "
+        "Tell the user to invoke `setup-dstack` explicitly. Require a concrete model and effort pair. "
+        "Pass it as the native spawn call takes it: for `codex` and `claude`, `model` and `effort` as "
+        "separate spawn arguments; for `cursor`, a `model` that already carries effort. Never inherit session effort. "
+        "For transcripts, return `transcripts_directory`.\n"
+    )
 
-    def test_config_dependent_skill_contract_passes(self):
+    def test_config_skill_requires_fixed_fail_closed_contract(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(Path(temp), "Use the configured profiles.\n", name="dstack-config")
+            messages = self.messages(skill)
+            for message in (
+                "config skill must name the fixed config path",
+                "config skill must select the active harness entry directly",
+                "config skill must derive a canonical harness id",
+                "config skill must reject harness aliases",
+                "config skill must select the canonical repository entry",
+                "config skill must verify the repository entry identity",
+                "config skill must accept linked worktrees via git common directory",
+                "config skill must resolve the repository entry with configure.py resolve",
+                "config skill must return the transcripts directory",
+                "config skill must fail closed with setup-dstack guidance",
+                "config skill must require a concrete model and effort pair",
+                "config skill must state how each host's spawn call takes the profile",
+                "config skill must forbid inheriting session effort",
+            ):
+                self.assertIn(message, messages)
+
+    def test_config_skill_contract_passes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(Path(temp), self.CONFIG_BODY, name="dstack-config")
+            self.assertEqual([], self.messages(skill))
+
+    def test_config_caller_must_call_dstack_config(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(Path(temp), "Spawn a judge on the `skeptical-reviewer` profile.\n", name="arena")
+            self.assertIn("config-dependent skill must resolve config through dstack-config", self.messages(skill))
+
+    def test_config_caller_with_one_call_line_passes(self):
         with tempfile.TemporaryDirectory() as temp:
             skill = self.make_skill(
                 Path(temp),
-                "Map the system-provided product identity to `codex`, `claude`, or `cursor`; never invent an alias. "
-                "Read `~/.dstack/config.json` and select `hosts[<active-harness>]`; on failure, stop and name the exact problem. "
-                "Tell the user to invoke `setup-dstack` explicitly. Require a concrete model and effort pair. "
-                "Apply it through `worker_binding`: `spawn-arguments` carries both values in the spawn call and "
-                "`worker-definitions` uses the generated worker. Never inherit session effort.\n",
+                "Call the Skill tool with `dstack-config`. Name the `skeptical-reviewer` profile. Spawn one judge on it.\n",
                 name="arena",
             )
             self.assertEqual([], self.messages(skill))
 
-    def test_profile_consuming_skill_must_pin_effort_with_the_worker_binding(self):
+    def test_other_skill_must_not_redescribe_config_procedure(self):
         with tempfile.TemporaryDirectory() as temp:
             skill = self.make_skill(
                 Path(temp),
-                "Map the system-provided product identity to `codex`, `claude`, or `cursor`; never invent an alias. "
-                "Read `~/.dstack/config.json` and select `hosts[<active-harness>]`; on failure, stop and name the exact problem. "
-                "Tell the user to invoke `setup-dstack` explicitly. Require a concrete model and effort pair. "
-                "Pass the profile model in the spawn call.\n",
+                "Call the Skill tool with `dstack-config`.\n",
+                {"references/notes.md": "Select `hosts[<active-harness>]` from `~/.dstack/config.json`.\n"},
                 name="arena",
             )
-            messages = self.messages(skill)
-            self.assertIn("profile-consuming skill must name the worker_binding mechanisms", messages)
-            self.assertIn("profile-consuming skill must forbid inheriting session effort", messages)
+            self.assertIn("config procedure belongs only in dstack-config", self.messages(skill))
 
-    def test_transcript_only_config_skill_needs_no_worker_binding(self):
+    def test_user_guide_may_name_config_path_only(self):
         with tempfile.TemporaryDirectory() as temp:
-            skill = self.make_skill(
-                Path(temp),
-                "Map the system-provided product identity to `codex`, `claude`, or `cursor`; never invent an alias. "
-                "Read `~/.dstack/config.json`, select `hosts[<active-harness>].repositories[<canonical-repository-root>]`, "
-                "and verify its `repository_root` exactly matches; if that key is absent, use `git rev-parse --git-common-dir`. "
-                "Run `configure.py resolve`; on failure, stop and name the exact problem. "
-                "Tell the user to invoke `setup-dstack` explicitly.\n",
-                name="recall",
-            )
-            self.assertEqual([], self.messages(skill))
+            root = Path(temp)
+            guide = self.make_skill(root, "Setup writes `~/.dstack/config.json`.\n", name="dstack-help")
+            self.assertEqual([], self.messages(guide))
+            leaky = self.make_skill(root / "b", "Skip profiles listed in `invalid_bindings`.\n", name="dstack-help")
+            self.assertIn("config procedure belongs only in dstack-config", self.messages(leaky))
 
-    def test_transcript_skill_requires_repository_identity(self):
+    def test_shipped_schema_matches_each_host_spawn_shape(self):
+        schema = json.loads((AUDIT.ROOT / "schemas" / "config.schema.json").read_text(encoding="utf-8"))
+        self.assertEqual([], AUDIT.schema_findings(schema))
+
+    def test_schema_with_a_worker_binding_or_wrong_host_shape_fails(self):
+        schema = json.loads((AUDIT.ROOT / "schemas" / "config.schema.json").read_text(encoding="utf-8"))
+        schema["$defs"]["workerBinding"] = {"type": "object"}
+        schema["$defs"]["pairHost"]["required"].append("worker_binding")
+        schema["$defs"]["cursorBinding"]["required"].append("effort")
+        schema["properties"]["hosts"]["properties"]["cursor"] = {"$ref": "#/$defs/pairHost"}
+        schema["$defs"]["modelIdentifier"]["not"]["enum"].remove("inherit")
+        messages = AUDIT.schema_findings(schema)
+        self.assertIn("retired worker binding must stay absent from the schema", messages)
+        self.assertIn("pairHost must contain exactly profiles, invalid_bindings, and repositories", messages)
+        self.assertIn("cursorBinding must contain exactly model", messages)
+        self.assertIn("codex and claude must use pairHost and cursor must use cursorHost", messages)
+        self.assertIn("config must reject automatic and parent-inheritance binding aliases", messages)
+
+    def test_retired_worker_binding_terms_fail_in_skills(self):
         with tempfile.TemporaryDirectory() as temp:
-            skill = self.make_skill(
-                Path(temp),
-                "Map the system-provided product identity to `codex`, `claude`, or `cursor`; never invent an alias. "
-                "Read `~/.dstack/config.json` and select `hosts[<active-harness>]`; on failure, stop and name the exact problem. "
-                "Tell the user to invoke `setup-dstack` explicitly.\n",
-                name="recall",
-            )
-            messages = self.messages(skill)
-            self.assertIn("transcript skill must select the canonical repository entry", messages)
-            self.assertIn("transcript skill must verify the repository entry identity", messages)
-            self.assertIn("transcript skill must accept linked worktrees via git common directory", messages)
-            self.assertIn("transcript skill must resolve the repository entry with configure.py resolve", messages)
-
-    def test_shipped_schema_requires_a_worker_binding(self):
-        findings = [finding.message for finding in AUDIT.check_structure()]
-        self.assertNotIn("each host entry must require a worker binding", findings)
-        self.assertNotIn("config must define exactly the two supported worker binding mechanisms", findings)
-        self.assertNotIn("config must define exactly the two supported pair encodings", findings)
-        self.assertNotIn("worker binding must require mechanism, directory, and pair encoding", findings)
-        self.assertNotIn("config must define exactly the three canonical harness ids", findings)
-        self.assertNotIn("each host entry must require repository-scoped configuration", findings)
+            skill = self.make_skill(Path(temp), "Spawn `dstack-<profile>` through `worker_binding`.\n")
+            self.assertIn("retired worker binding", self.messages(skill))
 
     def test_supported_playbook_inventory_is_exact(self):
         playbooks = AUDIT.SKILLS / "dstack-mode" / "playbooks"
@@ -182,10 +198,6 @@ class PortabilityAuditTests(unittest.TestCase):
         self.assertEqual("Investigation", playbooks["investigation"])
         self.assertEqual("Authoring or modifying a skill", playbooks["authoring-a-skill"])
         self.assertNotEqual("authoring-a-skill", AUDIT.kebab_from_title(playbooks["authoring-a-skill"]))
-        self.assertEqual("Multi-phase or multi-request plan", playbooks["multi-phase-plan"])
-        self.assertNotEqual("multi-phase-plan", AUDIT.kebab_from_title(playbooks["multi-phase-plan"]))
-        self.assertEqual("Apple development cleanup", playbooks["apple-dev-cleanup"])
-        self.assertNotEqual("apple-dev-cleanup", AUDIT.kebab_from_title(playbooks["apple-dev-cleanup"]))
         self.assertEqual(AUDIT.REQUIRED_DSTACK_PLAYBOOKS, set(playbooks))
 
     def test_unresolved_mode_title_fails(self):
@@ -386,13 +398,48 @@ class PortabilityAuditTests(unittest.TestCase):
             root = Path(temp)
             (root / "README.md").write_text("# Title\n\nSee [later](./guide.md#missing).\n", encoding="utf-8")
             (root / "guide.md").write_text("# Guide\n", encoding="utf-8")
-            (root / "docs" / "guide").mkdir(parents=True)
-            (root / "docs" / "guide" / "page.md").write_text(
+            (root / "skills" / "dstack-help").mkdir(parents=True)
+            (root / "skills" / "dstack-help" / "page.md").write_text(
                 "See [later](../../guide.md#missing).\n",
                 encoding="utf-8",
             )
             messages = [finding.message for finding in AUDIT.check_docs_vs_tree(root, set(), set())]
             self.assertTrue(any("has no heading with that anchor" in message for message in messages))
+
+    def make_sync_root(self, root: Path, sync_text: str) -> Path:
+        (root / "skills" / "how").mkdir(parents=True)
+        (root / "PSTACK_SYNC.md").write_text(sync_text, encoding="utf-8")
+        return root
+
+    def sync_text(self, playbooks=None, skills=("figure-it-out",)):
+        playbooks = sorted(AUDIT.EXCLUDED_DSTACK_PLAYBOOKS if playbooks is None else playbooks)
+        return (
+            "Pinned: pstack 1.0.0, commit `{}`.\n\n".format("a" * 40)
+            + "Upstream: repository `cursor/plugins`, subpath `pstack/`.\n\n## Excluded skills\n\n"
+            + "".join("- `{}`: out.\n".format(name) for name in skills)
+            + "\n## Excluded playbooks\n\n"
+            + "".join("- `{}`: out.\n".format(name) for name in playbooks)
+        )
+
+    def test_sync_file_contract_passes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = self.make_sync_root(Path(temp), self.sync_text())
+            self.assertEqual([], AUDIT.check_sync_file(root))
+
+    def test_sync_file_must_match_audit_and_tree(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = self.make_sync_root(Path(temp), self.sync_text(playbooks={"eval"}, skills=("how",)))
+            (root / "KNOWN_ISSUES.md").write_text("old\n", encoding="utf-8")
+            messages = [finding.message for finding in AUDIT.check_sync_file(root)]
+            self.assertIn("excluded playbooks disagree with the audit", messages)
+            self.assertIn("excluded pstack skill must stay absent", messages)
+            self.assertTrue(any(message.startswith("retired document must stay absent") for message in messages))
+
+    def test_missing_sync_file_fails(self):
+        with tempfile.TemporaryDirectory() as temp:
+            (Path(temp) / "skills").mkdir()
+            messages = [finding.message for finding in AUDIT.check_sync_file(Path(temp))]
+            self.assertEqual(["missing pstack sync contract"], messages)
 
     def test_missing_sibling_skill_fails(self):
         with tempfile.TemporaryDirectory() as temp:

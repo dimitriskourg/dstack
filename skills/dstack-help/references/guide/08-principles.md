@@ -56,7 +56,7 @@ The verification principles define what counts as proof:
 - [Fix Root Causes](../../../principle-fix-root-causes/SKILL.md) reproduces and traces to the cause before changing code.
 - [Sequence Work into Verifiable Units](../../../principle-sequence-verifiable-units/SKILL.md) ends each small unit in a check before starting the next.
 - [Test Behavior, Not Implementation](../../../principle-test-behavior-not-implementation/SKILL.md) asserts what the code's users can observe, so a test fails when that behavior breaks and survives a change to the internals.
-- [Explain the Number](../../../principle-explain-the-number/SKILL.md) names what limits a measured number and rules out that it measured something else, before anyone trusts or reports it. [`/benchmark-checklist`](../../../benchmark-checklist/SKILL.md) turns it into seven questions you answer from real runs.
+- [Explain the Number](../../../principle-explain-the-number/SKILL.md) names what limits a measured number and rules out that it measured something else, before anyone trusts or reports it.
 
 The delegation principles keep parallel work sane:
 

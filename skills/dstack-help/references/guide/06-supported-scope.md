@@ -15,19 +15,16 @@ dstack is a curated local workflow pack for Codex, Claude Code, and Cursor. Upst
 
 ## Retained skills
 
-All current standalone skills remain supported.
+The skills below remain supported. The everyday keep-set is closed.
 
 ### Workflow and orchestration
 
 - `dstack-mode`
 - `dstack-help`
 - `setup-dstack`
-- `automate-me`
-- `figure-it-out`
 - `arena`
 - `swarm`
 - `interrogate`
-- `show-me-your-work`
 - `recall`
 - `ketchup`
 - `in-your-own-words`
@@ -46,14 +43,12 @@ All current standalone skills remain supported.
 
 ### Verification and language guidance
 
-- `control-cli`
 - `control-ui`
 - `create-verification-skill`
 - `create-formal-verification-skill`
 - `maintain-formal-verification-skill`
 - `maintain-verification-skill`
 - `tdd`
-- `benchmark-checklist`
 - `typescript-best-practices`
 
 ### Code and prose quality
@@ -95,24 +90,14 @@ All current standalone skills remain supported.
 
 - Investigation
 - Bug fix
-- Performance issue
-- Hillclimb
-- Runtime forensics
-- Trace forensics
 - Feature
 - Refactoring
 - Prototype
-- Visual parity
 - Authoring or modifying a skill
-- Eval
 - Babysit
 - Session pickup
 - Pause safely
-- Multi-phase or multi-request plan
 - Opening a PR
-- Apple development cleanup
-
-Apple development cleanup is a dstack-specific local addition. It is explicit and machine-scoped, with an audit and approval gate before deleting simulator, runtime, Xcode build, or device-support state.
 
 ## Intentional exclusions
 
@@ -123,11 +108,23 @@ Apple development cleanup is a dstack-specific local addition. It is explicit an
 - **Worktree cleanup.** Excluded because dstack does not currently create or manage worktrees.
 - **Orchestrate.** Excluded with the provider-specific upstream runtime; dstack uses its retained skills and playbooks directly.
 - **Make Bot UI.** Excluded because the source skill is a provider-specific bot webhook, secret-request, and Tailscale workflow.
+- **figure-it-out.** Dropped from the everyday keep-set. Large or cross-cutting work matches a retained playbook, or is split into playbook-sized units.
+- **show-me-your-work.** Dropped from the everyday keep-set. There is no separate decision-trail skill.
+- **automate-me.** Dropped from the everyday keep-set. Personal mode generation is out of this pack.
+- **control-cli.** Dropped from the everyday keep-set. There is no bundled CLI/TUI harness; `control-ui` still covers browser, IDE, and Electron surfaces.
+- **Hillclimb.** Dropped from the everyday keep-set. One-off measured slowness has no dedicated playbook.
+- **Runtime forensics.** Dropped from the everyday keep-set. Live-instrumentation diagnosis is out; Bug fix still owns defects.
+- **Trace forensics.** Dropped from the everyday keep-set. Captured-artifact diagnosis is out; Bug fix still owns defects.
+- **Visual parity.** Dropped from the everyday keep-set. Pixel-exact matching is out; Prototype and `control-ui` still cover driving a UI.
+- **Apple development cleanup.** Dropped from the everyday keep-set. Machine-wide Apple simulator and runtime cleanup is out.
+- **Eval.** Dropped from the everyday keep-set. There is no blind skill-eval playbook; Authoring a skill remains.
+- **Perf issue.** Dropped from the everyday keep-set. Measured slowness has no dedicated playbook; Explain the Number still applies to a number you measured.
+- **Multi-phase or multi-request plan.** Dropped from the everyday keep-set. There is no plan playbook or plan template; Feature or Refactoring still match large work that can be split.
+- **benchmark-checklist.** Dropped from the everyday keep-set. Explain the Number still applies; there is no bundled checklist skill.
 
 Git worktrees remain a possible future capability for creation, isolation, and cleanup. Add those only when real team usage justifies a complete contract across Codex, Claude Code, and Cursor. Recognizing an existing linked worktree as the same registered repository is already in scope.
 
 ## Document ownership
 
 - This file defines what dstack supports.
-- [`DIFFERENCES.md`](https://github.com/dimitriskourg/dstack/blob/main/DIFFERENCES.md) records how that scope and retained source differ from upstream.
-- [`KNOWN_ISSUES.md`](https://github.com/dimitriskourg/dstack/blob/main/KNOWN_ISSUES.md) tracks unresolved defects inside this supported scope. Excluded features are not backlog items.
+- [`PSTACK_SYNC.md`](https://github.com/dimitriskourg/dstack/blob/main/PSTACK_SYNC.md) records the pinned upstream version, the exclusions, and how upstream changes are absorbed.

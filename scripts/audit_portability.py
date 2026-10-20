@@ -15,18 +15,27 @@ from typing import Dict, Iterable, List, Optional, Set, Tuple
 ROOT = Path(__file__).resolve().parents[1]
 SKILLS = ROOT / "skills"
 PROFILES = {"fast-explorer", "feature-worker", "bug-worker", "skeptical-reviewer"}
-CONFIG_DEPENDENT_SKILLS = {
-    "architect", "arena", "automate-me", "dstack-mode", "how", "interrogate",
-    "recall", "reflect", "show-me-your-work", "swarm", "why",
+CONFIG_SKILL = "dstack-config"
+CONFIG_CALL = "Call the Skill tool with `dstack-config`."
+CONFIG_CALLERS = {
+    "arena", "dstack-mode", "how", "interrogate",
+    "recall", "reflect", "swarm", "why",
 }
-TRANSCRIPT_CONFIG_SKILLS = {"automate-me", "dstack-mode", "recall", "reflect", "show-me-your-work"}
+CONFIG_OWNERS = {CONFIG_SKILL, "setup-dstack"}
+CONFIG_PROCEDURE_MARKERS = (
+    "hosts[<active-harness>]", "repositories[<canonical-repository-root>]",
+    "configure.py", "invalid_bindings", "transcripts_directory",
+    "system-provided product identity", "separate spawn arguments", "already carries effort",
+)
+USER_GUIDE_CONFIG_MARKERS = ("~/.dstack/config.json", "--git-common-dir")
+USER_GUIDE_SKILL = "dstack-help"
 CANONICAL_HOST_IDS = {"codex", "claude", "cursor"}
 REQUIRED_SKILLS = {
-    "architect", "arena", "automate-me", "benchmark-checklist", "blast-radius", "bro",
-    "comment-sicko", "control-cli", "control-ui", "correct", "create-formal-verification-skill", "create-verification-skill", "maintain-formal-verification-skill",
-    "deslop", "dstack-help", "dstack-mode",
-    "figure-it-out", "how", "in-your-own-words", "interrogate", "ketchup", "maintain-verification-skill", "no-comments",
-    "recall", "reflect", "setup-dstack", "sharpen", "show-me-your-work", "swarm", "tdd", "teach",
+    "architect", "arena", "blast-radius", "bro",
+    "comment-sicko", "control-ui", "correct", "create-formal-verification-skill", "create-verification-skill", "maintain-formal-verification-skill",
+    "deslop", "dstack-config", "dstack-help", "dstack-mode",
+    "how", "in-your-own-words", "interrogate", "ketchup", "maintain-verification-skill", "no-comments",
+    "recall", "reflect", "setup-dstack", "sharpen", "swarm", "tdd", "teach",
     "technical-writing", "typescript-best-practices", "unslop", "why",
     "principle-attack-the-premise", "principle-boundary-discipline",
     "principle-build-the-lever",
@@ -45,14 +54,17 @@ REQUIRED_SKILLS = {
     "principle-type-system-discipline",
 }
 REQUIRED_DSTACK_PLAYBOOKS = {
-    "apple-dev-cleanup", "authoring-a-skill", "babysit", "bug-fix", "eval",
-    "feature", "hillclimb", "investigation", "multi-phase-plan", "opening-a-pr",
-    "pause-safely", "perf-issue", "prototype", "refactoring", "runtime-forensics",
-    "session-pickup", "trace-forensics", "visual-parity",
+    "authoring-a-skill", "babysit", "bug-fix",
+    "feature", "investigation", "opening-a-pr",
+    "pause-safely", "prototype", "refactoring",
+    "session-pickup",
 }
+REMOVED_DOCS = ("DIFFERENCES.md", "KNOWN_ISSUES.md", "docs")
+SYNC_PIN = re.compile(r"^Pinned: pstack \S+, commit `[0-9a-f]{40}`\.$", re.M)
 EXCLUDED_DSTACK_PLAYBOOKS = {
-    "autonomous-run", "autopilot-full", "autopilot-stack", "shipping",
-    "worktree-cleanup",
+    "autonomous-run", "autopilot-full", "autopilot-stack", "eval",
+    "hillclimb", "multi-phase-plan", "orchestrate", "perf-issue", "runtime-forensics", "shipping",
+    "trace-forensics", "visual-parity", "worktree-cleanup",
 }
 LEAKAGE_PATTERNS: Tuple[Tuple[str, re.Pattern[str]], ...] = (
     ("provider name", re.compile(r"\b(?:Cursor|Codex|Claude Code)\b", re.I)),
@@ -63,7 +75,14 @@ LEAKAGE_PATTERNS: Tuple[Tuple[str, re.Pattern[str]], ...] = (
     ("legacy brand", re.compile(r"\b(?:pstack|ystack|poteto(?:-mode)?)\b", re.I)),
     ("config path override", re.compile(r"\bDSTACK_HOME\b|--dstack-home")),
     ("host selection override", re.compile(r"\bhost_override\b")),
+    (
+        "retired worker binding",
+        re.compile(r"\bworker_binding\b|\bworker-definitions\b|\bspawn-arguments\b|\bpair_encoding\b|"
+                   r"\bdefinitions_directory\b|\bdstack-<profile>|\bworker_bindings\.py\b"),
+    ),
 )
+HOST_BINDINGS = {"codex": "pairHost", "claude": "pairHost", "cursor": "cursorHost"}
+HOST_ENTRY_FIELDS = {"profiles", "invalid_bindings", "repositories"}
 REQUIRED_FRONTMATTER = {"name", "description"}
 OPTIONAL_FRONTMATTER = {"disable-model-invocation"}
 CODEX_SIDECAR = Path("agents") / "openai.yaml"
@@ -152,9 +171,6 @@ def documentation_paths(root: Path) -> List[Path]:
     readme = root / "README.md"
     if readme.is_file():
         paths.append(readme)
-    guide = root / "docs" / "guide"
-    if guide.is_dir():
-        paths.extend(sorted(path for path in guide.rglob("*.md") if path.is_file()))
     help_root = root / "skills" / "dstack-help"
     if help_root.is_dir():
         paths.extend(sorted(path for path in help_root.rglob("*.md") if path.is_file()))
@@ -378,6 +394,37 @@ def mentions_directory(text: str, source_dir: Path, skill_dir: Path, target: Pat
     )
 
 
+def check_config_procedure(skill_file: Path, body: str) -> List[Finding]:
+    required = (
+        ("~/.dstack/config.json" in body, "config skill must name the fixed config path"),
+        ("hosts[<active-harness>]" in body, "config skill must select the active harness entry directly"),
+        (
+            CANONICAL_HOST_IDS <= set(re.findall(r"`([a-z]+)`", body)) and "system-provided product identity" in body,
+            "config skill must derive a canonical harness id",
+        ),
+        ("invent an alias" in body, "config skill must reject harness aliases"),
+        ("repositories[<canonical-repository-root>]" in body, "config skill must select the canonical repository entry"),
+        ("`repository_root` exactly matches" in body, "config skill must verify the repository entry identity"),
+        ("git rev-parse --git-common-dir" in body, "config skill must accept linked worktrees via git common directory"),
+        ("configure.py resolve" in body, "config skill must resolve the repository entry with configure.py resolve"),
+        ("transcripts_directory" in body, "config skill must return the transcripts directory"),
+        (
+            "stop and name the exact problem" in body and "Tell the user to invoke `setup-dstack` explicitly." in body,
+            "config skill must fail closed with setup-dstack guidance",
+        ),
+        ("concrete model and effort pair" in body, "config skill must require a concrete model and effort pair"),
+        (
+            "separate spawn arguments" in body and "already carries effort" in body,
+            "config skill must state how each host's spawn call takes the profile",
+        ),
+        (
+            bool(re.search(r"\b(?:never|do not|must not)\b[^.\n]{0,80}\bsession effort\b", body, re.IGNORECASE)),
+            "config skill must forbid inheriting session effort",
+        ),
+    )
+    return [Finding(relative(skill_file), message) for ok, message in required if not ok]
+
+
 def check_skill(skill_dir: Path) -> List[Finding]:
     skill_file = skill_dir / "SKILL.md"
     if not skill_file.is_file():
@@ -402,33 +449,10 @@ def check_skill(skill_dir: Path) -> List[Finding]:
         ))
     if fields.get("disable-model-invocation") not in {None, "true"}:
         findings.append(Finding(relative(skill_file), "disable-model-invocation must be true or omitted"))
-    if skill_dir.name in CONFIG_DEPENDENT_SKILLS:
-        if "~/.dstack/config.json" not in body:
-            findings.append(Finding(relative(skill_file), "config-dependent skill must name the fixed config path"))
-        if "hosts[<active-harness>]" not in body:
-            findings.append(Finding(relative(skill_file), "config-dependent skill must select the active harness entry directly"))
-        if not CANONICAL_HOST_IDS <= set(re.findall(r"`([a-z]+)`", body)) or "system-provided product identity" not in body:
-            findings.append(Finding(relative(skill_file), "config-dependent skill must derive a canonical harness id"))
-        if "invent an alias" not in body:
-            findings.append(Finding(relative(skill_file), "config-dependent skill must reject harness aliases"))
-        if skill_dir.name in TRANSCRIPT_CONFIG_SKILLS:
-            if "repositories[<canonical-repository-root>]" not in body:
-                findings.append(Finding(relative(skill_file), "transcript skill must select the canonical repository entry"))
-            if "`repository_root` exactly matches" not in body:
-                findings.append(Finding(relative(skill_file), "transcript skill must verify the repository entry identity"))
-            if "git rev-parse --git-common-dir" not in body:
-                findings.append(Finding(relative(skill_file), "transcript skill must accept linked worktrees via git common directory"))
-            if "configure.py resolve" not in body:
-                findings.append(Finding(relative(skill_file), "transcript skill must resolve the repository entry with configure.py resolve"))
-        if "stop and name the exact problem" not in body or "Tell the user to invoke `setup-dstack` explicitly." not in body:
-            findings.append(Finding(relative(skill_file), "config-dependent skill must fail closed with setup-dstack guidance"))
-        if skill_dir.name not in {"automate-me", "recall"}:
-            if "concrete model and effort pair" not in body:
-                findings.append(Finding(relative(skill_file), "profile-consuming skill must require a concrete model and effort pair"))
-            if "`worker_binding`" not in body or not {"`spawn-arguments`", "`worker-definitions`"} <= set(re.findall(r"`[a-z-]+`", body)):
-                findings.append(Finding(relative(skill_file), "profile-consuming skill must name the worker_binding mechanisms"))
-            if not re.search(r"\b(?:never|do not|must not)\b[^.\n]{0,80}\bsession effort\b", body, re.IGNORECASE):
-                findings.append(Finding(relative(skill_file), "profile-consuming skill must forbid inheriting session effort"))
+    if skill_dir.name == CONFIG_SKILL:
+        findings.extend(check_config_procedure(skill_file, body))
+    if skill_dir.name in CONFIG_CALLERS and CONFIG_CALL not in body:
+        findings.append(Finding(relative(skill_file), "config-dependent skill must resolve config through dstack-config"))
     findings.extend(check_sidecar(skill_dir, "disable-model-invocation" in fields))
 
     package_texts: List[Tuple[Path, str]] = []
@@ -443,6 +467,12 @@ def check_skill(skill_dir: Path) -> List[Finding]:
                     if label == "provider name" and all(host in line.lower() for host in CANONICAL_HOST_IDS):
                         continue
                     findings.append(Finding(relative(path), label, line_number))
+            if skill_dir.name not in CONFIG_OWNERS:
+                markers = CONFIG_PROCEDURE_MARKERS
+                if skill_dir.name != USER_GUIDE_SKILL:
+                    markers += USER_GUIDE_CONFIG_MARKERS
+                if any(marker in line for marker in markers):
+                    findings.append(Finding(relative(path), "config procedure belongs only in dstack-config", line_number))
             if "Call the Skill tool with" in line:
                 calls = SKILL_CALL.findall(line)
                 if not calls or line.count("Call the Skill tool with") != len(calls):
@@ -491,8 +521,63 @@ def check_skill(skill_dir: Path) -> List[Finding]:
     return findings
 
 
-def check_structure() -> List[Finding]:
+def schema_findings(value: Dict) -> List[str]:
+    messages: List[str] = []
+    definitions = value.get("$defs", {})
+    hosts = value.get("properties", {}).get("hosts", {})
+    if set(hosts.get("propertyNames", {}).get("enum", [])) != CANONICAL_HOST_IDS:
+        messages.append("config must define exactly the three canonical harness ids")
+    host_refs = {
+        host: entry.get("$ref", "").rpartition("/")[2]
+        for host, entry in hosts.get("properties", {}).items()
+    }
+    if host_refs != HOST_BINDINGS or hosts.get("additionalProperties") is not False:
+        messages.append("codex and claude must use pairHost and cursor must use cursorHost")
+    for name in sorted(set(HOST_BINDINGS.values())):
+        entry = definitions.get(name, {})
+        if set(entry.get("required", [])) != HOST_ENTRY_FIELDS or set(entry.get("properties", {})) != HOST_ENTRY_FIELDS:
+            messages.append("{} must contain exactly profiles, invalid_bindings, and repositories".format(name))
+        if set(entry.get("properties", {}).get("profiles", {}).get("properties", {})) != PROFILES:
+            messages.append("{} must define exactly the four supported profiles".format(name))
+    for name, fields in (("pairBinding", {"model", "effort"}), ("cursorBinding", {"model"})):
+        binding = definitions.get(name, {})
+        if set(binding.get("required", [])) != fields or set(binding.get("properties", {})) != fields:
+            messages.append("{} must contain exactly {}".format(name, " and ".join(sorted(fields))))
+    reserved = definitions.get("modelIdentifier", {}).get("not", {}).get("enum", [])
+    if set(reserved) != {"auto", "inherit", "inherit-parent"}:
+        messages.append("config must reject automatic and parent-inheritance binding aliases")
+    if "workerBinding" in definitions:
+        messages.append("retired worker binding must stay absent from the schema")
+    return messages
+
+
+def sync_section(text: str, heading: str) -> Set[str]:
+    match = re.search(r"^## {}\n(.*?)(?=^## |\Z)".format(re.escape(heading)), text, re.M | re.S)
+    return set(re.findall(r"^- `([^`]+)`", match.group(1), re.M)) if match else set()
+
+
+def check_sync_file(root: Path) -> List[Finding]:
+    path = root / "PSTACK_SYNC.md"
+    if not path.is_file():
+        return [Finding("PSTACK_SYNC.md", "missing pstack sync contract")]
+    text = path.read_text(encoding="utf-8")
     findings: List[Finding] = []
+    if not SYNC_PIN.search(text):
+        findings.append(Finding("PSTACK_SYNC.md", "must pin a pstack version and full commit"))
+    if not re.search(r"^Upstream: repository `cursor/plugins`, subpath `pstack/`", text, re.M):
+        findings.append(Finding("PSTACK_SYNC.md", "must record upstream repository cursor/plugins and subpath pstack/"))
+    if sync_section(text, "Excluded playbooks") != EXCLUDED_DSTACK_PLAYBOOKS:
+        findings.append(Finding("PSTACK_SYNC.md", "excluded playbooks disagree with the audit"))
+    for skill in sorted(sync_section(text, "Excluded skills") & {path.name for path in (root / "skills").iterdir()}):
+        findings.append(Finding("skills/" + skill, "excluded pstack skill must stay absent"))
+    for removed in REMOVED_DOCS:
+        if (root / removed).exists():
+            findings.append(Finding(removed, "retired document must stay absent; PSTACK_SYNC.md, README.md, and dstack-help replace it"))
+    return findings
+
+
+def check_structure() -> List[Finding]:
+    findings: List[Finding] = check_sync_file(ROOT)
     for removed in ("adapters", "contracts"):
         if (ROOT / removed).exists() and any((ROOT / removed).iterdir()):
             findings.append(Finding(removed, "removed portability layer must stay absent"))
@@ -505,29 +590,7 @@ def check_structure() -> List[Finding]:
         findings.append(Finding(relative(schema), "schema must use JSON Schema draft 2020-12"))
     if set(value.get("required", [])) != {"schema_version", "hosts"} or set(value.get("properties", {})) != {"schema_version", "hosts"}:
         findings.append(Finding(relative(schema), "config root must contain only schema_version and hosts"))
-    profile_properties = value.get("properties", {}).get("hosts", {}).get("additionalProperties", {}).get("properties", {}).get("profiles", {}).get("properties", {})
-    if set(profile_properties) != PROFILES:
-        findings.append(Finding(relative(schema), "config must define exactly the four supported profiles"))
-    reserved = value.get("$defs", {}).get("modelIdentifier", {}).get("not", {}).get("enum", [])
-    if set(reserved) != {"auto", "inherit-parent"}:
-        findings.append(Finding(relative(schema), "config must reject automatic and parent-inheritance binding aliases"))
-    host_entry = value.get("properties", {}).get("hosts", {}).get("additionalProperties", {})
-    if "worker_binding" not in set(host_entry.get("required", [])):
-        findings.append(Finding(relative(schema), "each host entry must require a worker binding"))
-    host_ids = value.get("properties", {}).get("hosts", {}).get("propertyNames", {}).get("enum", [])
-    if set(host_ids) != CANONICAL_HOST_IDS:
-        findings.append(Finding(relative(schema), "config must define exactly the three canonical harness ids"))
-    if "repositories" not in set(host_entry.get("required", [])):
-        findings.append(Finding(relative(schema), "each host entry must require repository-scoped configuration"))
-    worker_binding = value.get("$defs", {}).get("workerBinding", {})
-    if set(worker_binding.get("required", [])) != {"mechanism", "definitions_directory", "pair_encoding"}:
-        findings.append(Finding(relative(schema), "worker binding must require mechanism, directory, and pair encoding"))
-    mechanisms = worker_binding.get("properties", {}).get("mechanism", {}).get("enum", [])
-    if set(mechanisms) != {"spawn-arguments", "worker-definitions"}:
-        findings.append(Finding(relative(schema), "config must define exactly the two supported worker binding mechanisms"))
-    encodings = worker_binding.get("properties", {}).get("pair_encoding", {}).get("enum", [])
-    if set(encodings) != {"sibling-fields", "model-brackets", None}:
-        findings.append(Finding(relative(schema), "config must define exactly the two supported pair encodings"))
+    findings.extend(Finding(relative(schema), message) for message in schema_findings(value))
 
     playbooks = SKILLS / "dstack-mode" / "playbooks"
     actual_playbooks = {path.stem for path in playbooks.glob("*.md")}

@@ -7,14 +7,6 @@ description: "Spawn N parallel candidates at the same task, pick a base, graft t
 
 Spawn candidates and judges with the active harness's native subagent tool. Every supported harness can spawn subagents. If a nested spawn is denied, run the affected pass serially in the current agent and disclose the loss of independence.
 
-## Configuration
-
-Before using a profile, map the system-provided product identity to the canonical id `codex`, `claude`, or `cursor`, then read `~/.dstack/config.json` and select `hosts[<active-harness>]`. Never invent an alias or select another host entry. If the file is missing, unreadable, or invalid, the identity is unknown, its host entry is absent, or a required profile is missing or listed in `invalid_bindings`, stop and name the exact problem. Tell the user to invoke `setup-dstack` explicitly. Every profile must provide a concrete model and effort pair; do not guess, omit, or inherit a binding.
-
-Apply the profile through `worker_binding`: pass its exact model and effort for `spawn-arguments`; for `worker-definitions`, spawn `dstack-<profile>` without overrides. Stop if the binding is missing, rejected, or different. Never inherit session effort.
-
-Open a todolist with one entry per phase (Frame, Fan out, Cross-judge, Pick, Graft, Verify) before launching anything.
-
 ## Phase A: Frame
 
 Every candidate gets the same prompt, so the prompt is the contract.
@@ -26,13 +18,13 @@ Every candidate gets the same prompt, so the prompt is the contract.
 
 ## Phase B: Fan out
 
-Launch candidates in bounded waves that fit the active harness's available child capacity. Each gets the task, the path to the shared grounding, its own output path, and instructions to produce the artifact and a short rationale naming the alternatives it considered and what it rejected. Every required candidate runs even when N exceeds the first wave's capacity.
+Call the Skill tool with `dstack-config`. Name each candidate's profile. Launch candidates in bounded waves that fit the active harness's available child capacity. Each gets the task, the path to the shared grounding, its own output path, and instructions to produce the artifact and a short rationale naming the alternatives it considered and what it rejected. Every required candidate runs even when N exceeds the first wave's capacity.
 
 If a required candidate produces no output, retry it in a later wave or run that candidate pass serially in the current agent. Do not reduce N silently. If the user accepts a smaller candidate set after a persistent failure, record the reduced independence in the synthesis note.
 
 ## Phase C: Cross-judge
 
-After all Phase B candidates complete, use the configured `skeptical-reviewer` profile. Spawn one read-only judge subagent. It sees the rubric and the candidates by path label, scores each criterion, and recommends a base with rationale. It runs in parallel with your reading in Phase D. Don't spawn it while candidates are still writing.
+After all Phase B candidates complete, spawn one read-only judge subagent. Call the Skill tool with `dstack-config`. Name the `skeptical-reviewer` profile for the judge. It sees the rubric and the candidates by path label, scores each criterion, and recommends a base with rationale. It runs in parallel with your reading in Phase D. Don't spawn it while candidates are still writing.
 
 ## Phase D: Pick a base
 

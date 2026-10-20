@@ -23,7 +23,12 @@ GIT_TMP = Path(__file__).resolve().parent / ".tmp"
 
 
 class ConfiguratorTests(unittest.TestCase):
-    def profiles(self, prefix: str):
+    def profiles(self, prefix: str, host: str = "codex"):
+        if host == "cursor":
+            return {
+                profile: {"model": "{}-{}[effort=medium]".format(prefix, profile)}
+                for profile in CONFIGURE.PROFILES
+            }
         return {
             profile: {"model": "{}-{}".format(prefix, profile), "effort": "medium"}
             for profile in CONFIGURE.PROFILES
@@ -34,21 +39,14 @@ class ConfiguratorTests(unittest.TestCase):
         host: str,
         prefix: str,
         transcripts: str = "/tmp/transcripts",
-        worker_binding=None,
         invalid_bindings=None,
         repository_root: str = "/private/tmp/repository",
     ):
         return {
             "host": host,
             "repository_root": repository_root,
-            "profiles": self.profiles(prefix),
+            "profiles": self.profiles(prefix, host),
             "invalid_bindings": invalid_bindings or [],
-            "worker_binding": worker_binding
-            or {
-                "mechanism": "spawn-arguments",
-                "definitions_directory": None,
-                "pair_encoding": None,
-            },
             "transcripts_directory": transcripts,
         }
 
@@ -127,7 +125,7 @@ class ConfiguratorTests(unittest.TestCase):
             self.assertEqual(0, status)
             self.assertEqual("", stderr)
             saved = json.loads(config.read_text(encoding="utf-8"))
-            self.assertEqual(self.profiles("stable"), saved["hosts"]["claude"]["profiles"])
+            self.assertEqual(self.profiles("stable", "claude"), saved["hosts"]["claude"]["profiles"])
             self.assertIsNone(
                 saved["hosts"]["codex"]["repositories"]["/private/tmp/repository"]["transcripts_directory"]
             )
@@ -273,7 +271,6 @@ class ConfiguratorTests(unittest.TestCase):
             config_value["hosts"]["codex"] = {
                 "profiles": entry["profiles"],
                 "invalid_bindings": entry["invalid_bindings"],
-                "worker_binding": entry["worker_binding"],
                 "repositories": {
                     "/private/tmp/repository": {
                         "repository_root": "/private/tmp/other-repository",
@@ -289,7 +286,14 @@ class ConfiguratorTests(unittest.TestCase):
     def test_reserved_binding_aliases_are_rejected(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            for field, value in (("model", "inherit-parent"), ("model", "auto"), ("effort", "inherit-parent"), ("effort", "auto")):
+            for field, value in (
+                ("model", "inherit-parent"),
+                ("model", "inherit"),
+                ("model", "auto"),
+                ("effort", "inherit-parent"),
+                ("effort", "inherit"),
+                ("effort", "auto"),
+            ):
                 with self.subTest(field=field, value=value):
                     config = root / "{}.{}.config.json".format(field, value)
                     proposal = root / "{}.{}.proposal.json".format(field, value)
@@ -301,20 +305,48 @@ class ConfiguratorTests(unittest.TestCase):
                     self.assertIn("must be a concrete value", stderr)
                     self.assertFalse(config.exists())
 
-    def test_schema_version_stays_two_and_unsupported_version_is_preserved(self):
+    def test_schema_version_is_three_and_unsupported_version_is_preserved(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             config = root / "config.json"
             proposal = root / "proposal.json"
             existing = CONFIGURE.default_config()
-            existing["schema_version"] = 3
+            existing["schema_version"] = 4
             self.write_json(config, existing)
             original = config.read_bytes()
             self.write_json(proposal, self.proposal("codex", "candidate"))
             status, _, stderr = self.apply(config, proposal)
             self.assertEqual(2, status)
-            self.assertIn("config.schema_version must be 2; found 3", stderr)
+            self.assertIn("config.schema_version must be 3; found 4", stderr)
             self.assertEqual(original, config.read_bytes())
+
+    def test_old_v2_config_fails_with_rerun_setup_guidance(self):
+        old_entry = {
+            "profiles": self.profiles("old"),
+            "invalid_bindings": [],
+            "worker_binding": {"mechanism": "spawn-arguments", "definitions_directory": None, "pair_encoding": None},
+            "repositories": {},
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = root / "config.json"
+            proposal = root / "proposal.json"
+            self.write_json(config, {"schema_version": 2, "hosts": {"codex": old_entry}})
+            original = config.read_bytes()
+            self.write_json(proposal, self.proposal("codex", "candidate"))
+            for arguments in (
+                ["apply", "--proposal", str(proposal)],
+                ["resolve", "--host", "codex"],
+                ["validate"],
+                ["show"],
+            ):
+                with self.subTest(command=arguments[0]):
+                    status, stdout, stderr = self.run_configurator(arguments, config)
+                    self.assertEqual(2, status)
+                    self.assertEqual("", stdout)
+                    self.assertIn("old schema_version 2 config from the worker binding era", stderr)
+                    self.assertIn("delete or rewrite ~/.dstack/config.json, then rerun setup-dstack", stderr)
+                    self.assertEqual(original, config.read_bytes())
 
     def test_replace_failure_preserves_previous_file_and_removes_temporary_file(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -329,7 +361,6 @@ class ConfiguratorTests(unittest.TestCase):
             changed["hosts"]["codex"] = {
                 "profiles": entry["profiles"],
                 "invalid_bindings": entry["invalid_bindings"],
-                "worker_binding": entry["worker_binding"],
                 "repositories": {
                     "/private/tmp/repository": {
                         "repository_root": "/private/tmp/repository",
@@ -343,110 +374,153 @@ class ConfiguratorTests(unittest.TestCase):
             self.assertEqual(original, json.loads(config.read_text(encoding="utf-8")))
             self.assertEqual([], list(root.glob(".config.*.tmp")))
 
-    def test_worker_binding_is_required_and_preserved_per_host(self):
+    def test_each_host_stores_the_shape_its_spawn_call_takes(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             config = root / "config.json"
-            first = root / "first.json"
-            second = root / "second.json"
-            self.write_json(first, self.proposal("codex", "alpha"))
-            self.write_json(
-                second,
-                self.proposal(
-                    "claude",
-                    "beta",
-                    worker_binding={
-                        "mechanism": "worker-definitions",
-                        "definitions_directory": "/tmp/workers",
-                        "pair_encoding": "sibling-fields",
-                    },
-                ),
-            )
-            self.assertEqual(0, self.apply(config, first)[0])
-            self.assertEqual(0, self.apply(config, second)[0])
+            for host, prefix in (("codex", "alpha"), ("claude", "beta"), ("cursor", "gamma")):
+                proposal = root / "{}.json".format(host)
+                self.write_json(proposal, self.proposal(host, prefix))
+                status, _, stderr = self.apply(config, proposal)
+                self.assertEqual(0, status, stderr)
             saved = json.loads(config.read_text(encoding="utf-8"))
             self.assertEqual(
-                {"mechanism": "spawn-arguments", "definitions_directory": None, "pair_encoding": None},
-                saved["hosts"]["codex"]["worker_binding"],
+                {"model": "alpha-fast-explorer", "effort": "medium"},
+                saved["hosts"]["codex"]["profiles"]["fast-explorer"],
             )
             self.assertEqual(
-                {
-                    "mechanism": "worker-definitions",
-                    "definitions_directory": "/tmp/workers",
-                    "pair_encoding": "sibling-fields",
-                },
-                saved["hosts"]["claude"]["worker_binding"],
+                {"model": "beta-fast-explorer", "effort": "medium"},
+                saved["hosts"]["claude"]["profiles"]["fast-explorer"],
+            )
+            self.assertEqual(
+                {"model": "gamma-fast-explorer[effort=medium]"},
+                saved["hosts"]["cursor"]["profiles"]["fast-explorer"],
+            )
+            for host in ("codex", "claude", "cursor"):
+                self.assertEqual(
+                    {"profiles", "invalid_bindings", "repositories"}, set(saved["hosts"][host])
+                )
+
+    def test_cursor_accepts_a_catalog_slug_as_the_spawn_model(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = root / "config.json"
+            proposal = root / "proposal.json"
+            value = self.proposal("cursor", "unused")
+            value["profiles"]["fast-explorer"] = {"model": "vendor-model-low"}
+            self.write_json(proposal, value)
+            status, _, stderr = self.apply(config, proposal)
+            self.assertEqual(0, status, stderr)
+            saved = json.loads(config.read_text(encoding="utf-8"))
+            self.assertEqual(
+                {"model": "vendor-model-low"}, saved["hosts"]["cursor"]["profiles"]["fast-explorer"]
             )
 
-    def test_missing_worker_binding_is_rejected(self):
+    def test_retired_worker_binding_is_rejected(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             config = root / "config.json"
             proposal = root / "proposal.json"
             invalid = self.proposal("codex", "candidate")
-            del invalid["worker_binding"]
+            invalid["worker_binding"] = {
+                "mechanism": "spawn-arguments",
+                "definitions_directory": None,
+                "pair_encoding": None,
+            }
             self.write_json(proposal, invalid)
             status, _, stderr = self.apply(config, proposal)
             self.assertEqual(2, status)
-            self.assertIn("proposal is missing: worker_binding", stderr)
+            self.assertIn("proposal has unknown keys: worker_binding", stderr)
             self.assertFalse(config.exists())
 
-    def test_worker_binding_mechanism_and_directory_must_agree(self):
+            entry = self.proposal("codex", "stable")
+            stored = {
+                "profiles": entry["profiles"],
+                "invalid_bindings": [],
+                "worker_binding": invalid["worker_binding"],
+                "repositories": {},
+            }
+            self.write_json(config, {"schema_version": 3, "hosts": {"codex": stored}})
+            status, _, stderr = self.run_configurator(["validate"], config)
+            self.assertEqual(2, status)
+            self.assertIn("config.hosts.codex has unknown keys: worker_binding", stderr)
+
+    def test_pair_hosts_require_both_model_and_effort(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for host in ("codex", "claude"):
+                with self.subTest(host=host):
+                    config = root / "{}.config.json".format(host)
+                    proposal = root / "{}.proposal.json".format(host)
+                    invalid = self.proposal(host, "candidate")
+                    del invalid["profiles"]["bug-worker"]["effort"]
+                    self.write_json(proposal, invalid)
+                    status, _, stderr = self.apply(config, proposal)
+                    self.assertEqual(2, status)
+                    self.assertIn("proposal.profiles.bug-worker is missing: effort", stderr)
+                    self.assertFalse(config.exists())
+
+    def test_cursor_rejects_a_separate_effort_field(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = root / "config.json"
+            proposal = root / "proposal.json"
+            invalid = self.proposal("cursor", "candidate")
+            invalid["profiles"]["bug-worker"] = {"model": "vendor-model", "effort": "high"}
+            self.write_json(proposal, invalid)
+            status, _, stderr = self.apply(config, proposal)
+            self.assertEqual(2, status)
+            self.assertIn("proposal.profiles.bug-worker has unknown keys: effort", stderr)
+            self.assertFalse(config.exists())
+
+    def test_cursor_model_must_be_concrete_and_use_only_the_effort_bracket(self):
         cases = (
-            ({"mechanism": "inherit", "definitions_directory": None, "pair_encoding": None}, "must be one of"),
-            (
-                {"mechanism": "worker-definitions", "definitions_directory": None, "pair_encoding": "sibling-fields"},
-                "must be an absolute path",
-            ),
-            (
-                {"mechanism": "worker-definitions", "definitions_directory": "workers", "pair_encoding": "sibling-fields"},
-                "must be an absolute path",
-            ),
-            (
-                {"mechanism": "spawn-arguments", "definitions_directory": "/tmp/workers", "pair_encoding": None},
-                "must be null",
-            ),
-            (
-                {"mechanism": "spawn-arguments", "definitions_directory": None, "pair_encoding": "sibling-fields"},
-                "pair_encoding must be null",
-            ),
-            (
-                {"mechanism": "worker-definitions", "definitions_directory": "/tmp/workers", "pair_encoding": None},
-                "pair_encoding must be one of",
-            ),
-            (
-                {
-                    "mechanism": "worker-definitions",
-                    "definitions_directory": "/tmp/workers",
-                    "pair_encoding": "fused-slug",
-                },
-                "pair_encoding must be one of",
-            ),
+            ("auto", "must be a concrete value"),
+            ("inherit", "must be a concrete value"),
+            ("inherit-parent", "must be a concrete value"),
+            ("auto[effort=high]", "must be a concrete value"),
+            ("vendor-model[effort=inherit]", "must be a concrete value"),
+            ("vendor-model[]", "brackets must be exactly [effort=<value>]"),
+            ("vendor-model[fast=false]", "brackets must be exactly [effort=<value>]"),
+            ("vendor-model[effort=high,context=300k]", "brackets must be exactly [effort=<value>]"),
+            ("vendor-model[effort=]", "brackets must be exactly [effort=<value>]"),
+            ("vendor model", "without whitespace"),
         )
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            for index, (binding, expected) in enumerate(cases):
-                with self.subTest(binding=binding):
+            for index, (model, expected) in enumerate(cases):
+                with self.subTest(model=model):
                     config = root / "{}.config.json".format(index)
                     proposal = root / "{}.proposal.json".format(index)
-                    self.write_json(proposal, self.proposal("codex", "candidate", worker_binding=binding))
+                    invalid = self.proposal("cursor", "candidate")
+                    invalid["profiles"]["skeptical-reviewer"] = {"model": model}
+                    self.write_json(proposal, invalid)
                     status, _, stderr = self.apply(config, proposal)
                     self.assertEqual(2, status)
                     self.assertIn(expected, stderr)
                     self.assertFalse(config.exists())
 
-    def test_missing_pair_encoding_is_rejected(self):
+    def test_invalid_bindings_follow_the_host_profile_shape(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             config = root / "config.json"
             proposal = root / "proposal.json"
-            invalid = self.proposal("codex", "candidate")
-            del invalid["worker_binding"]["pair_encoding"]
-            self.write_json(proposal, invalid)
-            status, _, stderr = self.apply(config, proposal)
+            retired = [{"model": "retired-model[effort=high]"}]
+            self.write_json(proposal, self.proposal("cursor", "current", invalid_bindings=retired))
+            self.assertEqual(0, self.apply(config, proposal)[0])
+            self.assertEqual(
+                retired,
+                json.loads(config.read_text(encoding="utf-8"))["hosts"]["cursor"]["invalid_bindings"],
+            )
+
+            mismatched = root / "mismatched.json"
+            self.write_json(
+                mismatched,
+                self.proposal("codex", "current", invalid_bindings=[{"model": "retired-model"}]),
+            )
+            status, _, stderr = self.apply(config, mismatched)
             self.assertEqual(2, status)
-            self.assertIn("proposal.worker_binding is missing: pair_encoding", stderr)
-            self.assertFalse(config.exists())
+            self.assertIn("proposal.invalid_bindings[0] is missing: effort", stderr)
 
     def test_fused_identifiers_are_rejected(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -465,84 +539,6 @@ class ConfiguratorTests(unittest.TestCase):
                     self.assertEqual(2, status)
                     self.assertIn("must not contain brackets", stderr)
                     self.assertFalse(config.exists())
-
-    def test_pair_encoding_is_preserved_independently_per_host(self):
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            config = root / "config.json"
-            first = root / "first.json"
-            second = root / "second.json"
-            third = root / "third.json"
-            self.write_json(first, self.proposal("codex", "alpha"))
-            self.write_json(
-                second,
-                self.proposal(
-                    "claude",
-                    "beta",
-                    worker_binding={
-                        "mechanism": "worker-definitions",
-                        "definitions_directory": "/tmp/claude-workers",
-                        "pair_encoding": "sibling-fields",
-                    },
-                ),
-            )
-            self.write_json(
-                third,
-                self.proposal(
-                    "cursor",
-                    "gamma",
-                    worker_binding={
-                        "mechanism": "worker-definitions",
-                        "definitions_directory": "/tmp/cursor-workers",
-                        "pair_encoding": "model-brackets",
-                    },
-                ),
-            )
-            self.assertEqual(0, self.apply(config, first)[0])
-            self.assertEqual(0, self.apply(config, second)[0])
-            self.assertEqual(0, self.apply(config, third)[0])
-            saved = json.loads(config.read_text(encoding="utf-8"))
-            self.assertEqual(None, saved["hosts"]["codex"]["worker_binding"]["pair_encoding"])
-            self.assertEqual("sibling-fields", saved["hosts"]["claude"]["worker_binding"]["pair_encoding"])
-            self.assertEqual("model-brackets", saved["hosts"]["cursor"]["worker_binding"]["pair_encoding"])
-            self.assertEqual("spawn-arguments", saved["hosts"]["codex"]["worker_binding"]["mechanism"])
-
-    def test_existing_config_defaults_missing_pair_encoding(self):
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            config = root / "config.json"
-            proposal = self.proposal("codex", "stable")
-            entry = {
-                "profiles": proposal["profiles"],
-                "invalid_bindings": [],
-                "worker_binding": {"mechanism": "spawn-arguments", "definitions_directory": None},
-                "repositories": {
-                    "/private/tmp/repository": {
-                        "repository_root": "/private/tmp/repository",
-                        "transcripts_directory": "/tmp/transcripts",
-                    }
-                },
-            }
-            self.write_json(config, {"schema_version": 2, "hosts": {"codex": entry}})
-            status, stdout, stderr = self.run_configurator(["validate"], config)
-            self.assertEqual(0, status, stderr)
-            self.assertIn("Valid dstack configuration", stdout)
-
-            claude = {
-                "profiles": self.profiles("claude"),
-                "invalid_bindings": [],
-                "worker_binding": {
-                    "mechanism": "worker-definitions",
-                    "definitions_directory": "/tmp/claude-workers",
-                },
-                "repositories": {},
-            }
-            self.write_json(config, {"schema_version": 2, "hosts": {"claude": claude}})
-            checked = CONFIGURE.validate_config(json.loads(config.read_text(encoding="utf-8")))
-            self.assertEqual("sibling-fields", checked["hosts"]["claude"]["worker_binding"]["pair_encoding"])
-            self.write_json(config, {"schema_version": 2, "hosts": {"codex": entry}})
-            checked = CONFIGURE.validate_config(json.loads(config.read_text(encoding="utf-8")))
-            self.assertIsNone(checked["hosts"]["codex"]["worker_binding"]["pair_encoding"])
 
     def git_workspace(self):
         GIT_TMP.mkdir(exist_ok=True)

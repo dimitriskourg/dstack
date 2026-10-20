@@ -5,44 +5,47 @@
   "type": "object",
   "required": ["schema_version", "hosts"],
   "properties": {
-    "schema_version": { "const": 2 },
+    "schema_version": { "const": 3 },
     "hosts": {
       "type": "object",
       "propertyNames": {
         "enum": ["codex", "claude", "cursor"]
       },
-      "additionalProperties": {
-        "type": "object",
-        "required": ["profiles", "invalid_bindings", "worker_binding", "repositories"],
-        "properties": {
-          "profiles": {
-            "type": "object",
-            "required": ["fast-explorer", "feature-worker", "bug-worker", "skeptical-reviewer"],
-            "properties": {
-              "fast-explorer": { "$ref": "#/$defs/modelBinding" },
-              "feature-worker": { "$ref": "#/$defs/modelBinding" },
-              "bug-worker": { "$ref": "#/$defs/modelBinding" },
-              "skeptical-reviewer": { "$ref": "#/$defs/modelBinding" }
-            },
-            "additionalProperties": false
-          },
-          "invalid_bindings": { "type": "array", "items": { "$ref": "#/$defs/modelBinding" }, "uniqueItems": true },
-          "worker_binding": { "$ref": "#/$defs/workerBinding" },
-          "repositories": {
-            "type": "object",
-            "propertyNames": { "minLength": 1 },
-            "additionalProperties": { "$ref": "#/$defs/repositoryConfig" }
-          }
-        },
-        "additionalProperties": false
-      }
+      "properties": {
+        "codex": { "$ref": "#/$defs/pairHost" },
+        "claude": { "$ref": "#/$defs/pairHost" },
+        "cursor": { "$ref": "#/$defs/cursorHost" }
+      },
+      "additionalProperties": false
     }
   },
   "$defs": {
     "modelIdentifier": {
       "type": "string",
       "pattern": "^[^\\[\\]\\s]+$",
-      "not": { "enum": ["inherit-parent", "auto"] }
+      "not": { "enum": ["inherit-parent", "inherit", "auto"] }
+    },
+    "cursorModel": {
+      "type": "string",
+      "pattern": "^[^\\[\\]\\s]+(\\[effort=[^\\[\\]\\s,=]+\\])?$",
+      "not": { "pattern": "^(?:auto|inherit|inherit-parent)(?:\\[|$)|\\[effort=(?:auto|inherit|inherit-parent)\\]$" }
+    },
+    "pairBinding": {
+      "type": "object",
+      "required": ["model", "effort"],
+      "properties": {
+        "model": { "$ref": "#/$defs/modelIdentifier" },
+        "effort": { "$ref": "#/$defs/modelIdentifier" }
+      },
+      "additionalProperties": false
+    },
+    "cursorBinding": {
+      "type": "object",
+      "required": ["model"],
+      "properties": {
+        "model": { "$ref": "#/$defs/cursorModel" }
+      },
+      "additionalProperties": false
     },
     "repositoryConfig": {
       "type": "object",
@@ -53,39 +56,48 @@
       },
       "additionalProperties": false
     },
-    "workerBinding": {
+    "repositories": {
       "type": "object",
-      "required": ["mechanism", "definitions_directory", "pair_encoding"],
-      "properties": {
-        "mechanism": { "enum": ["spawn-arguments", "worker-definitions"] },
-        "definitions_directory": { "type": ["string", "null"], "minLength": 1 },
-        "pair_encoding": { "enum": ["sibling-fields", "model-brackets", null] }
-      },
-      "additionalProperties": false,
-      "allOf": [
-        {
-          "if": { "properties": { "mechanism": { "const": "worker-definitions" } }, "required": ["mechanism"] },
-          "then": {
-            "properties": {
-              "definitions_directory": { "type": "string" },
-              "pair_encoding": { "enum": ["sibling-fields", "model-brackets"] }
-            }
-          },
-          "else": {
-            "properties": {
-              "definitions_directory": { "type": "null" },
-              "pair_encoding": { "type": "null" }
-            }
-          }
-        }
-      ]
+      "propertyNames": { "minLength": 1 },
+      "additionalProperties": { "$ref": "#/$defs/repositoryConfig" }
     },
-    "modelBinding": {
+    "pairHost": {
       "type": "object",
-      "required": ["model", "effort"],
+      "required": ["profiles", "invalid_bindings", "repositories"],
       "properties": {
-        "model": { "$ref": "#/$defs/modelIdentifier" },
-        "effort": { "$ref": "#/$defs/modelIdentifier" }
+        "profiles": {
+          "type": "object",
+          "required": ["fast-explorer", "feature-worker", "bug-worker", "skeptical-reviewer"],
+          "properties": {
+            "fast-explorer": { "$ref": "#/$defs/pairBinding" },
+            "feature-worker": { "$ref": "#/$defs/pairBinding" },
+            "bug-worker": { "$ref": "#/$defs/pairBinding" },
+            "skeptical-reviewer": { "$ref": "#/$defs/pairBinding" }
+          },
+          "additionalProperties": false
+        },
+        "invalid_bindings": { "type": "array", "items": { "$ref": "#/$defs/pairBinding" }, "uniqueItems": true },
+        "repositories": { "$ref": "#/$defs/repositories" }
+      },
+      "additionalProperties": false
+    },
+    "cursorHost": {
+      "type": "object",
+      "required": ["profiles", "invalid_bindings", "repositories"],
+      "properties": {
+        "profiles": {
+          "type": "object",
+          "required": ["fast-explorer", "feature-worker", "bug-worker", "skeptical-reviewer"],
+          "properties": {
+            "fast-explorer": { "$ref": "#/$defs/cursorBinding" },
+            "feature-worker": { "$ref": "#/$defs/cursorBinding" },
+            "bug-worker": { "$ref": "#/$defs/cursorBinding" },
+            "skeptical-reviewer": { "$ref": "#/$defs/cursorBinding" }
+          },
+          "additionalProperties": false
+        },
+        "invalid_bindings": { "type": "array", "items": { "$ref": "#/$defs/cursorBinding" }, "uniqueItems": true },
+        "repositories": { "$ref": "#/$defs/repositories" }
       },
       "additionalProperties": false
     }

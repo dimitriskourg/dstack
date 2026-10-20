@@ -7,6 +7,7 @@ import argparse
 import copy
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -14,18 +15,15 @@ from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
+RETIRED_SCHEMA_VERSIONS = {2}
 CONFIG_PATH = Path("~/.dstack/config.json").expanduser()
 CONFIG_DISPLAY = "~/.dstack/config.json"
 PROFILES = ("fast-explorer", "feature-worker", "bug-worker", "skeptical-reviewer")
-RESERVED_BINDING_VALUES = {"auto", "inherit-parent"}
-SPAWN_ARGUMENTS = "spawn-arguments"
-WORKER_DEFINITIONS = "worker-definitions"
-WORKER_MECHANISMS = (SPAWN_ARGUMENTS, WORKER_DEFINITIONS)
-SIBLING_FIELDS = "sibling-fields"
-MODEL_BRACKETS = "model-brackets"
-PAIR_ENCODINGS = (SIBLING_FIELDS, MODEL_BRACKETS)
-SUPPORTED_HOSTS = ("codex", "claude", "cursor")
+RESERVED_BINDING_VALUES = {"auto", "inherit", "inherit-parent"}
+PROFILE_FIELDS = {"codex": ("model", "effort"), "claude": ("model", "effort"), "cursor": ("model",)}
+SUPPORTED_HOSTS = tuple(PROFILE_FIELDS)
+EFFORT_BRACKET = re.compile(r"^(?P<model>[^\[\]\s]+)\[effort=(?P<effort>[^\[\]\s,=]+)\]$")
 
 
 class ConfigError(Exception):
@@ -68,93 +66,61 @@ def validate_host(value: Any, location: str) -> str:
     return host
 
 
-def validate_binding(value: Any, location: str) -> Dict[str, str]:
+def require_concrete(value: str, location: str) -> str:
+    if value in RESERVED_BINDING_VALUES:
+        raise ConfigError(
+            "{} must be a concrete value; auto, inherit, and inherit-parent are not supported".format(location)
+        )
+    return value
+
+
+def validate_effort_carrying_model(value: Any, location: str) -> str:
+    if not isinstance(value, str) or not value or any(char.isspace() for char in value):
+        raise ConfigError("{} must be a non-empty string without whitespace".format(location))
+    if any(char in "[]" for char in value):
+        match = EFFORT_BRACKET.fullmatch(value)
+        if match is None:
+            raise ConfigError("{} brackets must be exactly [effort=<value>]".format(location))
+        require_concrete(match.group("model"), location)
+        require_concrete(match.group("effort"), "{} effort".format(location))
+        return value
+    return require_concrete(value, location)
+
+
+def validate_binding(host: str, value: Any, location: str) -> Dict[str, str]:
     binding = require_object(value, location)
-    require_exact_keys(binding, ("model", "effort"), (), location)
-    checked: Dict[str, str] = {
-        "model": require_identifier(binding["model"], "{}.model".format(location)),
-        "effort": require_identifier(binding["effort"], "{}.effort".format(location)),
+    fields = PROFILE_FIELDS[host]
+    require_exact_keys(binding, fields, (), location)
+    if fields == ("model",):
+        return {"model": validate_effort_carrying_model(binding["model"], "{}.model".format(location))}
+    return {
+        field: require_concrete(
+            require_identifier(binding[field], "{}.{}".format(location, field)),
+            "{}.{}".format(location, field),
+        )
+        for field in fields
     }
-    for field in ("model", "effort"):
-        if checked[field] in RESERVED_BINDING_VALUES:
-            raise ConfigError(
-                "{}.{} must be a concrete value; auto and inherit-parent are not supported".format(
-                    location, field
-                )
-            )
-    return checked
 
 
-def validate_profiles(value: Any, location: str) -> Dict[str, Dict[str, str]]:
+def validate_profiles(host: str, value: Any, location: str) -> Dict[str, Dict[str, str]]:
     profiles = require_object(value, location)
     require_exact_keys(profiles, PROFILES, (), location)
     return {
-        profile: validate_binding(profiles[profile], "{}.{}".format(location, profile))
+        profile: validate_binding(host, profiles[profile], "{}.{}".format(location, profile))
         for profile in PROFILES
     }
 
 
-def validate_invalid_bindings(value: Any, location: str) -> List[Dict[str, str]]:
+def validate_invalid_bindings(host: str, value: Any, location: str) -> List[Dict[str, str]]:
     if not isinstance(value, list):
         raise ConfigError("{} must be an array".format(location))
-    bindings = [validate_binding(item, "{}[{}]".format(location, index)) for index, item in enumerate(value)]
-    identities = [(item["model"], item["effort"]) for item in bindings]
+    bindings = [
+        validate_binding(host, item, "{}[{}]".format(location, index)) for index, item in enumerate(value)
+    ]
+    identities = [tuple(sorted(item.items())) for item in bindings]
     if len(identities) != len(set(identities)):
         raise ConfigError("{} must not contain duplicates".format(location))
     return bindings
-
-
-def validate_pair_encoding(value: Any, location: str, mechanism: str) -> Optional[str]:
-    if mechanism == WORKER_DEFINITIONS:
-        if value not in PAIR_ENCODINGS:
-            raise ConfigError(
-                "{}.pair_encoding must be one of: {}".format(location, ", ".join(PAIR_ENCODINGS))
-            )
-        return value
-    if value is not None:
-        raise ConfigError(
-            "{}.pair_encoding must be null when the mechanism is {}".format(location, SPAWN_ARGUMENTS)
-        )
-    return None
-
-
-def validate_worker_binding(
-    value: Any, location: str, *, encoding_required: bool = False
-) -> Dict[str, Any]:
-    binding = require_object(value, location)
-    required = ("mechanism", "definitions_directory", "pair_encoding") if encoding_required else (
-        "mechanism",
-        "definitions_directory",
-    )
-    optional = () if encoding_required else ("pair_encoding",)
-    require_exact_keys(binding, required, optional, location)
-    mechanism = require_identifier(binding["mechanism"], "{}.mechanism".format(location))
-    if mechanism not in WORKER_MECHANISMS:
-        raise ConfigError(
-            "{}.mechanism must be one of: {}".format(location, ", ".join(WORKER_MECHANISMS))
-        )
-    directory = binding["definitions_directory"]
-    if "pair_encoding" in binding:
-        encoding = validate_pair_encoding(binding["pair_encoding"], location, mechanism)
-    else:
-        encoding = SIBLING_FIELDS if mechanism == WORKER_DEFINITIONS else None
-    if mechanism == WORKER_DEFINITIONS:
-        if not isinstance(directory, str) or not directory or not Path(directory).expanduser().is_absolute():
-            raise ConfigError(
-                "{}.definitions_directory must be an absolute path when the mechanism is {}".format(
-                    location, WORKER_DEFINITIONS
-                )
-            )
-        return {
-            "mechanism": mechanism,
-            "definitions_directory": str(Path(directory).expanduser()),
-            "pair_encoding": encoding,
-        }
-    if directory is not None:
-        raise ConfigError(
-            "{}.definitions_directory must be null when the mechanism is {}".format(location, SPAWN_ARGUMENTS)
-        )
-    return {"mechanism": mechanism, "definitions_directory": None, "pair_encoding": None}
 
 
 def validate_transcripts_directory(value: Any, location: str) -> Optional[str]:
@@ -198,6 +164,12 @@ def validate_repositories(value: Any, location: str) -> Dict[str, Dict[str, Opti
 
 def validate_config(value: Any) -> Dict[str, Any]:
     config = require_object(value, "config")
+    version = config.get("schema_version")
+    if version in RETIRED_SCHEMA_VERSIONS and not isinstance(version, bool):
+        raise ConfigError(
+            "{} is an old schema_version {} config from the worker binding era and is not migrated; "
+            "delete or rewrite {}, then rerun setup-dstack".format(CONFIG_DISPLAY, version, CONFIG_DISPLAY)
+        )
     require_exact_keys(config, ("schema_version", "hosts"), (), "config")
     if config["schema_version"] != SCHEMA_VERSION or isinstance(config["schema_version"], bool):
         raise ConfigError("config.schema_version must be {}; found {}".format(SCHEMA_VERSION, config["schema_version"]))
@@ -207,11 +179,12 @@ def validate_config(value: Any) -> Dict[str, Any]:
         validate_host(host, "config host key")
         location = "config.hosts.{}".format(host)
         entry = require_object(hosts[host], location)
-        require_exact_keys(entry, ("profiles", "invalid_bindings", "worker_binding", "repositories"), (), location)
+        require_exact_keys(entry, ("profiles", "invalid_bindings", "repositories"), (), location)
         checked_hosts[host] = {
-            "profiles": validate_profiles(entry["profiles"], "{}.profiles".format(location)),
-            "invalid_bindings": validate_invalid_bindings(entry["invalid_bindings"], "{}.invalid_bindings".format(location)),
-            "worker_binding": validate_worker_binding(entry["worker_binding"], "{}.worker_binding".format(location)),
+            "profiles": validate_profiles(host, entry["profiles"], "{}.profiles".format(location)),
+            "invalid_bindings": validate_invalid_bindings(
+                host, entry["invalid_bindings"], "{}.invalid_bindings".format(location)
+            ),
             "repositories": validate_repositories(entry["repositories"], "{}.repositories".format(location)),
         }
     return {
@@ -224,18 +197,16 @@ def validate_proposal(value: Any) -> Dict[str, Any]:
     proposal = require_object(value, "proposal")
     require_exact_keys(
         proposal,
-        ("host", "repository_root", "profiles", "invalid_bindings", "worker_binding", "transcripts_directory"),
+        ("host", "repository_root", "profiles", "invalid_bindings", "transcripts_directory"),
         (),
         "proposal",
     )
+    host = validate_host(proposal["host"], "proposal.host")
     checked = {
-        "host": validate_host(proposal["host"], "proposal.host"),
+        "host": host,
         "repository_root": validate_repository_root(proposal["repository_root"], "proposal.repository_root"),
-        "profiles": validate_profiles(proposal["profiles"], "proposal.profiles"),
-        "invalid_bindings": validate_invalid_bindings(proposal["invalid_bindings"], "proposal.invalid_bindings"),
-        "worker_binding": validate_worker_binding(
-            proposal["worker_binding"], "proposal.worker_binding", encoding_required=True
-        ),
+        "profiles": validate_profiles(host, proposal["profiles"], "proposal.profiles"),
+        "invalid_bindings": validate_invalid_bindings(host, proposal["invalid_bindings"], "proposal.invalid_bindings"),
         "transcripts_directory": validate_transcripts_directory(proposal["transcripts_directory"], "proposal.transcripts_directory"),
     }
     return checked
@@ -381,7 +352,6 @@ def merge_proposal(config: Mapping[str, Any], proposal: Mapping[str, Any]) -> Di
     merged["hosts"][proposal["host"]] = {
         "profiles": copy.deepcopy(proposal["profiles"]),
         "invalid_bindings": copy.deepcopy(proposal["invalid_bindings"]),
-        "worker_binding": copy.deepcopy(proposal["worker_binding"]),
         "repositories": repositories,
     }
     return validate_config(merged)

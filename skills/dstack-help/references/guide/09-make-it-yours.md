@@ -1,24 +1,8 @@
 # Make it yours
 
-dstack-mode is one person's style. The playbooks, routing, and model roles underneath it work just as well with yours. This page covers generating a personal mode, capturing lessons from a session, fixing the repo so agents stop repeating mistakes, authoring a focused skill, and testing a skill change before you trust it.
+dstack-mode is one person's style. The playbooks, routing, and model roles underneath it work just as well with yours. This page covers capturing lessons from a session, fixing the repo so agents stop repeating mistakes, and authoring a focused skill.
 
 Start smaller than you think. You don't need many skills on day one, or even this whole plugin. Prompt plainly, watch where agents fail, and add a skill or a check when the same failure shows up twice.
-
-## Generate your own mode with `/automate-me`
-
-```text
-/automate-me
-```
-
-You don't describe your style, because [`/automate-me`](../../../automate-me/SKILL.md) reads it out of your history. It mines your recent transcripts in the active workspace for repeated preferences, in how you like replies, delegation, verification, code, prose, and process, then asks you which patterns are really you. It drafts a personal `<your-name>-mode/SKILL.md` in a discoverable skill directory through the active harness’s authoring workflow, runs the draft through [`/unslop`](../../../unslop/SKILL.md), and presents the local result for review. Publishing is a separate explicit request.
-
-Run it again whenever your habits drift:
-
-```text
-/automate-me update my mode skill with everything since its last edit
-```
-
-Update mode mines only the history since the skill last changed. It keeps rules you haven't contradicted, revises the ones with new evidence, and adds sections only for new patterns.
 
 ## Capture a session's lessons with `/reflect`
 
@@ -47,7 +31,7 @@ Human review isn't on the list. A reviewer who must catch the same mistake on ev
 
 It reads recent commits, reverts, review comments, and comments that explain workarounds, then groups the mistakes into classes. A class counts once it has happened twice. It fixes the most frequent classes one commit each, at the highest level that works, and proves each new check fails on a real past mistake. It also keeps a table in the agent instruction file that pairs each rule with what enforces it, so a rule that nothing enforces shows up as a repeat. The reply lists each class with its evidence, the level chosen, and why a higher level didn't work.
 
-Run it with no argument and it finds the classes from history on its own. `/reflect` and `/correct` split the work. `/reflect` improves skills from one session. `/correct` changes the repo so a mistake class can't come back. Pair it with `/architect` when the fix is a new boundary. [`/show-me-your-work`](../../../show-me-your-work/SKILL.md) explains how to preserve the evidence across a long task.
+Run it with no argument and it finds the classes from history on its own. `/reflect` and `/correct` split the work. `/reflect` improves skills from one session. `/correct` changes the repo so a mistake class can't come back. Pair it with `/architect` when the fix is a new boundary.
 
 ## Author a focused skill
 
@@ -71,28 +55,6 @@ Skills aren't the only prose you ship. For docs, RFCs, readmes, PR descriptions,
 
 [`/technical-writing`](../../../technical-writing/SKILL.md) applies a layered standard. Its goal is prose that a tired engineer understands on the first read. It picks the document's mode first (tutorial, how-to, reference, or explanation), then works sentence by sentence: who does what, one thought per sentence, nothing readable two ways. Use it to review what you or an agent just wrote, or name it up front when you ask for a doc.
 
-## Test a skill change blind
-
-A skill edit affects every future session, so test it like the experiment it is. The same goes for adopting someone else's skill. Check that it makes the agent better on your work before you keep it.
-
-```text
-/dstack-mode run the eval playbook on this skill change. same task for both variants, candidates stay blind.
-```
-
-When a skill keeps missing and you know what it should do, change and test it in one task:
-
-```text
-/dstack-mode update the review skill so it flags missing migrations, and eval the change.
-```
-
-Asking for the eval up front keeps the edit honest. A fix written from one bad session tends to overfit that session, and over many edits the skill drifts. The eval catches the drift before it ships.
-
-The [Eval playbook](../../../dstack-mode/playbooks/eval.md) is built around one failure mode, the observer effect. An agent that knows it's being evaluated behaves differently. So candidate agents get an organic-looking task in sanitized directories, never the words "eval" or "candidate", and never each other's existence. One judge scores all outputs under neutral labels, and chain-following gets graded from which files each candidate actually read, not from what it claims.
-
-Read every output yourself before accepting the verdict. If you disagree with the judge, suspect the rubric before you suspect your judgment.
-
-
-
-**Pitfall:** don't edit a skill mid-task because it's misbehaving. Fix it in its own change and keep the task moving. Publish only when explicitly requested. A skill edit that ships tangled into feature work is invisible to review and impossible to evaluate.
+**Pitfall:** don't edit a skill mid-task because it's misbehaving. Fix it in its own change and keep the task moving. Publish only when explicitly requested. A skill edit that ships tangled into feature work is invisible to review.
 
 Next: [Recipes and pitfalls](./10-recipes-and-pitfalls.md).

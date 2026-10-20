@@ -1,6 +1,6 @@
 # Route work through `/dstack-mode`
 
-`/dstack-mode` is the front door. You give it a goal, it matches one of eighteen playbooks, copies that playbook's steps into the todo list, and calls the other skills as the steps need them. In this page you learn what a good prompt looks like, and how little of one you actually need.
+`/dstack-mode` is the front door. You give it a goal, it matches one of ten playbooks, copies that playbook's steps into the todo list, and calls the other skills as the steps need them. In this page you learn what a good prompt looks like, and how little of one you actually need.
 
 ## What happens to your prompt
 
@@ -13,17 +13,13 @@ flowchart TD
     D -->|Defect| F[Bug fix]
     D -->|New behavior| G[Feature]
     D -->|Structure only| H[Refactoring]
-    D -->|Measured slowness| I[Perf issue]
-    D -->|Large work or no match| J[figure-it-out]
     E --> K[Verify and report]
     F --> K
     G --> K
     H --> K
-    I --> K
-    J --> K
 ```
 
-The diagram shows the common routes. There are also playbooks for hillclimbing a metric, diagnosing runtime symptoms and captured traces, prototypes, visual parity, authoring and evaluating skills, babysitting a PR or merge request to merge-ready, explicitly opening a request, session pickup, pausing safely, multi-phase plans, and Apple development cleanup. The [playbook directory](../../../dstack-mode/playbooks/) has the full set.
+The diagram shows the common routes. There are also playbooks for prototypes, authoring a skill, babysitting a PR or merge request to merge-ready, explicitly opening a request, session pickup, and pausing safely. The [playbook directory](../../../dstack-mode/playbooks/) has the full set.
 
 ## Say the goal, not the ceremony
 
@@ -120,7 +116,7 @@ While the active local session can supervise the work, say what done means:
 /dstack-mode im stepping away. keep going until the migration check reports zero old callers. log your decisions.
 ```
 
-Work you'll review later routes through [`/figure-it-out`](../../../figure-it-out/SKILL.md), which designs the run's phases and keeps a [`/show-me-your-work`](../../../show-me-your-work/SKILL.md) decision log. The [mode skill](../../../dstack-mode/SKILL.md#mode-lifetime) defines the active-session boundary, and [`/show-me-your-work`](../../../show-me-your-work/SKILL.md) explains how to audit the decision log.
+Work you'll review later still has to match a playbook, often Feature. Keep a local decision log in the prompt if you want one. The [mode skill](../../../dstack-mode/SKILL.md#mode-lifetime) defines the active-session boundary.
 
 **Pitfall:** don't enumerate skills in your prompt ("use /how, then /architect, then /arena..."). The playbook already sequences them, and a hand-written sequence usually reorders or drops steps the playbook would have kept. Name a skill only when you want to override a specific choice.
 
