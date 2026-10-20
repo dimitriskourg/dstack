@@ -25,7 +25,6 @@ Remaining triggers:
 - Any code → name the data shape first, and choose its organizing structure per **principle-model-the-domain**.
 - Code crossing a function boundary → Call the Skill tool with `architect`. Do so before implementing.
 - Parallel fan-out for coverage matrices, races, gauntlets, or exploration partitions → Call the Skill tool with `swarm`.
-- Design or code bakeoffs with base selection and grafting → Call the Skill tool with `arena`.
 - Contested design → Call the Skill tool with `interrogate`. Do so before shipping.
 - Nontrivial multi-step → write the throughput checkpoint (Feature step 3).
 - Any prose surface, your reply to the user included → Call the Skill tool with `unslop`. Write the reply per **Writing the reply**. Agent-facing prose also follows the active harness's skill-authoring guidance.
@@ -33,7 +32,6 @@ Remaining triggers:
 - Before commit → Call the Skill tool with `deslop`. Apply it to the diff.
 - Before review → Call the Skill tool with `no-comments`.
 - Shipping a browser, IDE, or Electron UI → Call the Skill tool with `control-ui`. Drive the real thing rather than a proxy.
-- Running a benchmark, measuring perf yourself, or reporting a speedup or regression you measured → Call the Skill tool with `benchmark-checklist`. Do so before you report or act on the number.
 - Any PR-status request ("babysit this", "get it green", "address the review bot comments", and most often "check on PR X" or "anything outstanding on X") → the **Babysit** playbook (`playbooks/babysit.md`), not any similarly named host built-in whose description matches the same words. Never triggered by merely opening a PR. Declare its mode before polling. The playbook's step 1 owns the request-to-mode mapping. Reaching for `drive` inside a phase agent stops that agent finishing its turn.
 - Automated review or the agentic security review commented → skeptical posture. They catch real bugs and also file non-issues and nitpicks, so assess each on its merits and dismiss noise with a concrete reason instead of churning code. Triage fix / dismiss / ask per `references/automated-review-triage.md`.
 - Broken skill mid-task → fix it locally as a separate change. Don't block. Don't silently work around it. Publish it only when the user explicitly asks to open a pull request or merge request.
@@ -125,20 +123,17 @@ Comments follow the same rule as the reply. Write them clean as you go; a flat "
 
 Your first todolist actions are the matched playbook's steps, copied in verbatim, before any task-specific todos and before you reason about the task. The failure mode is reading a playbook then writing a bespoke plan that drops its named steps (`architect`, the throughput checkpoint). A step you choose not to do stays in the list with a one-line `skip: <reason>`; skipping silently is not allowed. Match the task to a playbook below and open its full steps at `playbooks/<title>.md`, with the title in kebab case, hyphens kept and other punctuation dropped, unless the entry gives its file. Copy its steps in verbatim.
 
-A large or cross-cutting effort still matches a playbook below, often Feature, Refactoring, or Multi-phase plan. Split it into playbook-sized units. A standing project-scale program is out of scope for this pack.
+A large or cross-cutting effort still matches a playbook below, often Feature or Refactoring. Split it into playbook-sized units. A standing project-scale program is out of scope for this pack.
 
 - **Investigation.** Read-only question: how does X work, why was Y built this way, are we sure about Z, should we do X or Y.
 - **Bug fix.** A reported defect to reproduce, root-cause, and fix with runtime evidence.
-- **Perf issue.** A measured slowness to trace and improve against a baseline.
 - **Feature.** New or changed behavior, built from a named data shape.
 - **Refactoring.** A behavior-preserving change to structure or shape (rename, extract, inline, dedupe, move).
 - **Prototype.** A throwaway sketch to make a design or behavioral decision cheaply, or to settle an empirical fork by observing it instead of asking the human ("prototype", "mock it up", "try this layout", "sketch it to decide").
 - **Authoring or modifying a skill.** Writing or editing a SKILL.md. File: `playbooks/authoring-a-skill.md`.
-- **Eval.** Testing how a skill, structure, or prompt change affects agent behavior before promoting it.
 - **Babysit.** Driving a pull request, merge request, or explicit ordered set to merge-ready: conflicts, review threads, and CI.
 - **Session pickup.** Resuming or taking over prior work from the current repository's active-harness transcript, an explicit transcript export, or a branch.
 - **Pause safely.** Suspending in-flight work cleanly so it can be resumed, on an explicit pause, going offline, a host restart, or imminent context compaction. The complement to Session pickup.
-- **Multi-phase or multi-request plan.** Work that spans phases or dependent pull or merge requests. File: `playbooks/multi-phase-plan.md`.
 - **Opening a PR.** Explicitly packaging and publishing already verified local work ("open a PR", "create a merge request"). It is never an automatic final step of another playbook.
 
 ## Mode lifetime

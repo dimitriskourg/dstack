@@ -8,7 +8,7 @@ Updated 2026-10-19. This is the source-of-truth handoff for upstream alignment a
 - Upstream repository: <https://github.com/cursor/plugins/tree/main/pstack>
 - Recorded source commit: `d457567332aa6989e753ea289f30ea2bfbc80bc0`
 - Recorded plugin version: `0.15.28`
-- Recorded inventory: 56 pstack skills and 23 `poteto-mode` playbooks; dstack ships 55 skills
+- Recorded inventory: 56 pstack skills and 23 `poteto-mode` playbooks; dstack ships 54 skills
 
 Recheck the local source revision before a future sync. Treat pstack and other plugin folders as immutable inputs.
 
@@ -22,7 +22,7 @@ The same refresh then absorbed pstack `0.15.5` → `0.15.15`. New skills: `corre
 
 ### Curated scope
 
-dstack ports selected pstack material rather than pursuing source completeness. The everyday keep-set is shrinking. This branch drops `figure-it-out`, `show-me-your-work`, `automate-me`, `control-cli`, Hillclimb, Visual parity, Runtime forensics, Trace forensics, and Apple development cleanup; callers no longer route to them. `dstack-mode` ships 13 local playbooks. Retained source stays as close to pstack as the supported harnesses and team requirements allow. Excluded source remains available through pstack and Git history; dstack does not keep a disabled archive.
+dstack ports selected pstack material rather than pursuing source completeness. The everyday keep-set is closed. This branch drops `figure-it-out`, `show-me-your-work`, `automate-me`, `control-cli`, `benchmark-checklist`, Hillclimb, Visual parity, Runtime forensics, Trace forensics, Apple development cleanup, Eval, Perf issue, and Multi-phase plan; callers no longer route to them. `dstack-mode` ships 10 local playbooks. Retained source stays as close to pstack as the supported harnesses and team requirements allow. Excluded source remains available through pstack and Git history; dstack does not keep a disabled archive.
 
 ### Names
 
@@ -78,11 +78,11 @@ Every independently invocable skill that consumes profiles or transcripts reads 
 
 Invocation has two portable states. Human-only root skills keep `disable-model-invocation: true`; `agents/openai.yaml` mirrors that policy with `allow_implicit_invocation: false`. Skills called through the Skill tool omit both restrictions because a model-disabled skill cannot be an internal callee in Claude Code or Codex. A human-only prerequisite is phrased as an instruction for the user to run the skill, not as a Skill-tool call. See [invocation metadata](docs/agents/invocation.md).
 
-The pstack refresh keeps `benchmark-checklist` callable because the mode and performance playbooks invoke it. Its call sites use the standard Skill-tool phrase. `dstack-help` directs task requests to explicit user invocation of `dstack-mode` and bundles its guide pages under `references/guide/`, which the existing installer copies with the skill. The matching `docs/guide/` pages link to these canonical references instead of duplicating them.
+`benchmark-checklist` is dropped from the everyday keep-set. `dstack-help` directs task requests to explicit user invocation of `dstack-mode` and bundles its guide pages under `references/guide/`, which the existing installer copies with the skill. The matching `docs/guide/` pages link to these canonical references instead of duplicating them.
 
 The 2026-10-11 refresh absorbed pstack `00b14f1` (0.15.16) and `978ca6e` (0.15.17), verified by diffing `9f451cf..HEAD` for `pstack/`. 0.15.16 is the token-cutting rewrite: the same rules in fewer words across retained skills (`architect`, `arena`, `benchmark-checklist`, `figure-it-out`, `how`, `interrogate` plus its rubric and reviewer prompt, `reflect` plus its reviewer prompts, `technical-writing`, `unslop`, `why` plus epistemics, investigator, synthesizer, and source playbooks), the ten principle leaves that changed, and the `dstack-mode` playbooks that changed (`opening-a-pr`, `trace-forensics`). Deliberate dstack differences stayed: profile-based model and effort via `~/.dstack/config.json` (no hardcoded model names, Cursor model files, `Task`, or `subagent_type`), the standard Skill-tool call phrase, `reflect`'s transcript lookup through the dstack config, forge-neutral `gh`/`glab`, serialized repository writers, and the excluded playbooks. Human-only invocation on Skill-tool callees is still unported.
 
-The same refresh adopted upstream's naming-by-convention in `dstack-mode` as a separable change. Principles and playbooks are referenced by title. The agent kebab-cases the title (hyphens kept, other punctuation dropped) to find `principle-<title>` or `playbooks/<title>.md`. Explicit names remain only where the title does not map cleanly: **Sequence Work into Verifiable Units** (`principle-sequence-verifiable-units`), **Authoring or modifying a skill** (`playbooks/authoring-a-skill.md`), and **Multi-phase or multi-request plan** (`playbooks/multi-phase-plan.md`). The owner asked whether Multi-phase should name `references/plan.md`; that file is still the plan template inside the playbook, not the playbook the title resolves to. The portability audit now resolves the same convention and fails when a title does not point at an existing skill or playbook. This can be reverted on its own if the experiment fails.
+The same refresh adopted upstream's naming-by-convention in `dstack-mode` as a separable change. Principles and playbooks are referenced by title. The agent kebab-cases the title (hyphens kept, other punctuation dropped) to find `principle-<title>` or `playbooks/<title>.md`. Explicit names remain only where the title does not map cleanly: **Sequence Work into Verifiable Units** (`principle-sequence-verifiable-units`) and **Authoring or modifying a skill** (`playbooks/authoring-a-skill.md`). The portability audit now resolves the same convention and fails when a title does not point at an existing skill or playbook. This can be reverted on its own if the experiment fails.
 
 0.15.17 adds `/ketchup`, ported as `skills/ketchup/`: human-only (`disable-model-invocation: true`, `allow_implicit_invocation: false`), harness-neutral (PR, CI, and agent checks are hedged with "where the harness exposes them"), and routed from `dstack-help` next to `/recall`. `/ketchup` recaps only this chat since the last user message. `/recall` still rebuilds context across recent chats.
 
@@ -110,7 +110,7 @@ Not absorbed from `978ca6e..1b6d44f`: `plugin.json` and the Agent Plugins v1 roo
 
 Not absorbed from the earlier 0.15.16–0.15.17 commits: `plugin.json` and the pstack README (dstack is not a Cursor plugin package); pstack model-rule, `Task`, `subagent_type`, hardcoded slugs, and `pstack-models.mdc` hunks, because profiles live in `~/.dstack/config.json`; the built-in PR tool rule; autopilot owner paragraphs in Opening a PR; worktree, stack-manager, Origin, and Graphite language in Opening a PR; Shipping, autonomous-run, autopilot-full/stack, Orchestrate, and worktree-cleanup, which stay excluded; `make-bot-ui`, already excluded. `dstack-mode` still keeps its configuration, Skill-tool, native-subagent, and local-autonomy paragraphs, which 0.15.16 did not replace.
 
-The help and guide alignment was rechecked against `d457567` (plugin 0.15.28). `dstack-help` starts from the upstream help file and retains its section order, question routing, skill comparisons, prompting references, and reply format, plus the `/ketchup` row (every waiting item listed and decidable from the reply alone), the `/in-your-own-words` row, the `/sharpen` row, the `/create-formal-verification-skill` row, the `/maintain-formal-verification-skill` row, the recall/ketchup close call, and the `/dstack-mode` chat-as-runner sentence. Only the six upstream guide chapters directly linked by the help skill ship as local references (setup, mode, verification, principles, customization, and recipes), plus dstack’s supported-scope reference. The unneeded guide index, understanding, design, build-and-clean, and overnight chapters and all decorative images are omitted. Retained guide links point to the shipped chapters or the owning skills. Installation and setup use dstack’s fixed configuration and four concrete profiles; external helper skills are bundled; mode lifetime is host-neutral; repository writers serialize; publication is explicit and Babysit stops at merge-ready. Cloud work, automatic wake, autopilot, Shipping, worktree management, bot UI, the automation pack, `figure-it-out`, `show-me-your-work`, `automate-me`, `control-cli`, Hillclimb, Visual parity, Runtime forensics, Trace forensics, and Apple development cleanup remain excluded. Retained chapters preserve upstream examples and Mermaid diagrams; sibling-skill links resolve inside the installed skill collection.
+The help and guide alignment was rechecked against `d457567` (plugin 0.15.28). `dstack-help` starts from the upstream help file and retains its section order, question routing, skill comparisons, prompting references, and reply format, plus the `/ketchup` row (every waiting item listed and decidable from the reply alone), the `/in-your-own-words` row, the `/sharpen` row, the `/create-formal-verification-skill` row, the `/maintain-formal-verification-skill` row, the recall/ketchup close call, and the `/dstack-mode` chat-as-runner sentence. Only the six upstream guide chapters directly linked by the help skill ship as local references (setup, mode, verification, principles, customization, and recipes), plus dstack’s supported-scope reference. The unneeded guide index, understanding, design, build-and-clean, and overnight chapters and all decorative images are omitted. Retained guide links point to the shipped chapters or the owning skills. Installation and setup use dstack’s fixed configuration and four concrete profiles; external helper skills are bundled; mode lifetime is host-neutral; repository writers serialize; publication is explicit and Babysit stops at merge-ready. Cloud work, automatic wake, autopilot, Shipping, worktree management, bot UI, the automation pack, `figure-it-out`, `show-me-your-work`, `automate-me`, `control-cli`, `benchmark-checklist`, Hillclimb, Visual parity, Runtime forensics, Trace forensics, Apple development cleanup, Eval, Perf issue, and Multi-phase plan remain excluded. Retained chapters preserve upstream examples and Mermaid diagrams; sibling-skill links resolve inside the installed skill collection.
 
 The portability audit treats Skill-tool calls as invocation-graph edges and rejects any edge whose target is model-disabled. This preserves explicit-only roots without pretending either host supports a third state for internal-only invocation.
 
@@ -119,10 +119,6 @@ The currently bundled Skill Creator validator rejects that portable frontmatter 
 ### Additional skill
 
 `comment-sicko` remains an additional normal skill.
-
-### Multi-phase plan
-
-dstack still uses `references/plan.md`. It has not taken pstack's checkbox skeleton or `check-plan.mjs`. That checker is built for pstack's autopilot runtime, cloud lanes, and a hardcoded model. Whether dstack should add a similar local checker, without that runtime, is undecided. Revisit this on the next sync.
 
 ### Excluded pstack runtime
 
@@ -137,11 +133,15 @@ dstack does not ship pstack's provider-specific automation, agent wrappers, sile
 - `show-me-your-work`, dropped from the everyday keep-set; there is no separate decision-trail skill;
 - `automate-me`, dropped from the everyday keep-set;
 - `control-cli`, dropped from the everyday keep-set; there is no bundled CLI/TUI harness, and `control-ui` still covers browser, IDE, and Electron surfaces;
-- `hillclimb`, dropped from the everyday keep-set; one-off measured slowness stays on Perf issue;
-- `runtime-forensics`, dropped from the everyday keep-set; live-instrumentation diagnosis is out, and Bug fix and Perf issue still own defects and measured slowness;
-- `trace-forensics`, dropped from the everyday keep-set; captured-artifact diagnosis is out, and Bug fix and Perf issue still own defects and measured slowness;
+- `benchmark-checklist`, dropped from the everyday keep-set; Explain the Number still applies, and there is no bundled checklist skill;
+- `hillclimb`, dropped from the everyday keep-set; one-off measured slowness has no dedicated playbook;
+- `runtime-forensics`, dropped from the everyday keep-set; live-instrumentation diagnosis is out, and Bug fix still owns defects;
+- `trace-forensics`, dropped from the everyday keep-set; captured-artifact diagnosis is out, and Bug fix still owns defects;
 - `visual-parity`, dropped from the everyday keep-set; pixel-exact matching is out, and Prototype and `control-ui` still cover driving a UI;
-- `apple-dev-cleanup`, dropped from the everyday keep-set; machine-wide Apple simulator and runtime cleanup is out.
+- `apple-dev-cleanup`, dropped from the everyday keep-set; machine-wide Apple simulator and runtime cleanup is out;
+- `eval`, dropped from the everyday keep-set; there is no blind skill-eval playbook, and Authoring a skill remains;
+- `perf-issue`, dropped from the everyday keep-set; measured slowness has no dedicated playbook;
+- `multi-phase-plan`, dropped from the everyday keep-set; there is no plan playbook or `references/plan.md`.
 
 These are intentional scope choices, not capability gaps or known issues. Repository writers serialize. Read-only exploration, review, and independent artifacts outside the repository may still fan out in bounded waves.
 

@@ -1,6 +1,6 @@
 # Make it yours
 
-dstack-mode is one person's style. The playbooks, routing, and model roles underneath it work just as well with yours. This page covers capturing lessons from a session, fixing the repo so agents stop repeating mistakes, authoring a focused skill, and testing a skill change before you trust it.
+dstack-mode is one person's style. The playbooks, routing, and model roles underneath it work just as well with yours. This page covers capturing lessons from a session, fixing the repo so agents stop repeating mistakes, and authoring a focused skill.
 
 Start smaller than you think. You don't need many skills on day one, or even this whole plugin. Prompt plainly, watch where agents fail, and add a skill or a check when the same failure shows up twice.
 
@@ -55,28 +55,6 @@ Skills aren't the only prose you ship. For docs, RFCs, readmes, PR descriptions,
 
 [`/technical-writing`](../../../technical-writing/SKILL.md) applies a layered standard. Its goal is prose that a tired engineer understands on the first read. It picks the document's mode first (tutorial, how-to, reference, or explanation), then works sentence by sentence: who does what, one thought per sentence, nothing readable two ways. Use it to review what you or an agent just wrote, or name it up front when you ask for a doc.
 
-## Test a skill change blind
-
-A skill edit affects every future session, so test it like the experiment it is. The same goes for adopting someone else's skill. Check that it makes the agent better on your work before you keep it.
-
-```text
-/dstack-mode run the eval playbook on this skill change. same task for both variants, candidates stay blind.
-```
-
-When a skill keeps missing and you know what it should do, change and test it in one task:
-
-```text
-/dstack-mode update the review skill so it flags missing migrations, and eval the change.
-```
-
-Asking for the eval up front keeps the edit honest. A fix written from one bad session tends to overfit that session, and over many edits the skill drifts. The eval catches the drift before it ships.
-
-The [Eval playbook](../../../dstack-mode/playbooks/eval.md) is built around one failure mode, the observer effect. An agent that knows it's being evaluated behaves differently. So candidate agents get an organic-looking task in sanitized directories, never the words "eval" or "candidate", and never each other's existence. One judge scores all outputs under neutral labels, and chain-following gets graded from which files each candidate actually read, not from what it claims.
-
-Read every output yourself before accepting the verdict. If you disagree with the judge, suspect the rubric before you suspect your judgment.
-
-
-
-**Pitfall:** don't edit a skill mid-task because it's misbehaving. Fix it in its own change and keep the task moving. Publish only when explicitly requested. A skill edit that ships tangled into feature work is invisible to review and impossible to evaluate.
+**Pitfall:** don't edit a skill mid-task because it's misbehaving. Fix it in its own change and keep the task moving. Publish only when explicitly requested. A skill edit that ships tangled into feature work is invisible to review.
 
 Next: [Recipes and pitfalls](./10-recipes-and-pitfalls.md).

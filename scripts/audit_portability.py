@@ -22,7 +22,7 @@ CONFIG_DEPENDENT_SKILLS = {
 TRANSCRIPT_CONFIG_SKILLS = {"dstack-mode", "recall", "reflect"}
 CANONICAL_HOST_IDS = {"codex", "claude", "cursor"}
 REQUIRED_SKILLS = {
-    "architect", "arena", "benchmark-checklist", "blast-radius", "bro",
+    "architect", "arena", "blast-radius", "bro",
     "comment-sicko", "control-ui", "correct", "create-formal-verification-skill", "create-verification-skill", "maintain-formal-verification-skill",
     "deslop", "dstack-help", "dstack-mode",
     "how", "in-your-own-words", "interrogate", "ketchup", "maintain-verification-skill", "no-comments",
@@ -45,14 +45,15 @@ REQUIRED_SKILLS = {
     "principle-type-system-discipline",
 }
 REQUIRED_DSTACK_PLAYBOOKS = {
-    "authoring-a-skill", "babysit", "bug-fix", "eval",
-    "feature", "investigation", "multi-phase-plan", "opening-a-pr",
-    "pause-safely", "perf-issue", "prototype", "refactoring",
+    "authoring-a-skill", "babysit", "bug-fix",
+    "feature", "investigation", "opening-a-pr",
+    "pause-safely", "prototype", "refactoring",
     "session-pickup",
 }
 EXCLUDED_DSTACK_PLAYBOOKS = {
-    "apple-dev-cleanup", "autonomous-run", "autopilot-full", "autopilot-stack", "hillclimb",
-    "runtime-forensics", "shipping", "trace-forensics", "visual-parity", "worktree-cleanup",
+    "apple-dev-cleanup", "autonomous-run", "autopilot-full", "autopilot-stack", "eval",
+    "hillclimb", "multi-phase-plan", "perf-issue", "runtime-forensics", "shipping",
+    "trace-forensics", "visual-parity", "worktree-cleanup",
 }
 LEAKAGE_PATTERNS: Tuple[Tuple[str, re.Pattern[str]], ...] = (
     ("provider name", re.compile(r"\b(?:Cursor|Codex|Claude Code)\b", re.I)),

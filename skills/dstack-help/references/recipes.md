@@ -20,7 +20,6 @@ Swap in the real paths, skills, and done checks. Informal wording works.
 - Bug with a cheap test: `/dstack-mode repro <bug> first. if there's a cheap test path, /tdd it. then fix and rerun.`
 - Feature: `/dstack-mode add <behavior>. <current output> stays byte-identical. verify both.`
 - Refactor: `/dstack-mode move <code> into one module, zero behavior change. record the current output first and prove it's unchanged after.`
-- Perf: `/dstack-mode <operation> takes <time> on <fixture>. trace it, fix the measured cause, show me before and after.`
 
 ## Design and plan
 
@@ -28,8 +27,6 @@ Swap in the real paths, skills, and done checks. Informal wording works.
 - `/dstack-mode we need <feature>. /architect it first, and answer open questions with prototypes. let me review before proceeding.`
 - `/dstack-mode write a tutorial for how i would use <new package> first. then /teach me why it beats the current one.`
 - `ask /arena for a second opinion on this thread and our approach.`
-- `/dstack-mode turn this design into a plan. small verifiable PRs, each with its own verification steps.`
-- `/dstack-mode plan the migration of <library> to <target>. small verifiable PRs. the result must match the original exactly, bugs included.`
 
 ## Review and ship
 

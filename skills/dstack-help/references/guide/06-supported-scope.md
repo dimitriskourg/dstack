@@ -15,7 +15,7 @@ dstack is a curated local workflow pack for Codex, Claude Code, and Cursor. Upst
 
 ## Retained skills
 
-The skills below remain supported. This keep-set will shrink further; `figure-it-out`, `show-me-your-work`, `automate-me`, and `control-cli` are already out.
+The skills below remain supported. The everyday keep-set is closed.
 
 ### Workflow and orchestration
 
@@ -49,7 +49,6 @@ The skills below remain supported. This keep-set will shrink further; `figure-it
 - `maintain-formal-verification-skill`
 - `maintain-verification-skill`
 - `tdd`
-- `benchmark-checklist`
 - `typescript-best-practices`
 
 ### Code and prose quality
@@ -91,16 +90,13 @@ The skills below remain supported. This keep-set will shrink further; `figure-it
 
 - Investigation
 - Bug fix
-- Performance issue
 - Feature
 - Refactoring
 - Prototype
 - Authoring or modifying a skill
-- Eval
 - Babysit
 - Session pickup
 - Pause safely
-- Multi-phase or multi-request plan
 - Opening a PR
 
 ## Intentional exclusions
@@ -116,11 +112,15 @@ The skills below remain supported. This keep-set will shrink further; `figure-it
 - **show-me-your-work.** Dropped from the everyday keep-set. There is no separate decision-trail skill.
 - **automate-me.** Dropped from the everyday keep-set. Personal mode generation is out of this pack.
 - **control-cli.** Dropped from the everyday keep-set. There is no bundled CLI/TUI harness; `control-ui` still covers browser, IDE, and Electron surfaces.
-- **Hillclimb.** Dropped from the everyday keep-set. One-off measured slowness stays on Perf issue.
-- **Runtime forensics.** Dropped from the everyday keep-set. Live-instrumentation diagnosis is out; Bug fix and Perf issue still own defects and measured slowness.
-- **Trace forensics.** Dropped from the everyday keep-set. Captured-artifact diagnosis is out; Bug fix and Perf issue still own defects and measured slowness.
+- **Hillclimb.** Dropped from the everyday keep-set. One-off measured slowness has no dedicated playbook.
+- **Runtime forensics.** Dropped from the everyday keep-set. Live-instrumentation diagnosis is out; Bug fix still owns defects.
+- **Trace forensics.** Dropped from the everyday keep-set. Captured-artifact diagnosis is out; Bug fix still owns defects.
 - **Visual parity.** Dropped from the everyday keep-set. Pixel-exact matching is out; Prototype and `control-ui` still cover driving a UI.
 - **Apple development cleanup.** Dropped from the everyday keep-set. Machine-wide Apple simulator and runtime cleanup is out.
+- **Eval.** Dropped from the everyday keep-set. There is no blind skill-eval playbook; Authoring a skill remains.
+- **Perf issue.** Dropped from the everyday keep-set. Measured slowness has no dedicated playbook; Explain the Number still applies to a number you measured.
+- **Multi-phase or multi-request plan.** Dropped from the everyday keep-set. There is no plan playbook or plan template; Feature or Refactoring still match large work that can be split.
+- **benchmark-checklist.** Dropped from the everyday keep-set. Explain the Number still applies; there is no bundled checklist skill.
 
 Git worktrees remain a possible future capability for creation, isolation, and cleanup. Add those only when real team usage justifies a complete contract across Codex, Claude Code, and Cursor. Recognizing an existing linked worktree as the same registered repository is already in scope.
 

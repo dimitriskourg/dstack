@@ -182,8 +182,6 @@ class PortabilityAuditTests(unittest.TestCase):
         self.assertEqual("Investigation", playbooks["investigation"])
         self.assertEqual("Authoring or modifying a skill", playbooks["authoring-a-skill"])
         self.assertNotEqual("authoring-a-skill", AUDIT.kebab_from_title(playbooks["authoring-a-skill"]))
-        self.assertEqual("Multi-phase or multi-request plan", playbooks["multi-phase-plan"])
-        self.assertNotEqual("multi-phase-plan", AUDIT.kebab_from_title(playbooks["multi-phase-plan"]))
         self.assertEqual(AUDIT.REQUIRED_DSTACK_PLAYBOOKS, set(playbooks))
 
     def test_unresolved_mode_title_fails(self):

@@ -80,7 +80,6 @@ The default answer is `/dstack-mode`, which runs most of the others when its ste
 | Bring a verification skill and its feature map back in line with the app | [`/maintain-verification-skill`](../maintain-verification-skill/SKILL.md) |
 | Formally verify a race, invariant, or other property that tests rarely reach | [`/create-formal-verification-skill`](../create-formal-verification-skill/SKILL.md) |
 | Bring a formal verification back in line after the code it covers changed, and learn whether a failure is drift or a bug | [`/maintain-formal-verification-skill`](../maintain-formal-verification-skill/SKILL.md) |
-| Vet a performance number before reporting or acting on it | [`/benchmark-checklist`](../benchmark-checklist/SKILL.md) |
 | Pick a concrete model and effort for each profile | [`/setup-dstack`](../setup-dstack/SKILL.md) |
 | Turn what a finished task taught into skill edits | [`/reflect`](../reflect/SKILL.md) |
 | Stop agents from repeating the same mistakes in this repo | [`/correct`](../correct/SKILL.md) |
@@ -109,11 +108,10 @@ Playbooks are step lists inside `/dstack-mode`, not skills, so they have no slas
 - "babysit this pr" or "check on pr 123" runs Babysit. It drives the PR to merge-ready and stops there. dstack stops at merge-ready and leaves merging to the team.
 - "take over this branch" runs Session pickup.
 - "pause safely" runs Pause safely.
-- "run the eval playbook" runs Eval.
 
 Without `/dstack-mode`, a phrase such as "babysit this pr" can start a host built-in for the same job instead. The Playbooks section of [`dstack-mode`](../dstack-mode/SKILL.md) lists every playbook and when it applies. [Guide page 6](references/guide/06-verify-and-ship.md) covers opening a request and babysitting it to merge-ready.
 
-dstack has no standalone planning skill. For work that spans phases or dependent PRs, asking `/dstack-mode` for a plan runs the [Multi-phase plan playbook](../dstack-mode/playbooks/multi-phase-plan.md), which writes the plan and doesn't implement it. For a design question, the Prototype playbook or `/architect` settles it in code first.
+dstack has no standalone planning skill. For a design question, the Prototype playbook or `/architect` settles it in code first.
 
 Principles are one-rule skills that `/dstack-mode` reads and cites in its replies. The user rarely invokes one. They steer with the names instead, as in "apply prove it works. show me the real output." Typing `/principle-<name>` still loads one on demand. [Guide page 8](references/guide/08-principles.md) lists them.
 
@@ -135,7 +133,7 @@ For a run that drifts, [`references/prompting.md`](references/prompting.md) has 
 ## Make dstack my own
 
 - [`/reflect`](../reflect/SKILL.md) after a session turns its lessons into skill edits the user approves.
-- `/dstack-mode write a skill for <workflow>` runs the authoring playbook. The eval playbook tests a skill change blind.
+- `/dstack-mode write a skill for <workflow>` runs the authoring playbook.
 - Fix a misbehaving skill in its own change, not inside the feature work where it went wrong.
 
 [Guide page 9](references/guide/09-make-it-yours.md) covers each of these.

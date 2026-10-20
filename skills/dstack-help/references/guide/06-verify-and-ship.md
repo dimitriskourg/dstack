@@ -26,25 +26,9 @@ Ask for the proof as an artifact you can inspect yourself: the failing test and 
 
 For a small diff you don't fully trust, [`/blast-radius`](../../../blast-radius/SKILL.md) finds what it could break elsewhere. It finds the one fact that makes the change safe and proves that fact by running code, not by arguing for it.
 
-## Vet a measured number with `/benchmark-checklist`
+## Vet a measured number
 
-A before-and-after number is the easiest evidence to get wrong by accident. A warm cache, a debug build on one side, or work that never ran inside the timed region can each produce a convincing speedup. Before you report or act on a number, type:
-
-```text
-/benchmark-checklist vet the export speedup before it goes in the pr
-```
-
-[`/benchmark-checklist`](../../../benchmark-checklist/SKILL.md) asks seven questions and wants evidence from a run for each:
-
-1. What limits the number, and why isn't it double?
-2. Did every side run tuned the way production runs?
-3. Does the result break a physical limit, like disk bandwidth or core count?
-4. Did anything error or return wrong output?
-5. Does it reproduce over alternating runs, with a median and a range?
-6. Does it matter end to end, on the path a user waits on?
-7. Did the work actually happen inside the timed region?
-
-The verdict comes back as faster, slower, no measurable difference, or inconclusive, with the run count, range, and limiter. It says inconclusive when it can't name the limiter or a side ran untuned. `/dstack-mode` already runs the checklist inside the Perf issue playbook, so you type it yourself when you measured something outside it, or when someone else's number looks too good. It's the working form of the [Explain the Number principle](../../../principle-explain-the-number/SKILL.md).
+A before-and-after number is the easiest evidence to get wrong by accident. A warm cache, a debug build on one side, or work that never ran inside the timed region can each produce a convincing speedup. Before you report or act on a number, apply the [Explain the Number principle](../../../principle-explain-the-number/SKILL.md): name what limits it, rule out that it measured something else, and keep the run count, range, and limiter with the number.
 
 ## Create a project verification skill
 

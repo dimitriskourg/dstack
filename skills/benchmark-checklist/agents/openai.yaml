@@ -1,3 +1,0 @@
-interface:
-  display_name: "Benchmark Checklist"
-  short_description: "Vet a perf number before reporting it"
