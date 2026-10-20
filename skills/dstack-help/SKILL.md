@@ -38,7 +38,7 @@ Name a skill directly when the user wants more or less than the playbook. Read i
 | The user wants to | Skill |
 |---|---|
 | Check that the agent understood the goal and the problem | [`/in-your-own-words`](../in-your-own-words/SKILL.md) |
-| Aim a task higher before starting | [`/sharpen`](../sharpen/SKILL.md) |
+| Get a prompt rewritten deeper before sending it, without doing the task | [`/sharpen`](../sharpen/SKILL.md) |
 | Know how code works now | [`/how`](../how/SKILL.md) |
 | Know why code is shaped this way | [`/why`](../why/SKILL.md) |
 | Understand a change, explained plainly | [`/teach`](../teach/SKILL.md) |
