@@ -15,16 +15,25 @@ from typing import Dict, Iterable, List, Optional, Set, Tuple
 ROOT = Path(__file__).resolve().parents[1]
 SKILLS = ROOT / "skills"
 PROFILES = {"fast-explorer", "feature-worker", "bug-worker", "skeptical-reviewer"}
-CONFIG_DEPENDENT_SKILLS = {
-    "architect", "arena", "dstack-mode", "how", "interrogate",
+CONFIG_SKILL = "dstack-config"
+CONFIG_CALL = "Call the Skill tool with `dstack-config`."
+CONFIG_CALLERS = {
+    "arena", "dstack-mode", "how", "interrogate",
     "recall", "reflect", "swarm", "why",
 }
-TRANSCRIPT_CONFIG_SKILLS = {"dstack-mode", "recall", "reflect"}
+CONFIG_OWNERS = {CONFIG_SKILL, "setup-dstack"}
+CONFIG_PROCEDURE_MARKERS = (
+    "hosts[<active-harness>]", "repositories[<canonical-repository-root>]",
+    "configure.py", "invalid_bindings", "transcripts_directory",
+    "system-provided product identity", "separate spawn arguments", "already carries effort",
+)
+USER_GUIDE_CONFIG_MARKERS = ("~/.dstack/config.json", "--git-common-dir")
+USER_GUIDE_SKILL = "dstack-help"
 CANONICAL_HOST_IDS = {"codex", "claude", "cursor"}
 REQUIRED_SKILLS = {
     "architect", "arena", "blast-radius", "bro",
     "comment-sicko", "control-ui", "correct", "create-formal-verification-skill", "create-verification-skill", "maintain-formal-verification-skill",
-    "deslop", "dstack-help", "dstack-mode",
+    "deslop", "dstack-config", "dstack-help", "dstack-mode",
     "how", "in-your-own-words", "interrogate", "ketchup", "maintain-verification-skill", "no-comments",
     "recall", "reflect", "setup-dstack", "sharpen", "swarm", "tdd", "teach",
     "technical-writing", "typescript-best-practices", "unslop", "why",
@@ -386,6 +395,37 @@ def mentions_directory(text: str, source_dir: Path, skill_dir: Path, target: Pat
     )
 
 
+def check_config_procedure(skill_file: Path, body: str) -> List[Finding]:
+    required = (
+        ("~/.dstack/config.json" in body, "config skill must name the fixed config path"),
+        ("hosts[<active-harness>]" in body, "config skill must select the active harness entry directly"),
+        (
+            CANONICAL_HOST_IDS <= set(re.findall(r"`([a-z]+)`", body)) and "system-provided product identity" in body,
+            "config skill must derive a canonical harness id",
+        ),
+        ("invent an alias" in body, "config skill must reject harness aliases"),
+        ("repositories[<canonical-repository-root>]" in body, "config skill must select the canonical repository entry"),
+        ("`repository_root` exactly matches" in body, "config skill must verify the repository entry identity"),
+        ("git rev-parse --git-common-dir" in body, "config skill must accept linked worktrees via git common directory"),
+        ("configure.py resolve" in body, "config skill must resolve the repository entry with configure.py resolve"),
+        ("transcripts_directory" in body, "config skill must return the transcripts directory"),
+        (
+            "stop and name the exact problem" in body and "Tell the user to invoke `setup-dstack` explicitly." in body,
+            "config skill must fail closed with setup-dstack guidance",
+        ),
+        ("concrete model and effort pair" in body, "config skill must require a concrete model and effort pair"),
+        (
+            "separate spawn arguments" in body and "already carries effort" in body,
+            "config skill must state how each host's spawn call takes the profile",
+        ),
+        (
+            bool(re.search(r"\b(?:never|do not|must not)\b[^.\n]{0,80}\bsession effort\b", body, re.IGNORECASE)),
+            "config skill must forbid inheriting session effort",
+        ),
+    )
+    return [Finding(relative(skill_file), message) for ok, message in required if not ok]
+
+
 def check_skill(skill_dir: Path) -> List[Finding]:
     skill_file = skill_dir / "SKILL.md"
     if not skill_file.is_file():
@@ -410,33 +450,10 @@ def check_skill(skill_dir: Path) -> List[Finding]:
         ))
     if fields.get("disable-model-invocation") not in {None, "true"}:
         findings.append(Finding(relative(skill_file), "disable-model-invocation must be true or omitted"))
-    if skill_dir.name in CONFIG_DEPENDENT_SKILLS:
-        if "~/.dstack/config.json" not in body:
-            findings.append(Finding(relative(skill_file), "config-dependent skill must name the fixed config path"))
-        if "hosts[<active-harness>]" not in body:
-            findings.append(Finding(relative(skill_file), "config-dependent skill must select the active harness entry directly"))
-        if not CANONICAL_HOST_IDS <= set(re.findall(r"`([a-z]+)`", body)) or "system-provided product identity" not in body:
-            findings.append(Finding(relative(skill_file), "config-dependent skill must derive a canonical harness id"))
-        if "invent an alias" not in body:
-            findings.append(Finding(relative(skill_file), "config-dependent skill must reject harness aliases"))
-        if skill_dir.name in TRANSCRIPT_CONFIG_SKILLS:
-            if "repositories[<canonical-repository-root>]" not in body:
-                findings.append(Finding(relative(skill_file), "transcript skill must select the canonical repository entry"))
-            if "`repository_root` exactly matches" not in body:
-                findings.append(Finding(relative(skill_file), "transcript skill must verify the repository entry identity"))
-            if "git rev-parse --git-common-dir" not in body:
-                findings.append(Finding(relative(skill_file), "transcript skill must accept linked worktrees via git common directory"))
-            if "configure.py resolve" not in body:
-                findings.append(Finding(relative(skill_file), "transcript skill must resolve the repository entry with configure.py resolve"))
-        if "stop and name the exact problem" not in body or "Tell the user to invoke `setup-dstack` explicitly." not in body:
-            findings.append(Finding(relative(skill_file), "config-dependent skill must fail closed with setup-dstack guidance"))
-        if skill_dir.name not in {"recall"}:
-            if "concrete model and effort pair" not in body:
-                findings.append(Finding(relative(skill_file), "profile-consuming skill must require a concrete model and effort pair"))
-            if "separate spawn arguments" not in body or "already carries effort" not in body:
-                findings.append(Finding(relative(skill_file), "profile-consuming skill must state how each host's spawn call takes the profile"))
-            if not re.search(r"\b(?:never|do not|must not)\b[^.\n]{0,80}\bsession effort\b", body, re.IGNORECASE):
-                findings.append(Finding(relative(skill_file), "profile-consuming skill must forbid inheriting session effort"))
+    if skill_dir.name == CONFIG_SKILL:
+        findings.extend(check_config_procedure(skill_file, body))
+    if skill_dir.name in CONFIG_CALLERS and CONFIG_CALL not in body:
+        findings.append(Finding(relative(skill_file), "config-dependent skill must resolve config through dstack-config"))
     findings.extend(check_sidecar(skill_dir, "disable-model-invocation" in fields))
 
     package_texts: List[Tuple[Path, str]] = []
@@ -451,6 +468,12 @@ def check_skill(skill_dir: Path) -> List[Finding]:
                     if label == "provider name" and all(host in line.lower() for host in CANONICAL_HOST_IDS):
                         continue
                     findings.append(Finding(relative(path), label, line_number))
+            if skill_dir.name not in CONFIG_OWNERS:
+                markers = CONFIG_PROCEDURE_MARKERS
+                if skill_dir.name != USER_GUIDE_SKILL:
+                    markers += USER_GUIDE_CONFIG_MARKERS
+                if any(marker in line for marker in markers):
+                    findings.append(Finding(relative(path), "config procedure belongs only in dstack-config", line_number))
             if "Call the Skill tool with" in line:
                 calls = SKILL_CALL.findall(line)
                 if not calls or line.count("Call the Skill tool with") != len(calls):

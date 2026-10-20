@@ -1,0 +1,3 @@
+interface:
+  display_name: "Dstack config"
+  short_description: "Resolve dstack profile spawn values and transcripts"

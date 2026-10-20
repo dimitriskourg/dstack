@@ -11,7 +11,7 @@ This project is under development. Keep schema version 3 unless the user explici
 - Keep only the four profiles documented in `DIFFERENCES.md`.
 - Every profile must contain a concrete model and effort pair. Parent-model inheritance and automatic model aliases are not configuration options.
 - Each host's profiles hold exactly what its native spawn call takes: `codex` and `claude` store `model` and `effort`, passed as separate spawn arguments; `cursor` stores one `model` id that carries the effort, passed as the spawn model. No worker definitions or generated worker files. A worker never inherits session effort.
-- Read profiles and repository-scoped transcript directories only from `~/.dstack/config.json`. Map the system product identity to `codex`, `claude`, or `cursor`; transcript consumers also select and verify the canonical Git-root entry, or a registered checkout that shares its git common directory. Config-dependent skills stop when the file or required entry is unavailable.
+- Read profiles and repository-scoped transcript directories only from `~/.dstack/config.json`. Map the system product identity to `codex`, `claude`, or `cursor`; transcript consumers also select and verify the canonical Git-root entry, or a registered checkout that shares its git common directory. The procedure lives only in `skills/dstack-config`; a skill that spawns or reads transcripts uses this exact line at the point of use: Call the Skill tool with `dstack-config`. It stops when the file or required entry is unavailable. Do not re-describe the procedure in any other skill.
 - Do not recreate adapters, capability files, or provider-specific rules.
 - Do not infer live-host proof from static validation.
 

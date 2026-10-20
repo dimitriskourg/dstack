@@ -8,9 +8,9 @@ Product exclusions also live in [Supported scope](docs/guide/06-supported-scope.
 
 ## Keep-set inventory
 
-dstack ships 54 skills and 10 `dstack-mode` playbooks. The keep-set is closed.
+dstack ships 55 skills and 10 `dstack-mode` playbooks. The keep-set is closed.
 
-**Kept skills.** `architect`, `arena`, `blast-radius`, `bro`, `comment-sicko`, `control-ui`, `correct`, `create-formal-verification-skill`, `create-verification-skill`, `deslop`, `dstack-help`, `dstack-mode`, `how`, `in-your-own-words`, `interrogate`, `ketchup`, `maintain-formal-verification-skill`, `maintain-verification-skill`, `no-comments`, `recall`, `reflect`, `setup-dstack`, `sharpen`, `swarm`, `tdd`, `teach`, `technical-writing`, `typescript-best-practices`, `unslop`, `why`, and the 24 `principle-*` leaves.
+**Kept skills.** `architect`, `arena`, `blast-radius`, `bro`, `comment-sicko`, `control-ui`, `correct`, `create-formal-verification-skill`, `create-verification-skill`, `deslop`, `dstack-config`, `dstack-help`, `dstack-mode`, `how`, `in-your-own-words`, `interrogate`, `ketchup`, `maintain-formal-verification-skill`, `maintain-verification-skill`, `no-comments`, `recall`, `reflect`, `setup-dstack`, `sharpen`, `swarm`, `tdd`, `teach`, `technical-writing`, `typescript-best-practices`, `unslop`, `why`, and the 24 `principle-*` leaves.
 
 **Kept playbooks.** Authoring a skill, Babysit, Bug fix, Feature, Investigation, Opening a PR, Pause safely, Prototype, Refactoring, Session pickup.
 
@@ -27,8 +27,8 @@ Renames, no aliases: `poteto-mode` → `dstack-mode`, `setup-pstack` → `setup-
   - `codex`, `claude`: `{"model": "<id>", "effort": "<effort>"}`, passed as separate spawn arguments (Claude `Agent` model and effort; Codex `spawn_agent` model and `reasoning_effort`). Neither value may contain brackets.
   - `cursor`: `{"model": "<cursor-form id>"}` with no `effort` field, passed as `Task.model`. The id carries the effort: `id[effort=value]` (exactly one `effort` option) or a catalog slug that encodes effort.
 - No `worker_binding`, `definitions_directory`, `pair_encoding`, `spawn-arguments` / `worker-definitions` mechanisms, or generated `dstack-<profile>` worker files. A worker never inherits session effort.
-- Config-dependent skills read the file themselves, map the system-provided product identity to those three host ids, and stop with an explicit `setup-dstack` instruction on failure. Transcript consumers also select and verify `repositories[<canonical-repository-root>]`, or a registered checkout that shares `git rev-parse --git-common-dir`.
-- Full resolve text lives in `dstack-mode` and `setup-dstack`. Other config-dependent skills point at that section and keep one spawn-shape sentence (transcript skills also keep the repository-resolve strings the audit requires).
+- `dstack-config` is a dstack-only skill and the single owner of the config read procedure. It maps the system-provided product identity to those three host ids, selects and verifies `repositories[<canonical-repository-root>]` or a registered checkout that shares `git rev-parse --git-common-dir`, returns one named profile's spawn values or the transcripts directory, and stops with an explicit `setup-dstack` instruction on failure. `setup-dstack` owns writing the file.
+- A skill that spawns (`dstack-mode`, `arena`, `how`, `why`, `interrogate`, `swarm`, `recall`, `reflect`) carries one line at the point of use: Call the Skill tool with `dstack-config`. Spawned workers do not call it. Around that line the text stays at pstack 0.15.28 wording except for the harness-neutral edits. The audit fails any other skill that re-describes the procedure.
 - Spawn uses the active harness's native subagent tool. A denied nested spawn collapses onto the current agent and is disclosed. The chat that receives `/dstack-mode` runs the playbook and never spawns a subagent to run the playbook itself.
 - Skill-to-skill instruction is exact: Call the Skill tool with `skill-name`.
 - No adapters, capability files, provider-specific rules, `poteto-agent`, or `subagent_type`. Skills say "native spawn call"; only this file names `Task`, `Agent`, or `spawn_agent`.

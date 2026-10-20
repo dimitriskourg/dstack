@@ -10,17 +10,11 @@ Mine the current conversation for durable learnings, then route them into skill 
 
 Spawn reviewers with the active harness's native subagent tool. Every supported harness can spawn subagents. If a nested spawn is denied, run the affected review serially and disclose the loss of independence. Pick each subagent's configured profile for the job, per the Subagents section of the **dstack-mode** skill.
 
-## Configuration
-
-Read **dstack-mode** Configuration. Map the system-provided product identity to `codex`, `claude`, or `cursor`, then read `~/.dstack/config.json` and select `hosts[<active-harness>]` and `repositories[<canonical-repository-root>]`. Verify the selected entry's `repository_root` exactly matches its key. If that key is absent, select the registered repository that shares this checkout's `git rev-parse --git-common-dir`. Run `configure.py resolve --host <active-harness>` from the active checkout. Never invent an alias. If the file is missing, unreadable, or invalid, the identity is unknown, its host entry is absent, or a required profile is missing or listed in `invalid_bindings`, stop and name the exact problem. Tell the user to invoke `setup-dstack` explicitly. Every profile must provide a concrete model and effort pair.
-
-Pass the profile exactly as the native spawn call takes it: for `codex` and `claude`, its `model` and `effort` as separate spawn arguments; for `cursor`, its `model` string, which already carries effort, as the spawn model. Stop if the profile is missing, rejected, or different. Never inherit session effort.
-
 Invoke when the user says "reflect" or "/reflect". Skip when the conversation is trivial, off-topic, or already covered by an existing skill the parent followed correctly. One-offs are not learnings.
 
 ## 1. Locate the active transcript
 
-Use the selected repository entry's configured `transcripts_directory`. Do not search again here. When it is `null` or the directory is unreadable, skip to the digest fallback below.
+Call the Skill tool with `dstack-config`. Ask for the transcripts directory. Do not search again here. When it has none or the directory is unreadable, skip to the digest fallback below.
 
 ```bash
 ls -t <transcript-dir>/*.jsonl <transcript-dir>/*/*.jsonl <transcript-dir>/*/subagents/*.jsonl 2>/dev/null | head -10
@@ -32,7 +26,7 @@ For each candidate, read the first line and check that its message text contains
 
 ## 2. Run three reviewers
 
-Launch three general-purpose subagents in bounded waves that fit the active harness's available child capacity, each on a different configured profile, with full tool access. **Don't use a restricted read-only mode.** Reviewers need MCP access for context lookups (tickets, chat threads, observability traces referenced in the transcript). The prompt forbids file writes. The parent applies edits. Every required reviewer runs even when the first wave cannot hold all three.
+Launch three general-purpose subagents in bounded waves that fit the active harness's available child capacity, each on a different configured profile, with full tool access. **Don't use a restricted read-only mode.** Reviewers need MCP access for context lookups (tickets, chat threads, observability traces referenced in the transcript). The prompt forbids file writes. The parent applies edits. Every required reviewer runs even when the first wave cannot hold all three. Call the Skill tool with `dstack-config`. Name each reviewer's profile from the table.
 
 | Lens | Model role | Prompt template |
 |---|---|---|
@@ -44,7 +38,7 @@ Pass each template verbatim, substituting the transcript path or digest where ma
 
 ## 3. Synthesize
 
-One general-purpose subagent on your configured `skeptical-reviewer` role, with full tool access. It spot-verifies citations through MCP, and a restricted read-only mode strips that on some hosts. Pass `references/synthesizer.md` verbatim, with each reviewer's full output inlined where marked. It returns an Accepted / Rejected / Backlog list.
+Call the Skill tool with `dstack-config`. Name the `skeptical-reviewer` profile. Spawn one general-purpose subagent on it, with full tool access. It spot-verifies citations through MCP, and a restricted read-only mode strips that on some hosts. Pass `references/synthesizer.md` verbatim, with each reviewer's full output inlined where marked. It returns an Accepted / Rejected / Backlog list.
 
 ## 4. Structural enforcement check
 

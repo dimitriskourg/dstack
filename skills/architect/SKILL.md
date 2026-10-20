@@ -7,12 +7,6 @@ description: "Sketch types, signatures, and module structure before code, then s
 
 Sketch types, function signatures, class shapes, and module boundaries with `not implemented` bodies and pseudocode. Synthesize across multiple model perspectives, then fill in code against the chosen sketch.
 
-## Configuration
-
-Read **dstack-mode** Configuration. Map the system-provided product identity to `codex`, `claude`, or `cursor`, then read `~/.dstack/config.json` and select `hosts[<active-harness>]`. Never invent an alias. If the file is missing, unreadable, or invalid, the identity is unknown, its host entry is absent, or a required profile is missing or listed in `invalid_bindings`, stop and name the exact problem. Tell the user to invoke `setup-dstack` explicitly. Every profile must provide a concrete model and effort pair.
-
-Pass the profile exactly as the native spawn call takes it: for `codex` and `claude`, its `model` and `effort` as separate spawn arguments; for `cursor`, its `model` string, which already carries effort, as the spawn model. Stop if the profile is missing, rejected, or different. Never inherit session effort.
-
 ## Start
 
 Open a todolist with one entry per phase before starting.

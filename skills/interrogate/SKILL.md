@@ -7,12 +7,6 @@ description: "Use for \"interrogate\", \"adversarial review\", \"multi-model rev
 
 Spawn one reviewer per configured model to adversarially review code changes. The adversarial signal comes from model diversity, not assigned personas. The deliverable is a synthesized verdict. Do NOT auto-apply changes.
 
-## Configuration
-
-Read **dstack-mode** Configuration. Map the system-provided product identity to `codex`, `claude`, or `cursor`, then read `~/.dstack/config.json` and select `hosts[<active-harness>]`. Never invent an alias. If the file is missing, unreadable, or invalid, the identity is unknown, its host entry is absent, or a required profile is missing or listed in `invalid_bindings`, stop and name the exact problem. Tell the user to invoke `setup-dstack` explicitly. Every profile must provide a concrete model and effort pair.
-
-Pass the profile exactly as the native spawn call takes it: for `codex` and `claude`, its `model` and `effort` as separate spawn arguments; for `cursor`, its `model` string, which already carries effort, as the spawn model. Stop if the profile is missing, rejected, or different. Never inherit session effort.
-
 ## Step 1, Scope
 
 Identify what to review from context:
@@ -29,13 +23,13 @@ Before spawning reviewers, state the intent in one clear paragraph from the user
 
 ## Step 3, Spawn Reviewers
 
-Select reviewers across `skeptical-reviewer`, `bug-worker`, `feature-worker`, and `fast-explorer`. Use only the profiles whose angle fits the rubric, but keep at least two independent reviewers. Launch them in bounded waves that fit the active harness's available child capacity.
+Select reviewers across `skeptical-reviewer`, `bug-worker`, `feature-worker`, and `fast-explorer`. Use only the profiles whose angle fits the rubric, but keep at least two independent reviewers. Call the Skill tool with `dstack-config`. Name each selected profile. Launch them in bounded waves that fit the active harness's available child capacity.
 
 For each reviewer:
 - helper: a general-purpose subagent, read-only
-- binding: the exact model and effort pair from that reviewer's selected profile
+- binding: the values `dstack-config` returned for that reviewer's profile
 
-When selected profiles resolve to the same concrete binding, disclose the reduced model diversity. Never spawn a reviewer without the exact configured model and effort pair for its named profile.
+When selected profiles resolve to the same concrete binding, disclose the reduced model diversity.
 
 Read `references/reviewer-prompt.md` and fill in the same template for every reviewer with the stated intent, the diff or file contents, the rubric from `references/rubric.md`, and the code-quality lens from `references/code-quality-review.md`. Pick each subagent's configured profile for the job, per the Subagents section of the **dstack-mode** skill.
 

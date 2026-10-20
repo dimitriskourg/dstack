@@ -58,73 +58,74 @@ class PortabilityAuditTests(unittest.TestCase):
             self.assertIn("provider name", messages)
             self.assertIn("provider helper schema", messages)
 
-    def test_config_dependent_skill_requires_fixed_fail_closed_contract(self):
-        with tempfile.TemporaryDirectory() as temp:
-            skill = self.make_skill(Path(temp), "Use the configured profiles.\n", name="arena")
-            messages = self.messages(skill)
-            self.assertIn("config-dependent skill must name the fixed config path", messages)
-            self.assertIn("config-dependent skill must select the active harness entry directly", messages)
-            self.assertIn("config-dependent skill must derive a canonical harness id", messages)
-            self.assertIn("config-dependent skill must reject harness aliases", messages)
-            self.assertIn("config-dependent skill must fail closed with setup-dstack guidance", messages)
-            self.assertIn("profile-consuming skill must require a concrete model and effort pair", messages)
-            self.assertIn("profile-consuming skill must state how each host's spawn call takes the profile", messages)
-            self.assertIn("profile-consuming skill must forbid inheriting session effort", messages)
+    CONFIG_BODY = (
+        "Map the system-provided product identity to `codex`, `claude`, or `cursor`; never invent an alias. "
+        "Read `~/.dstack/config.json` and select `hosts[<active-harness>]` and `repositories[<canonical-repository-root>]`, "
+        "and verify its `repository_root` exactly matches; if that key is absent, use `git rev-parse --git-common-dir`. "
+        "Run `configure.py resolve`; on failure, stop and name the exact problem. "
+        "Tell the user to invoke `setup-dstack` explicitly. Require a concrete model and effort pair. "
+        "Pass it as the native spawn call takes it: for `codex` and `claude`, `model` and `effort` as "
+        "separate spawn arguments; for `cursor`, a `model` that already carries effort. Never inherit session effort. "
+        "For transcripts, return `transcripts_directory`.\n"
+    )
 
-    def test_config_dependent_skill_contract_passes(self):
+    def test_config_skill_requires_fixed_fail_closed_contract(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(Path(temp), "Use the configured profiles.\n", name="dstack-config")
+            messages = self.messages(skill)
+            for message in (
+                "config skill must name the fixed config path",
+                "config skill must select the active harness entry directly",
+                "config skill must derive a canonical harness id",
+                "config skill must reject harness aliases",
+                "config skill must select the canonical repository entry",
+                "config skill must verify the repository entry identity",
+                "config skill must accept linked worktrees via git common directory",
+                "config skill must resolve the repository entry with configure.py resolve",
+                "config skill must return the transcripts directory",
+                "config skill must fail closed with setup-dstack guidance",
+                "config skill must require a concrete model and effort pair",
+                "config skill must state how each host's spawn call takes the profile",
+                "config skill must forbid inheriting session effort",
+            ):
+                self.assertIn(message, messages)
+
+    def test_config_skill_contract_passes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(Path(temp), self.CONFIG_BODY, name="dstack-config")
+            self.assertEqual([], self.messages(skill))
+
+    def test_config_caller_must_call_dstack_config(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(Path(temp), "Spawn a judge on the `skeptical-reviewer` profile.\n", name="arena")
+            self.assertIn("config-dependent skill must resolve config through dstack-config", self.messages(skill))
+
+    def test_config_caller_with_one_call_line_passes(self):
         with tempfile.TemporaryDirectory() as temp:
             skill = self.make_skill(
                 Path(temp),
-                "Map the system-provided product identity to `codex`, `claude`, or `cursor`; never invent an alias. "
-                "Read `~/.dstack/config.json` and select `hosts[<active-harness>]`; on failure, stop and name the exact problem. "
-                "Tell the user to invoke `setup-dstack` explicitly. Require a concrete model and effort pair. "
-                "Pass it as the native spawn call takes it: for `codex` and `claude`, `model` and `effort` as "
-                "separate spawn arguments; for `cursor`, a `model` that already carries effort. Never inherit session effort.\n",
+                "Call the Skill tool with `dstack-config`. Name the `skeptical-reviewer` profile. Spawn one judge on it.\n",
                 name="arena",
             )
             self.assertEqual([], self.messages(skill))
 
-    def test_profile_consuming_skill_must_state_the_spawn_shape(self):
+    def test_other_skill_must_not_redescribe_config_procedure(self):
         with tempfile.TemporaryDirectory() as temp:
             skill = self.make_skill(
                 Path(temp),
-                "Map the system-provided product identity to `codex`, `claude`, or `cursor`; never invent an alias. "
-                "Read `~/.dstack/config.json` and select `hosts[<active-harness>]`; on failure, stop and name the exact problem. "
-                "Tell the user to invoke `setup-dstack` explicitly. Require a concrete model and effort pair. "
-                "Pass the profile model in the spawn call.\n",
+                "Call the Skill tool with `dstack-config`.\n",
+                {"references/notes.md": "Select `hosts[<active-harness>]` from `~/.dstack/config.json`.\n"},
                 name="arena",
             )
-            messages = self.messages(skill)
-            self.assertIn("profile-consuming skill must state how each host's spawn call takes the profile", messages)
-            self.assertIn("profile-consuming skill must forbid inheriting session effort", messages)
+            self.assertIn("config procedure belongs only in dstack-config", self.messages(skill))
 
-    def test_transcript_only_config_skill_needs_no_spawn_shape(self):
+    def test_user_guide_may_name_config_path_only(self):
         with tempfile.TemporaryDirectory() as temp:
-            skill = self.make_skill(
-                Path(temp),
-                "Map the system-provided product identity to `codex`, `claude`, or `cursor`; never invent an alias. "
-                "Read `~/.dstack/config.json`, select `hosts[<active-harness>].repositories[<canonical-repository-root>]`, "
-                "and verify its `repository_root` exactly matches; if that key is absent, use `git rev-parse --git-common-dir`. "
-                "Run `configure.py resolve`; on failure, stop and name the exact problem. "
-                "Tell the user to invoke `setup-dstack` explicitly.\n",
-                name="recall",
-            )
-            self.assertEqual([], self.messages(skill))
-
-    def test_transcript_skill_requires_repository_identity(self):
-        with tempfile.TemporaryDirectory() as temp:
-            skill = self.make_skill(
-                Path(temp),
-                "Map the system-provided product identity to `codex`, `claude`, or `cursor`; never invent an alias. "
-                "Read `~/.dstack/config.json` and select `hosts[<active-harness>]`; on failure, stop and name the exact problem. "
-                "Tell the user to invoke `setup-dstack` explicitly.\n",
-                name="recall",
-            )
-            messages = self.messages(skill)
-            self.assertIn("transcript skill must select the canonical repository entry", messages)
-            self.assertIn("transcript skill must verify the repository entry identity", messages)
-            self.assertIn("transcript skill must accept linked worktrees via git common directory", messages)
-            self.assertIn("transcript skill must resolve the repository entry with configure.py resolve", messages)
+            root = Path(temp)
+            guide = self.make_skill(root, "Setup writes `~/.dstack/config.json`.\n", name="dstack-help")
+            self.assertEqual([], self.messages(guide))
+            leaky = self.make_skill(root / "b", "Skip profiles listed in `invalid_bindings`.\n", name="dstack-help")
+            self.assertIn("config procedure belongs only in dstack-config", self.messages(leaky))
 
     def test_shipped_schema_matches_each_host_spawn_shape(self):
         schema = json.loads((AUDIT.ROOT / "schemas" / "config.schema.json").read_text(encoding="utf-8"))

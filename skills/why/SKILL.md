@@ -7,15 +7,9 @@ description: "Use for 'why does X work this way', 'why we picked Y', design rati
 
 Investigate the motivation and intent behind code. The companion `how` skill answers what the code does and how it works. `why` answers what forces led to its shape.
 
-## Configuration
+Each spawn below names a profile. Call the Skill tool with `dstack-config`. Name that profile before each spawn and pass the values it returns. Spawn with the active harness's native subagent tool. If a nested spawn is denied, the current agent performs that pass directly. Pick each subagent's profile for the job, per the Subagents section of the **dstack-mode** skill.
 
-Read **dstack-mode** Configuration. Map the system-provided product identity to `codex`, `claude`, or `cursor`, then read `~/.dstack/config.json` and select `hosts[<active-harness>]`. Never invent an alias. If the file is missing, unreadable, or invalid, the identity is unknown, its host entry is absent, or a required profile is missing or listed in `invalid_bindings`, stop and name the exact problem. Tell the user to invoke `setup-dstack` explicitly. Every profile must provide a concrete model and effort pair.
-
-Pass the profile exactly as the native spawn call takes it: for `codex` and `claude`, its `model` and `effort` as separate spawn arguments; for `cursor`, its `model` string, which already carries effort, as the spawn model. Stop if the profile is missing, rejected, or different. Never inherit session effort.
-
-Every spawn is a general-purpose subagent with full tool access. **Don't use a restricted read-only mode.** Where a host strips MCP access in that mode it disables MCP-backed investigators and the synthesizer's citation spot-checks. Investigators still shouldn't write anything. Investigators use the configured `fast-explorer` profile. The synthesizer uses the configured `skeptical-reviewer` profile. Pick each subagent's configured profile for the job, per the Subagents section of the **dstack-mode** skill.
-
-Spawn helpers with the active harness's native subagent tool. Every supported harness can spawn subagents. If a nested spawn is denied, the current agent performs that pass directly.
+Every spawn is a general-purpose subagent with full tool access. **Don't use a restricted read-only mode.** Where a host strips MCP access in that mode it disables MCP-backed investigators and the synthesizer's citation spot-checks. Investigators still shouldn't write anything.
 
 ## Operating Posture
 
@@ -51,7 +45,7 @@ Map each available MCP to one evidence category:
 
 Source control is always available through local Git. Forge discussion is available only when the matching GitHub or GitLab CLI is installed and authenticated. For the other six categories, classify available integrations using their names, instructions, tools, and resource descriptors. If an integration could fit more than one category, choose the one matching its primary evidence. Record unavailable and ambiguous categories in the coverage map. An unavailable category is a reported evidence gap, not a setup failure.
 
-Spawn one investigator per category that has a matching MCP, all in a single message so they run concurrently, each owning exactly one tool or MCP. Don't ask one agent to cover multiple MCPs.
+Spawn one investigator per category that has a matching MCP, all in a single message so they run concurrently, each owning exactly one tool or MCP. Don't ask one agent to cover multiple MCPs. Profile: `fast-explorer`.
 
 Each investigator's prompt is `references/investigator-prompt.md` filled in, plus:
 - the category playbook `references/sources/<source>.md` for the selected MCP, adapted from the examples in `references/source-playbook.md`
@@ -81,7 +75,7 @@ If your scope assessment suggests a single-commit trivial target where the PR de
 
 ## Step 4. Synthesize
 
-Spawn one synthesizer. It gets:
+Spawn one synthesizer. Profile: `skeptical-reviewer`. It gets:
 1. The investigator findings, including any null results and any categories skipped with justification
 2. The code anchor
 3. The user's original question

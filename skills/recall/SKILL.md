@@ -10,13 +10,9 @@ disable-model-invocation: true
 
 Keep it tight and on-topic. Read only what the in-scope threads need, then stop.
 
-## Configuration
-
-Read **dstack-mode** Configuration. Map the system-provided product identity to `codex`, `claude`, or `cursor`, then read `~/.dstack/config.json` and select `hosts[<active-harness>]` and `repositories[<canonical-repository-root>]`. Verify the selected entry's `repository_root` exactly matches its key. If that key is absent, select the registered repository that shares this checkout's `git rev-parse --git-common-dir`. Run `configure.py resolve --host <active-harness>` from the active checkout. Never invent an alias. If the file is missing, unreadable, or invalid, the identity is unknown, its host entry is absent, or a required profile is missing or listed in `invalid_bindings`, stop and name the exact problem. Tell the user to invoke `setup-dstack` explicitly.
-
 Your context lives in two records. Your own chat history holds what you did and decided. The shared record holds everything that happened around the same code under other names: the symptoms users keep reporting, the fixes that shipped and got reverted, the errors still firing in prod. That second record is what the **why** skill searches, across source control, the issue tracker, chat and issue channels, long-form docs, and error tracking. A feature with a long bug tail keeps most of its story there, so don't reconstruct it from your transcripts alone.
 
-Use the selected repository entry's configured `transcripts_directory`. Do not search for the directory again. When it is `null` or the directory is unreadable, say so up front and build the brief from steps 4 and 5 alone.
+Call the Skill tool with `dstack-config`. Ask for the transcripts directory. Do not search for the directory again. When it has none or the directory is unreadable, say so up front and build the brief from steps 4 and 5 alone.
 
 1. Classify, then route. One specific prior chat to resume is the `session-pickup` playbook, not this. A human-readable summary of your work is a different task. Recall loads working context across recent chats before you act. If the user already gave you a full state capsule (paths, branch, the change), use it and skip the mining.
 2. Lock the scope before searching. Pin the window ("recent" is a real range, default the last 7 days), the topic if named, and the workspace (default the active one. Never read another project's transcripts without being asked). State the scope back. Never quietly turn "all" into "recent N".
