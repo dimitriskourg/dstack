@@ -28,3 +28,10 @@ git diff --check
 ```
 
 These commands validate repository structure and static contracts. They do not prove discovery, nested invocation, model-and-effort enforcement, fan-out, forge behavior, or end-to-end behavior in a live harness.
+
+## Pull requests
+
+- One PR per pstack sync, never mixed with our own changes. Open as draft; the owner decides ready and merge.
+- Titles stay under about 70 characters. Sync PRs: `sync: pstack <version> (<short commit>)`. Own changes: `<area>: <what changed>`, with area one of sync, config, skills, playbooks, setup, scripts, docs. Name any config-shape or version change in the title. Mark unfinished work as draft, never `WIP` in the title.
+- Sync PR description: From and To commits with the pstack compare link; Applied, one line each; Decided, each item with the choice and a one-line why; Not imported, each new pstack skill declined, with the reason also recorded in `PSTACK_SYNC.md`; Checks.
+- Own-change PR description: Why; What changed, user-visible first; pstack impact, whether it widens or narrows the diff and which `PSTACK_SYNC.md` rule covers it; Breaking; Checks, adding "static only; not tested in a live harness" when true.
