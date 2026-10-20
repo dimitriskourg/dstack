@@ -55,14 +55,14 @@ The script applies these on every absorb, to the pinned and target pstack text a
 From the repository root, on a clean working tree:
 
 ```bash
-python3 scripts/pstack_sync.py --dry-run           # report only; target is origin main
-python3 scripts/pstack_sync.py                     # write clean changes; moves the pin on exit 0
+python3 scripts/pstack_sync.py --dry-run           # report only; target defaults to origin main
+python3 scripts/pstack_sync.py <commit>            # write clean changes; moves the pin on exit 0
 python3 scripts/pstack_sync.py <commit> --decided  # after hand fixes; moves the pin to <commit>
 ```
 
-The target may be a branch, tag, or commit; pass the same one to every run of a sync. `--pstack-dir <folder>` reads a local pstack folder instead of fetching, for offline use only.
+A write run takes only a full commit: the Target the dry run printed. A dry run also takes a branch or tag. `--pstack-dir <folder>` reads a local pstack folder instead of fetching, for offline use only.
 
-Exit 0: run the `AGENTS.md` gates and commit. Exit 1: hand the needs-decision report to an agent to propose a fix per item, get the owner's approval, apply the approved fixes, then rerun with `--decided` and the exact target commit from the report.
+Exit 0: run the `AGENTS.md` gates and commit. Exit 1: the report shows, for each needs-decision item, pstack's change and the dstack lines it clashes with. Hand it to an agent to propose a fix per item, get the owner's approval, apply the approved fixes, then rerun with the same commit and `--decided`; those items are then listed as decided by hand.
 
 ## Stop and ask
 

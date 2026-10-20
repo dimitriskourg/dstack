@@ -21,7 +21,7 @@ import sys
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, List, Optional, Pattern, Sequence, Set, Tuple
+from typing import Dict, Iterable, List, Optional, Pattern, Sequence, Set, Tuple
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,6 +29,7 @@ SYNC_FILE = "PSTACK_SYNC.md"
 PIN = re.compile(r"^Pinned: pstack (?P<version>\S+), commit `(?P<commit>[0-9a-f]{7,40})`\.$", re.M)
 UPSTREAM = re.compile(r"^Upstream: repository `(?P<repo>[\w.-]+/[\w.-]+)`, subpath `(?P<subpath>[^`]*)`", re.M)
 DEFAULT_TARGET = "main"
+FULL_COMMIT = re.compile(r"[0-9a-f]{40}")
 BULLET = re.compile(r"^- `([^`]+)`", re.M)
 MODE = "poteto-mode"
 SKILL_RENAMES = {"poteto-mode": "dstack-mode", "setup-pstack": "setup-dstack", "poteto-help": "dstack-help"}
@@ -85,15 +86,25 @@ class Report:
     pinned_version: str
     target_version: str
     dry_run: bool
+    decided: bool = False
     applied: List[Tuple[str, str]] = field(default_factory=list)
     skipped: List[Tuple[str, str]] = field(default_factory=list)
     decisions: List[Tuple[str, str]] = field(default_factory=list)
+    details: Dict[str, List[Tuple[str, str, str]]] = field(default_factory=dict)
     pin_note: str = ""
+
+    def decide(self, path: str, reason: str, *blocks: Tuple[str, str, str]) -> None:
+        self.decisions.append((path, reason))
+        kept = [block for block in blocks if block[2]]
+        if kept:
+            self.details[path] = kept
 
     def render(self) -> str:
         changed = self.applied or self.skipped or self.decisions
-        result = "no-op" if not changed else "{} applied, {} skipped, {} need a decision".format(
-            len(self.applied), len(self.skipped), len(self.decisions))
+        decision_title = "Decided by hand" if self.decided else "Needs decision"
+        result = "no-op" if not changed else "{} applied, {} skipped, {} {}".format(
+            len(self.applied), len(self.skipped), len(self.decisions),
+            "decided by hand" if self.decided else "need a decision")
         lines = [
             "# pstack sync report",
             "",
@@ -102,11 +113,42 @@ class Report:
             "- Mode: {}".format("dry run" if self.dry_run else "write"),
             "- Result: {}".format(result),
         ]
-        for title, items in (("Applied", self.applied), ("Skipped", self.skipped), ("Needs decision", self.decisions)):
+        for title, items in (("Applied", self.applied), ("Skipped", self.skipped), (decision_title, self.decisions)):
             lines += ["", "## " + title, ""]
-            lines += ["- `{}`: {}".format(path, reason) for path, reason in items] or ["None."]
+            if not items:
+                lines.append("None.")
+            for path, reason in items:
+                lines.append("- `{}`: {}".format(path, reason))
+                for label, language, body in self.details.get(path, []):
+                    fence = "`" * max(3, longest_backtick_run(body) + 1)
+                    lines += ["", "  " + label + ":", "", "  " + fence + language]
+                    lines += [("  " + line).rstrip() for line in body.splitlines()]
+                    lines += ["  " + fence, ""]
         lines += ["", "## Pin", "", self.pin_note]
         return "\n".join(lines) + "\n"
+
+
+def longest_backtick_run(text: str) -> int:
+    return max((len(run) for run in re.findall(r"`+", text)), default=0)
+
+
+def upstream_hunks(base: str, theirs: str) -> Tuple[str, str, str]:
+    diff = difflib.unified_diff(base.splitlines(), theirs.splitlines(), n=1, lineterm="")
+    return ("pstack change", "diff", "\n".join(list(diff)[2:]))
+
+
+def clashing_lines(merged: str) -> Tuple[str, str, str]:
+    blocks: List[str] = []
+    current: Optional[List[str]] = None
+    for line in merged.splitlines():
+        if line.startswith("<<<<<<< "):
+            current = []
+        elif current is not None and (line.startswith("=======") or line.startswith("||||||| ")):
+            blocks.append("\n".join(current))
+            current = None
+        elif current is not None:
+            current.append(line)
+    return ("dstack lines it clashes with", "text", "\n...\n".join(blocks))
 
 
 def section_bullets(text: str, heading: str) -> List[str]:
@@ -315,6 +357,10 @@ def sync(
     dry_run: bool = False,
     decided: bool = False,
 ) -> Report:
+    if not dry_run and not FULL_COMMIT.fullmatch(target_ref):
+        raise SystemExit(
+            "A write run needs an explicit full target commit, not {!r}. Run --dry-run first and pass "
+            "the Target commit it prints.".format(target_ref))
     sync_path = dstack_root / SYNC_FILE
     sync_text = sync_path.read_text(encoding="utf-8")
     config = parse_sync(sync_text)
@@ -325,7 +371,7 @@ def sync(
         upstream = Upstream.fetched(url, config.subpath, cache_dir or default_cache_dir())
     pinned = upstream.commit(config.commit)
     target = upstream.commit(target_ref)
-    report = Report(pinned, target, config.version, upstream.version(target), dry_run)
+    report = Report(pinned, target, config.version, upstream.version(target), dry_run, decided)
 
     skills_root = dstack_root / "skills"
     kept_skills = {path.name for path in skills_root.iterdir() if path.is_dir()}
@@ -348,14 +394,17 @@ def sync(
             or any(fnmatch.fnmatch(inner, pattern) for pattern in config.excluded_files)
         )
         if excluded:
-            removed, added = line_changes(upstream.show(pinned, path) or "", upstream.show(target, path) or "")
+            old_text, new_text = upstream.show(pinned, path) or "", upstream.show(target, path) or ""
+            removed, added = line_changes(old_text, new_text)
             if names_kept and any(names_kept.search(line) for line in removed + added):
-                report.decisions.append((path, "excluded upstream file changed in lines that name a kept skill or playbook"))
+                report.decide(path, "excluded upstream file changed in lines that name a kept skill or playbook",
+                              upstream_hunks(old_text, new_text))
             else:
                 report.skipped.append((path, "excluded"))
             continue
         if top in config.owned:
-            report.decisions.append((path, "owned by dstack; every upstream change needs a decision"))
+            report.decide(path, "owned by dstack; every upstream change needs a decision",
+                          upstream_hunks(upstream.show(pinned, path) or "", upstream.show(target, path) or ""))
             continue
         local_top = SKILL_RENAMES.get(top, top)
         local = skills_root / local_top / rest
@@ -419,7 +468,8 @@ def sync(
         if not conflict and merged.count(CONFIG_CALL) < ours.count(CONFIG_CALL):
             reasons.append("drops the dstack-config call line")
         if reasons:
-            report.decisions.append((report_path, "; ".join(reasons)))
+            report.decide(report_path, "; ".join(reasons), upstream_hunks(base, theirs),
+                          clashing_lines(merged) if conflict else ("", "", ""))
             continue
         if not dry_run:
             local.parent.mkdir(parents=True, exist_ok=True)
@@ -432,7 +482,7 @@ def sync(
     if pinned == target:
         report.pin_note = "Pin unchanged: target is the pinned commit."
     elif dry_run:
-        report.pin_note = "Pin unchanged: dry run."
+        report.pin_note = "Pin unchanged: dry run. Write run: python3 scripts/pstack_sync.py {}".format(target)
     elif report.decisions and not decided:
         report.pin_note = "Pin unchanged: {} decision(s) pending.".format(len(report.decisions))
     else:
@@ -444,8 +494,8 @@ def sync(
 
 def main(argv: Sequence[str] = sys.argv[1:]) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("target", nargs="?", default=DEFAULT_TARGET,
-                        help="target branch, tag, or commit in the upstream repository (default: main)")
+    parser.add_argument("target", nargs="?",
+                        help="full target commit; a dry run also takes a branch or tag (default: main)")
     parser.add_argument("--pstack-dir", type=Path, help="offline only: read a local pstack folder instead of fetching")
     parser.add_argument("--dry-run", action="store_true", help="write nothing and leave the pin")
     parser.add_argument("--decided", action="store_true", help="every pending decision was settled by hand; move the pin")
@@ -454,8 +504,10 @@ def main(argv: Sequence[str] = sys.argv[1:]) -> int:
     parser.add_argument("--repo-url", help=argparse.SUPPRESS)
     parser.add_argument("--dstack-root", type=Path, default=ROOT, help=argparse.SUPPRESS)
     args = parser.parse_args(list(argv))
+    if args.target is None and not args.dry_run:
+        parser.error("a write run needs an explicit full target commit; run --dry-run first and pass the Target it prints")
     report = sync(
-        args.target, args.dstack_root, pstack_dir=args.pstack_dir, repo_url=args.repo_url,
+        args.target or DEFAULT_TARGET, args.dstack_root, pstack_dir=args.pstack_dir, repo_url=args.repo_url,
         cache_dir=args.cache_dir, dry_run=args.dry_run, decided=args.decided,
     )
     text = report.render()

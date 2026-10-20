@@ -158,11 +158,26 @@ class PstackSyncTests(unittest.TestCase):
         self.assertEqual(self.local["skills/how/SKILL.md"], self.read("skills/how/SKILL.md"))
         self.assertEqual(self.pinned, self.pin())
         self.assertEqual(1, self.main(target))
+        text = report.render()
+        self.assertIn("## Needs decision", text)
+        self.assertIn("  pstack change:\n\n  ```diff\n", text)
+        self.assertIn("  -Line 3.\n  +Line three.\n", text)
+        self.assertIn("  dstack lines it clashes with:\n\n  ```text\n", text)
+        self.assertIn("  Line 2, edited by dstack.\n", text)
+
+    def test_detail_fence_outlasts_fences_in_the_skill(self):
+        target = self.upstream_change({"pstack/skills/how/SKILL.md": HOW.replace("Line 3.", "```\nLine 3.\n```")})
+        text = self.run_sync(target, dry_run=True).render()
+        self.assertIn("  ````diff\n", text)
 
     def test_decided_moves_the_pin_without_writing(self):
         target = self.upstream_change({"pstack/skills/how/SKILL.md": HOW.replace("Line 3.", "Line three.")})
         report = self.run_sync(target, decided=True)
         self.assertEqual(1, len(report.decisions))
+        text = report.render()
+        self.assertIn("## Decided by hand\n\n- `skills/how/SKILL.md`", text)
+        self.assertIn("1 decided by hand", text)
+        self.assertNotIn("Needs decision", text)
         self.assertEqual(self.local["skills/how/SKILL.md"], self.read("skills/how/SKILL.md"))
         self.assertEqual(target, self.pin())
 
@@ -268,9 +283,22 @@ class PstackSyncTests(unittest.TestCase):
 
     def test_default_target_is_the_latest_main(self):
         target = self.upstream_change({"pstack/skills/how/SKILL.md": HOW.replace("Line 9.", "Line nine.")})
-        report = SYNC.sync(dstack_root=self.dstack, repo_url=self.upstream.as_uri(), cache_dir=self.cache)
+        report = SYNC.sync(dstack_root=self.dstack, repo_url=self.upstream.as_uri(), cache_dir=self.cache, dry_run=True)
         self.assertEqual(target, report.target)
-        self.assertEqual(target, self.pin())
+        self.assertIn("Write run: python3 scripts/pstack_sync.py " + target, report.render())
+        self.assertEqual(self.pinned, self.pin())
+
+    def test_write_run_requires_a_full_target_commit(self):
+        target = self.upstream_change({"pstack/skills/how/SKILL.md": HOW.replace("Line 9.", "Line nine.")})
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            self.main()
+        for ref in ("main", target[:7]):
+            with self.assertRaises(SystemExit) as raised:
+                self.run_sync(ref)
+            self.assertIn("explicit full target commit", str(raised.exception.code))
+        self.assertEqual(self.local["skills/how/SKILL.md"], self.read("skills/how/SKILL.md"))
+        self.assertEqual(self.pinned, self.pin())
+        self.assertEqual(0, self.main(target))
 
     def test_tag_target_and_shallow_cache(self):
         self.upstream_change({"pstack/skills/how/SKILL.md": HOW.replace("Line 9.", "Line nine.")})
