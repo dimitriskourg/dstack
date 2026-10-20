@@ -76,6 +76,6 @@ Exit 0: run the `AGENTS.md` gates and commit. Exit 1: the report shows, for each
 
 Everything else applies automatically.
 
-## Open
+## Verified
 
-- Cursor bracket form (`id[effort=value]`) on `Task.model` is documented only for subagent frontmatter, so live proof that its effort sticks is still open.
+- Cursor `Task.model` accepts listed catalog slugs only, including effort-encoding suffixes; `id[effort=value]` is rejected at spawn. Subagent replies name a family, not which encoded effort physically ran.

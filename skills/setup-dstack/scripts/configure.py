@@ -7,7 +7,6 @@ import argparse
 import copy
 import json
 import os
-import re
 import subprocess
 import sys
 import tempfile
@@ -23,7 +22,6 @@ PROFILES = ("fast-explorer", "feature-worker", "bug-worker", "skeptical-reviewer
 RESERVED_BINDING_VALUES = {"auto", "inherit", "inherit-parent"}
 PROFILE_FIELDS = {"codex": ("model", "effort"), "claude": ("model", "effort"), "cursor": ("model",)}
 SUPPORTED_HOSTS = tuple(PROFILE_FIELDS)
-EFFORT_BRACKET = re.compile(r"^(?P<model>[^\[\]\s]+)\[effort=(?P<effort>[^\[\]\s,=]+)\]$")
 
 
 class ConfigError(Exception):
@@ -74,25 +72,10 @@ def require_concrete(value: str, location: str) -> str:
     return value
 
 
-def validate_effort_carrying_model(value: Any, location: str) -> str:
-    if not isinstance(value, str) or not value or any(char.isspace() for char in value):
-        raise ConfigError("{} must be a non-empty string without whitespace".format(location))
-    if any(char in "[]" for char in value):
-        match = EFFORT_BRACKET.fullmatch(value)
-        if match is None:
-            raise ConfigError("{} brackets must be exactly [effort=<value>]".format(location))
-        require_concrete(match.group("model"), location)
-        require_concrete(match.group("effort"), "{} effort".format(location))
-        return value
-    return require_concrete(value, location)
-
-
 def validate_binding(host: str, value: Any, location: str) -> Dict[str, str]:
     binding = require_object(value, location)
     fields = PROFILE_FIELDS[host]
     require_exact_keys(binding, fields, (), location)
-    if fields == ("model",):
-        return {"model": validate_effort_carrying_model(binding["model"], "{}.model".format(location))}
     return {
         field: require_concrete(
             require_identifier(binding[field], "{}.{}".format(location, field)),
