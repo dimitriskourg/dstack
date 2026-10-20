@@ -1,6 +1,6 @@
 ### Session pickup
 
-**You own the resume point. Read the prior trail, don't redo it.** For "take over this", "resume this conversation", "continue from <transcript path>", "you're taking over", "pick up where X left off", an explicit transcript export, or a branch you're meant to continue.
+**You own the resume point. Read the prior trail, don't redo it.**
 
 1. Locate the prior trail. Use the selected repository entry's configured `transcripts_directory`, already loaded by dstack-mode from `~/.dstack/config.json`, or use an explicit transcript URL, export, or pushed branch. Do not search for a transcript directory again or use another repository entry. Read the metadata overview and last messages first, then scan back for the decision points. Parse a long transcript in a subagent and keep the reduced timeline in the main thread (the **principle-guard-the-context-window** skill). Pick each subagent's configured profile for the job, per the Subagents section.
 2. Reconstruct operational state. The branch and checkout, what already landed (`git log`, `git diff` against the base), the open todos, the decisions made. The prior trail is authoritative input. Resist the bias to re-derive it.

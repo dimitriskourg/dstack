@@ -10,6 +10,8 @@ These guides are bundled with `dstack-help`:
 - [Recipes and pitfalls](../../skills/dstack-help/references/guide/10-recipes-and-pitfalls.md)
 - [Supported scope](06-supported-scope.md)
 
+Repository stubs for the same setup and mode pages: [01-setup](01-setup.md), [02-dstack-mode](02-dstack-mode.md).
+
 Repository-specific notes:
 
 - [How dstack works](02-how-dstack-works.md)

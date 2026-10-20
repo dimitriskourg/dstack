@@ -51,8 +51,8 @@ REQUIRED_DSTACK_PLAYBOOKS = {
     "session-pickup",
 }
 EXCLUDED_DSTACK_PLAYBOOKS = {
-    "apple-dev-cleanup", "autonomous-run", "autopilot-full", "autopilot-stack", "eval",
-    "hillclimb", "multi-phase-plan", "perf-issue", "runtime-forensics", "shipping",
+    "autonomous-run", "autopilot-full", "autopilot-stack", "eval",
+    "hillclimb", "multi-phase-plan", "orchestrate", "perf-issue", "runtime-forensics", "shipping",
     "trace-forensics", "visual-parity", "worktree-cleanup",
 }
 LEAKAGE_PATTERNS: Tuple[Tuple[str, re.Pattern[str]], ...] = (
