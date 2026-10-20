@@ -130,7 +130,6 @@ A large or cross-cutting effort still matches a playbook below, often Feature, R
 - **Investigation.** Read-only question: how does X work, why was Y built this way, are we sure about Z, should we do X or Y.
 - **Bug fix.** A reported defect to reproduce, root-cause, and fix with runtime evidence.
 - **Perf issue.** A measured slowness to trace and improve against a baseline.
-- **Hillclimb.** Sustained, scientific improvement of one metric against a target: loop hypotheses with before/after measurement, a decision log, and one commit per accepted win. Distinct from Perf issue, which is a one-off fix.
 - **Runtime forensics.** Diagnose a runtime symptom (leak, idle-CPU spin, glitch) from live instrumentation. The deliverable is a diagnosis, not a fix.
 - **Trace forensics.** Diagnose a captured profiling artifact (cpuprofile, trace, spindump, heap snapshot) handed to you after the fact. The deliverable is a diagnosis, not a fix.
 - **Feature.** New or changed behavior, built from a named data shape.

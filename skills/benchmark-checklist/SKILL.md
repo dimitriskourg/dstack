@@ -5,7 +5,7 @@ description: "Vet a perf measurement (limiter, tuning, limits, errors, repeatabi
 
 # Benchmark checklist
 
-Use this when you produce a performance number: a PR's before and after, a regression claim, a hillclimb harness, or a library or config choice. Answer each question with evidence from a run, not a guess about the code.
+Use this when you produce a performance number: a PR's before and after, a regression claim, a measurement harness, or a library or config choice. Answer each question with evidence from a run, not a guess about the code.
 
 For a quick ballpark the user asked for, one run is enough. Still check questions 4 and 7, and say that it is one run. Skip the rest unless that run looks wrong. A choice between options is never a ballpark.
 
@@ -35,4 +35,3 @@ For a quick ballpark the user asked for, one run is enough. Still check question
 ## Other perf material
 
 - Vet the **Perf issue** playbook's baseline before the playbook plans from it, and every number after that.
-- Vet the **Hillclimb** playbook's harness before it is frozen. The frozen harness then prints error and work counts, so each keep-or-revert checks questions 4 and 7 for free.

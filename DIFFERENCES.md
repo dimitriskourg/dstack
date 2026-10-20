@@ -8,7 +8,7 @@ Updated 2026-10-19. This is the source-of-truth handoff for upstream alignment a
 - Upstream repository: <https://github.com/cursor/plugins/tree/main/pstack>
 - Recorded source commit: `d457567332aa6989e753ea289f30ea2bfbc80bc0`
 - Recorded plugin version: `0.15.28`
-- Recorded inventory: 56 pstack skills and 23 `poteto-mode` playbooks; dstack ships 57 skills
+- Recorded inventory: 56 pstack skills and 23 `poteto-mode` playbooks; dstack ships 56 skills
 
 Recheck the local source revision before a future sync. Treat pstack and other plugin folders as immutable inputs.
 
@@ -22,7 +22,7 @@ The same refresh then absorbed pstack `0.15.5` → `0.15.15`. New skills: `corre
 
 ### Curated scope
 
-dstack ports selected pstack material rather than pursuing source completeness. The everyday keep-set is shrinking. This slice drops `figure-it-out` and `show-me-your-work`; callers no longer route to them. `dstack-mode` still ships 18 local playbooks. Retained source stays as close to pstack as the supported harnesses and team requirements allow. Excluded source remains available through pstack and Git history; dstack does not keep a disabled archive.
+dstack ports selected pstack material rather than pursuing source completeness. The everyday keep-set is shrinking. This branch drops `figure-it-out`, `show-me-your-work`, `automate-me`, and the Hillclimb playbook; callers no longer route to them. `dstack-mode` ships 17 local playbooks. Retained source stays as close to pstack as the supported harnesses and team requirements allow. Excluded source remains available through pstack and Git history; dstack does not keep a disabled archive.
 
 ### Names
 
@@ -109,7 +109,7 @@ Not absorbed from `978ca6e..1b6d44f`: `plugin.json` and the Agent Plugins v1 roo
 
 Not absorbed from the earlier 0.15.16–0.15.17 commits: `plugin.json` and the pstack README (dstack is not a Cursor plugin package); pstack model-rule, `Task`, `subagent_type`, hardcoded slugs, and `pstack-models.mdc` hunks, because profiles live in `~/.dstack/config.json`; the built-in PR tool rule; autopilot owner paragraphs in Opening a PR; worktree, stack-manager, Origin, and Graphite language in Opening a PR; Shipping, autonomous-run, autopilot-full/stack, Orchestrate, and worktree-cleanup, which stay excluded; `make-bot-ui`, already excluded. `dstack-mode` still keeps its configuration, Skill-tool, native-subagent, and local-autonomy paragraphs, which 0.15.16 did not replace.
 
-The help and guide alignment was rechecked against `d457567` (plugin 0.15.28). `dstack-help` starts from the upstream help file and retains its section order, question routing, skill comparisons, prompting references, and reply format, plus the `/ketchup` row (every waiting item listed and decidable from the reply alone), the `/in-your-own-words` row, the `/sharpen` row, the `/create-formal-verification-skill` row, the `/maintain-formal-verification-skill` row, the recall/ketchup close call, and the `/dstack-mode` chat-as-runner sentence. Only the six upstream guide chapters directly linked by the help skill ship as local references (setup, mode, verification, principles, customization, and recipes), plus dstack’s supported-scope reference. The unneeded guide index, understanding, design, build-and-clean, and overnight chapters and all decorative images are omitted. Retained guide links point to the shipped chapters or the owning skills. Installation and setup use dstack’s fixed configuration and four concrete profiles; external helper skills are bundled; mode lifetime is host-neutral; repository writers serialize; publication is explicit and Babysit stops at merge-ready. Cloud work, automatic wake, autopilot, Shipping, worktree management, bot UI, the automation pack, `figure-it-out`, and `show-me-your-work` remain excluded. Retained chapters preserve upstream examples and Mermaid diagrams; sibling-skill links resolve inside the installed skill collection.
+The help and guide alignment was rechecked against `d457567` (plugin 0.15.28). `dstack-help` starts from the upstream help file and retains its section order, question routing, skill comparisons, prompting references, and reply format, plus the `/ketchup` row (every waiting item listed and decidable from the reply alone), the `/in-your-own-words` row, the `/sharpen` row, the `/create-formal-verification-skill` row, the `/maintain-formal-verification-skill` row, the recall/ketchup close call, and the `/dstack-mode` chat-as-runner sentence. Only the six upstream guide chapters directly linked by the help skill ship as local references (setup, mode, verification, principles, customization, and recipes), plus dstack’s supported-scope reference. The unneeded guide index, understanding, design, build-and-clean, and overnight chapters and all decorative images are omitted. Retained guide links point to the shipped chapters or the owning skills. Installation and setup use dstack’s fixed configuration and four concrete profiles; external helper skills are bundled; mode lifetime is host-neutral; repository writers serialize; publication is explicit and Babysit stops at merge-ready. Cloud work, automatic wake, autopilot, Shipping, worktree management, bot UI, the automation pack, `figure-it-out`, `show-me-your-work`, `automate-me`, and Hillclimb remain excluded. Retained chapters preserve upstream examples and Mermaid diagrams; sibling-skill links resolve inside the installed skill collection.
 
 The portability audit treats Skill-tool calls as invocation-graph edges and rejects any edge whose target is model-disabled. This preserves explicit-only roots without pretending either host supports a third state for internal-only invocation.
 
@@ -137,7 +137,9 @@ dstack does not ship pstack's provider-specific automation, agent wrappers, sile
 - `shipping`, because the source playbook is Graphite-specific and dstack stops at merge-ready;
 - `worktree-cleanup` and its audit script, because dstack does not create or manage worktrees;
 - `figure-it-out`, dropped from the everyday keep-set; large work matches a retained playbook or is split;
-- `show-me-your-work`, dropped from the everyday keep-set; Hillclimb still keeps a local `decision.tsv`.
+- `show-me-your-work`, dropped from the everyday keep-set; there is no separate decision-trail skill;
+- `automate-me`, dropped from the everyday keep-set;
+- `hillclimb`, dropped from the everyday keep-set; one-off measured slowness stays on Perf issue.
 
 These are intentional scope choices, not capability gaps or known issues. Repository writers serialize. Read-only exploration, review, and independent artifacts outside the repository may still fan out in bounded waves.
 

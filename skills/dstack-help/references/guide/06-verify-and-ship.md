@@ -44,7 +44,7 @@ A before-and-after number is the easiest evidence to get wrong by accident. A wa
 6. Does it matter end to end, on the path a user waits on?
 7. Did the work actually happen inside the timed region?
 
-The verdict comes back as faster, slower, no measurable difference, or inconclusive, with the run count, range, and limiter. It says inconclusive when it can't name the limiter or a side ran untuned. `/dstack-mode` already runs the checklist inside the Perf issue and Hillclimb playbooks, so you type it yourself when you measured something outside them, or when someone else's number looks too good. It's the working form of the [Explain the Number principle](../../../principle-explain-the-number/SKILL.md).
+The verdict comes back as faster, slower, no measurable difference, or inconclusive, with the run count, range, and limiter. It says inconclusive when it can't name the limiter or a side ran untuned. `/dstack-mode` already runs the checklist inside the Perf issue playbook, so you type it yourself when you measured something outside it, or when someone else's number looks too good. It's the working form of the [Explain the Number principle](../../../principle-explain-the-number/SKILL.md).
 
 ## Create a project verification skill
 

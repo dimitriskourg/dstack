@@ -15,14 +15,13 @@ dstack is a curated local workflow pack for Codex, Claude Code, and Cursor. Upst
 
 ## Retained skills
 
-The skills below remain supported. This keep-set will shrink further; `figure-it-out` and `show-me-your-work` are already out.
+The skills below remain supported. This keep-set will shrink further; `figure-it-out`, `show-me-your-work`, and `automate-me` are already out.
 
 ### Workflow and orchestration
 
 - `dstack-mode`
 - `dstack-help`
 - `setup-dstack`
-- `automate-me`
 - `arena`
 - `swarm`
 - `interrogate`
@@ -94,7 +93,6 @@ The skills below remain supported. This keep-set will shrink further; `figure-it
 - Investigation
 - Bug fix
 - Performance issue
-- Hillclimb
 - Runtime forensics
 - Trace forensics
 - Feature
@@ -122,7 +120,9 @@ Apple development cleanup is a dstack-specific local addition. It is explicit an
 - **Orchestrate.** Excluded with the provider-specific upstream runtime; dstack uses its retained skills and playbooks directly.
 - **Make Bot UI.** Excluded because the source skill is a provider-specific bot webhook, secret-request, and Tailscale workflow.
 - **figure-it-out.** Dropped from the everyday keep-set. Large or cross-cutting work matches a retained playbook, or is split into playbook-sized units.
-- **show-me-your-work.** Dropped from the everyday keep-set. Hillclimb still keeps a local `decision.tsv`; there is no separate decision-trail skill.
+- **show-me-your-work.** Dropped from the everyday keep-set. There is no separate decision-trail skill.
+- **automate-me.** Dropped from the everyday keep-set. Personal mode generation is out of this pack.
+- **Hillclimb.** Dropped from the everyday keep-set. One-off measured slowness stays on Perf issue.
 
 Git worktrees remain a possible future capability for creation, isolation, and cleanup. Add those only when real team usage justifies a complete contract across Codex, Claude Code, and Cursor. Recognizing an existing linked worktree as the same registered repository is already in scope.
 

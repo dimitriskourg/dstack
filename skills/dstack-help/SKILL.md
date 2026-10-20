@@ -82,7 +82,6 @@ The default answer is `/dstack-mode`, which runs most of the others when its ste
 | Bring a formal verification back in line after the code it covers changed, and learn whether a failure is drift or a bug | [`/maintain-formal-verification-skill`](../maintain-formal-verification-skill/SKILL.md) |
 | Vet a performance number before reporting or acting on it | [`/benchmark-checklist`](../benchmark-checklist/SKILL.md) |
 | Pick a concrete model and effort for each profile | [`/setup-dstack`](../setup-dstack/SKILL.md) |
-| Turn their own working habits into a personal mode skill | [`/automate-me`](../automate-me/SKILL.md) |
 | Turn what a finished task taught into skill edits | [`/reflect`](../reflect/SKILL.md) |
 | Stop agents from repeating the same mistakes in this repo | [`/correct`](../correct/SKILL.md) |
 | Find their way around dstack | `/dstack-help` |
@@ -135,7 +134,6 @@ For a run that drifts, [`references/prompting.md`](references/prompting.md) has 
 
 ## Make dstack my own
 
-- [`/automate-me`](../automate-me/SKILL.md) drafts a personal mode skill from the user's own history, to use alongside `/dstack-mode`.
 - [`/reflect`](../reflect/SKILL.md) after a session turns its lessons into skill edits the user approves.
 - `/dstack-mode write a skill for <workflow>` runs the authoring playbook. The eval playbook tests a skill change blind.
 - Fix a misbehaving skill in its own change, not inside the feature work where it went wrong.

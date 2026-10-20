@@ -16,13 +16,13 @@ ROOT = Path(__file__).resolve().parents[1]
 SKILLS = ROOT / "skills"
 PROFILES = {"fast-explorer", "feature-worker", "bug-worker", "skeptical-reviewer"}
 CONFIG_DEPENDENT_SKILLS = {
-    "architect", "arena", "automate-me", "dstack-mode", "how", "interrogate",
+    "architect", "arena", "dstack-mode", "how", "interrogate",
     "recall", "reflect", "swarm", "why",
 }
-TRANSCRIPT_CONFIG_SKILLS = {"automate-me", "dstack-mode", "recall", "reflect"}
+TRANSCRIPT_CONFIG_SKILLS = {"dstack-mode", "recall", "reflect"}
 CANONICAL_HOST_IDS = {"codex", "claude", "cursor"}
 REQUIRED_SKILLS = {
-    "architect", "arena", "automate-me", "benchmark-checklist", "blast-radius", "bro",
+    "architect", "arena", "benchmark-checklist", "blast-radius", "bro",
     "comment-sicko", "control-cli", "control-ui", "correct", "create-formal-verification-skill", "create-verification-skill", "maintain-formal-verification-skill",
     "deslop", "dstack-help", "dstack-mode",
     "how", "in-your-own-words", "interrogate", "ketchup", "maintain-verification-skill", "no-comments",
@@ -46,12 +46,12 @@ REQUIRED_SKILLS = {
 }
 REQUIRED_DSTACK_PLAYBOOKS = {
     "apple-dev-cleanup", "authoring-a-skill", "babysit", "bug-fix", "eval",
-    "feature", "hillclimb", "investigation", "multi-phase-plan", "opening-a-pr",
+    "feature", "investigation", "multi-phase-plan", "opening-a-pr",
     "pause-safely", "perf-issue", "prototype", "refactoring", "runtime-forensics",
     "session-pickup", "trace-forensics", "visual-parity",
 }
 EXCLUDED_DSTACK_PLAYBOOKS = {
-    "autonomous-run", "autopilot-full", "autopilot-stack", "shipping",
+    "autonomous-run", "autopilot-full", "autopilot-stack", "hillclimb", "shipping",
     "worktree-cleanup",
 }
 LEAKAGE_PATTERNS: Tuple[Tuple[str, re.Pattern[str]], ...] = (
@@ -422,7 +422,7 @@ def check_skill(skill_dir: Path) -> List[Finding]:
                 findings.append(Finding(relative(skill_file), "transcript skill must resolve the repository entry with configure.py resolve"))
         if "stop and name the exact problem" not in body or "Tell the user to invoke `setup-dstack` explicitly." not in body:
             findings.append(Finding(relative(skill_file), "config-dependent skill must fail closed with setup-dstack guidance"))
-        if skill_dir.name not in {"automate-me", "recall"}:
+        if skill_dir.name not in {"recall"}:
             if "concrete model and effort pair" not in body:
                 findings.append(Finding(relative(skill_file), "profile-consuming skill must require a concrete model and effort pair"))
             if "`worker_binding`" not in body or not {"`spawn-arguments`", "`worker-definitions`"} <= set(re.findall(r"`[a-z-]+`", body)):
