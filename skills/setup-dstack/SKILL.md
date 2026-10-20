@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Setup dstack
 
-Use `~/.dstack/config.json` as the only configuration source. Its location is fixed; do not honor an environment override or accept another path. Use `scripts/configure.py` for validation and atomic config writes, and `scripts/worker_bindings.py` only for generated worker definitions. Do not create host rule files or edit installed skills.
+Use `~/.dstack/config.json` as the only configuration source. Its location is fixed; do not honor an environment override or accept another path. Use `scripts/configure.py` for validation and atomic config writes. Do not create host rule files or worker definition files, and do not edit installed skills.
 
 ## 1. Identify the host
 
@@ -27,7 +27,7 @@ Use a trustworthy catalog exposed by the active host. Preserve exact model ident
 Inspect how the catalog is shaped before treating it as complete:
 
 - A complete catalog enumerates model identifiers and, separately, the effort values each model accepts.
-- A fused spawn identifier, with model and effort in one string, is not a complete catalog. Do not store that string as `model`. Ask the user to confirm the model identifier and the effort as two values.
+- A fused spawn identifier carries model and effort in one string. On `codex` and `claude`, never store it; ask the user to confirm the model identifier and the effort as two values. On `cursor`, a fused identifier the spawn operation lists is a valid profile value, stored unchanged.
 - If the spawn operation lists fewer models or efforts than the host's picker or a host models API, that list is partial: it is only what this session can pass as a spawn argument. Prefer a host models API or CLI that lists entitled models and their effort parameters when one exists. Otherwise ask the user for exact pairs. Never claim validation against a partial list.
 - When the catalog is partial, preserve existing concrete bindings. Do not move a pair to `invalid_bindings` only because it is absent from this session's spawn list. Put a pair in `invalid_bindings` only when a complete catalog, or the host itself, rejects it.
 
@@ -42,20 +42,13 @@ The four profiles are:
 - `bug-worker`
 - `skeptical-reviewer`
 
-`auto`, `inherit-parent`, an omitted model, and an omitted effort are invalid profile values. A fused spawn identifier is also invalid as a stored `model` or `effort` value.
+## 3. Shape each profile for the spawn call
 
-## 3. Decide how the host binds workers
+Each profile holds exactly what the host's native spawn call takes, so setup never generates worker definitions. On `codex` and `claude`, the pair hosts, a profile is `{"model": "<model-id>", "effort": "<effort>"}`, passed as separate spawn arguments, and neither value may contain brackets. On `cursor`, the single-id host, a profile is `{"model": "<spawn-model-id>"}` with no `effort` field, passed as the spawn model, and the id must carry the effort: either `<model-id>[effort=<effort>]` or a listed spawn identifier that encodes the effort.
 
-Inspect the current schema of the host's spawn operation instead of assuming it. Record the result in `worker_binding`.
+On the single-id host, inspect the live spawn operation's schema before choosing between those two forms. If it says the model must resolve to a listed identifier, store a listed identifier that encodes the chosen effort. Use the bracket form only when the spawn operation documents or accepts it. Never store an id that carries no effort, because the worker would then run at the session effort.
 
-- `spawn-arguments`: the spawn operation takes both a model and an effort argument, `definitions_directory` is `null`, and `pair_encoding` is `null`.
-- `worker-definitions`: the spawn operation cannot carry both values, so workers must be declared ahead of time in the host's own worker definition directory. Record that absolute directory in `definitions_directory`. Inspect the definition schema and record `pair_encoding`:
-  - `sibling-fields`: definitions have separate `model` and `effort` fields.
-  - `model-brackets`: definitions have a `model` field that accepts `id[effort=value]` and no effort field. If the schema can refuse a parent spawn override of that model, set that refusal on every generated definition.
-
-Choose `worker-definitions` whenever the spawn operation has no effort argument, even when it accepts a model. A spawn that carries only the model leaves the worker on the session effort and breaks the exact-pair contract. Do not reconstruct a fused spawn slug to compensate.
-
-Do not choose an encoding from the harness id. Inspect the live spawn operation and definition schema. A host whose spawn call already carries both halves stays on `spawn-arguments` with `pair_encoding` null, including after this setup path changes.
+`auto`, `inherit`, `inherit-parent`, an omitted model, an omitted effort on a pair host, and an id without effort on the single-id host are invalid profile values.
 
 ## 4. Find the transcript directory
 
@@ -67,7 +60,7 @@ If no scoped directory can be confirmed, store `null` and say transcript-backed 
 
 Run the configurator's `show` command. Preserve other hosts. For the active host, when the catalog is complete, preserve model-effort pairs still present in the catalog, put unavailable former pairs in `invalid_bindings`, require a concrete replacement for every affected profile, and remove pairs that become valid again. When the catalog is partial, preserve existing concrete bindings and do not mark them invalid from the session spawn list alone. Never write a profile binding rejected by a complete catalog.
 
-Show the current and proposed value for all four profiles, the worker binding mechanism, pair encoding, and definitions directory, the active repository root and its transcript directory, invalid bindings, catalog status (`complete` or `partial`), and canonical harness id. Preserve every other harness and repository entry. Ask only about actual preferences. Do not write before the user confirms.
+Show the current and proposed value for all four profiles, the active repository root and its transcript directory, invalid bindings, catalog status (`complete` or `partial`), and canonical harness id. Preserve every other harness and repository entry. Ask only about actual preferences. Do not write before the user confirms.
 
 ## 6. Apply
 
@@ -78,16 +71,17 @@ Create a temporary proposal with this exact shape:
   "host": "<codex|claude|cursor>",
   "repository_root": "<canonical-repository-root>",
   "profiles": {
-    "fast-explorer": {"model": "<model-id>", "effort": "<effort>"},
-    "feature-worker": {"model": "<model-id>", "effort": "<effort>"},
-    "bug-worker": {"model": "<model-id>", "effort": "<effort>"},
-    "skeptical-reviewer": {"model": "<model-id>", "effort": "<effort>"}
+    "fast-explorer": <profile>,
+    "feature-worker": <profile>,
+    "bug-worker": <profile>,
+    "skeptical-reviewer": <profile>
   },
   "invalid_bindings": <reconciled-invalid-bindings>,
-  "worker_binding": {"mechanism": "<spawn-arguments|worker-definitions>", "definitions_directory": <absolute-path-or-null>, "pair_encoding": <null|"sibling-fields"|"model-brackets">},
   "transcripts_directory": <absolute-path-or-null>
 }
 ```
+
+Each `<profile>`, and each entry of `invalid_bindings`, uses the shape from step 3 for the active host.
 
 ```text
 python3 <setup-dstack-dir>/scripts/configure.py apply --proposal <temporary-json>
@@ -95,17 +89,9 @@ python3 <setup-dstack-dir>/scripts/configure.py apply --proposal <temporary-json
 
 Delete the temporary proposal after the command. If it fails, report the exact error and leave the previous file intact.
 
-Then synchronize the workers:
-
-```text
-python3 <setup-dstack-dir>/scripts/worker_bindings.py --host <active-host>
-```
-
-The command is a no-op for a `spawn-arguments` host. For a `worker-definitions` host, it synchronizes and confirms one definition per profile, using the recorded `pair_encoding`, without touching other files in the directory. Treat a failure as a failed setup: report it and do not tell the user that profiles are ready.
-
 ## 7. Report
 
-Return the selected host, configuration path, profile changes, worker binding mechanism, pair encoding, generated worker definitions and their verification result, transcript discovery result, invalid bindings, catalog status, and schema validation result.
+Return the selected host, configuration path, profile changes, transcript discovery result, invalid bindings, catalog status, and schema validation result.
 
 If the project lacks a real-app verification harness, offer once to create one. On acceptance, Call the Skill tool with `create-verification-skill`.
 

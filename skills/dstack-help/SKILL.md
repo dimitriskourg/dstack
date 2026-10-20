@@ -87,7 +87,7 @@ Playbooks are step lists inside `/dstack-mode`, not slash commands. The Playbook
 |---|---|
 | A skill stopped and asked for `setup-dstack` | Run `setup-dstack` in this repository. |
 | The mode stopped applying | Start each task with `/dstack-mode`. |
-| A new profile choice had no effect | Rerun `setup-dstack`. Start a new chat if the host reads worker definitions only at startup. |
+| A new profile choice had no effect | Rerun `setup-dstack`, then check that the profile holds exactly what the host's spawn call takes. |
 | Parallel agents overwrote each other | Repository writers serialize. Give parallel workers read-only slices or output outside the repository. |
 | Success claimed from a green build | Ask for the real command, flow, stored value, or profile. |
 

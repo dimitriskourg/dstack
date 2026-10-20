@@ -12,7 +12,7 @@ Bundled skills live at `~/.agents/skills/<name>/SKILL.md`, which is `../<name>/S
 
 Before routing or spawning, map the system-provided product identity to the canonical id `codex`, `claude`, or `cursor`. Resolve the canonical repository root with `git rev-parse --show-toplevel` and symlink resolution. Read `~/.dstack/config.json`, select `hosts[<active-harness>]` and `repositories[<canonical-repository-root>]` when that key is this checkout, and verify the selected entry's `repository_root` exactly matches its key. If that key is absent, select the registered repository that shares this checkout's `git rev-parse --git-common-dir`. Run `configure.py resolve --host <active-harness>` from the active checkout and use that result. Never invent an alias or select another host. Do not select a repository with a different git common directory. If the file is missing, unreadable, or invalid, either entry is absent, the identity or repository is unknown, or a required profile is missing or listed in `invalid_bindings`, stop and name the exact problem. Tell the user to invoke `setup-dstack` explicitly. Do not enter a playbook or guess, omit, or inherit a binding. Every profile must provide a concrete model and effort pair.
 
-Apply the profile through `worker_binding`: pass its exact model and effort for `spawn-arguments`; for `worker-definitions`, spawn `dstack-<profile>` without overrides. Stop if the binding is missing, rejected, or different. Never inherit session effort.
+Pass the profile exactly as the native spawn call takes it: for `codex` and `claude`, its `model` and `effort` as separate spawn arguments; for `cursor`, its `model` string, which already carries effort, as the spawn model. Stop if the profile is missing, rejected, or different. Never inherit session effort.
 
 ## Non-negotiables
 
@@ -95,7 +95,7 @@ Read the leaf skill in full for any principle you apply. Each entry names when i
 
 **Defaults for every spawn.** Run in the background when supported, preserve the tools the task needs, pass file pointers instead of inlining large context, and select the concrete model and effort from the configured profile. To change profiles, tell the user to invoke `setup-dstack` explicitly. Use `fast-explorer` for cheap read-only breadth, `feature-worker` for implementation, `bug-worker` for evidence-backed fixes, and `skeptical-reviewer` for judgment or independent review. If the harness cannot apply the configured pair, stop and report the rejected binding; do not inherit the parent model.
 
-**Match the pair to the job.** Before each spawn, pick the configured profile whose pair fits the job, then apply that pair unchanged through `worker_binding`. Do not invent a slug, drop a half of the pair, raise or lower effort yourself, or inherit session effort. Verification stays on the swarm worker's configured pair. If the harness rejects the pair, stop and report the rejected binding.
+**Match the pair to the job.** Before each spawn, pick the configured profile whose pair fits the job, then pass that profile unchanged in the native spawn call. Do not invent a slug, drop a half of the pair, raise or lower effort yourself, or inherit session effort. Verification stays on the swarm worker's configured pair. If the harness rejects the pair, stop and report the rejected binding.
 
 You own every subagent's work. Review the diff and write your own summary, don't pass through what it said. A second opinion is the same prompt on a different configured profile when possible. Agreement is high-signal.
 

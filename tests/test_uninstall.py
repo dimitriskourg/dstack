@@ -35,7 +35,6 @@ class UninstallerTests(unittest.TestCase):
         skills = root / "agents" / "skills"
         claude = root / "claude" / "skills"
         dstack_home = root / "dstack-home"
-        workers = root / "workers"
         for name in ("alpha", "beta"):
             skill = skills / name
             skill.mkdir(parents=True)
@@ -44,33 +43,13 @@ class UninstallerTests(unittest.TestCase):
             )
             claude.mkdir(parents=True, exist_ok=True)
             (claude / name).symlink_to(skill, target_is_directory=True)
-        workers.mkdir()
-        for profile in UNINSTALL.PROFILES:
-            (workers / "dstack-{}.md".format(profile)).write_text(
-                "---\nname: dstack-{0}\ndescription: worker\n---\n\n"
-                "<!-- dstack-managed-worker: {0} -->\n".format(profile),
-                encoding="utf-8",
-            )
         dstack_home.mkdir()
         (dstack_home / "config.json").write_text(
-            json.dumps(
-                {
-                    "schema_version": 2,
-                    "hosts": {
-                        "claude": {
-                            "worker_binding": {
-                                "mechanism": "worker-definitions",
-                                "definitions_directory": str(workers),
-                                "pair_encoding": "sibling-fields",
-                            }
-                        }
-                    },
-                }
-            ),
+            json.dumps({"schema_version": 2, "hosts": {}}),
             encoding="utf-8",
         )
         (dstack_home / "keep-for-skills-only.txt").write_text("config", encoding="utf-8")
-        return skills, claude, dstack_home, workers
+        return skills, claude, dstack_home
 
     def run_uninstaller(self, source: Path, root: Path, arguments):
         stdout = io.StringIO()
@@ -91,23 +70,22 @@ class UninstallerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             source = self.make_source(root)
-            skills, claude, dstack_home, workers = self.install_fixture(root)
+            skills, claude, dstack_home = self.install_fixture(root)
 
             status, stdout, stderr = self.run_uninstaller(source, root, ["--all", "--dry-run"])
 
             self.assertEqual(0, status)
             self.assertEqual("", stderr)
-            self.assertIn("Uninstall dry run complete: 9 removals", stdout)
+            self.assertIn("Uninstall dry run complete: 5 removals", stdout)
             self.assertTrue((skills / "alpha").is_dir())
             self.assertTrue((claude / "alpha").is_symlink())
             self.assertTrue(dstack_home.is_dir())
-            self.assertTrue((workers / "dstack-fast-explorer.md").is_file())
 
-    def test_skills_only_preserves_configuration_and_workers(self):
+    def test_skills_only_preserves_configuration(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             source = self.make_source(root)
-            skills, claude, dstack_home, workers = self.install_fixture(root)
+            skills, claude, dstack_home = self.install_fixture(root)
 
             status, stdout, stderr = self.run_uninstaller(source, root, ["--skills-only"])
 
@@ -117,33 +95,28 @@ class UninstallerTests(unittest.TestCase):
             self.assertFalse((skills / "alpha").exists())
             self.assertFalse(os.path.lexists(str(claude / "alpha")))
             self.assertTrue((dstack_home / "config.json").is_file())
-            self.assertTrue((workers / "dstack-fast-explorer.md").is_file())
 
-    def test_all_removes_skills_workers_and_dstack_home(self):
+    def test_all_removes_skills_and_dstack_home(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             source = self.make_source(root)
-            skills, claude, dstack_home, workers = self.install_fixture(root)
+            skills, claude, dstack_home = self.install_fixture(root)
             unrelated_skill = skills / "personal"
             unrelated_skill.mkdir()
-            unrelated_worker = workers / "personal.md"
-            unrelated_worker.write_text("keep", encoding="utf-8")
 
             status, stdout, stderr = self.run_uninstaller(source, root, ["--all"])
 
             self.assertEqual(0, status)
             self.assertEqual("", stderr)
-            self.assertIn("Uninstalled dstack skills and configuration: 9 removals completed.", stdout)
+            self.assertIn("Uninstalled dstack skills and configuration: 5 removals completed.", stdout)
             self.assertTrue(unrelated_skill.is_dir())
-            self.assertTrue(unrelated_worker.is_file())
             self.assertFalse(dstack_home.exists())
-            self.assertFalse((workers / "dstack-fast-explorer.md").exists())
 
     def test_unverified_skill_stops_before_any_removal(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             source = self.make_source(root)
-            skills, claude, dstack_home, _ = self.install_fixture(root)
+            skills, claude, dstack_home = self.install_fixture(root)
             (skills / "beta" / "SKILL.md").write_text(
                 "---\nname: personal\ndescription: do not remove\n---\n", encoding="utf-8"
             )
@@ -162,7 +135,7 @@ class UninstallerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             source = self.make_source(root)
-            skills, claude, _, _ = self.install_fixture(root)
+            skills, claude, _ = self.install_fixture(root)
             (claude / "alpha").unlink()
             (claude / "alpha").mkdir()
 
@@ -173,26 +146,11 @@ class UninstallerTests(unittest.TestCase):
             self.assertIn("expected a dstack compatibility link", stderr)
             self.assertTrue((skills / "alpha").is_dir())
 
-    def test_tampered_worker_stops_before_any_removal(self):
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            source = self.make_source(root)
-            skills, _, dstack_home, workers = self.install_fixture(root)
-            (workers / "dstack-bug-worker.md").write_text("personal", encoding="utf-8")
-
-            status, stdout, stderr = self.run_uninstaller(source, root, ["--all"])
-
-            self.assertEqual(2, status)
-            self.assertEqual("", stdout)
-            self.assertIn("worker definition ownership cannot be verified", stderr)
-            self.assertTrue((skills / "alpha").is_dir())
-            self.assertTrue(dstack_home.is_dir())
-
     def test_removal_failure_reports_partial_completion_truthfully(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             source = self.make_source(root)
-            skills, _, _, _ = self.install_fixture(root)
+            skills, _, _ = self.install_fixture(root)
             real_remove = UNINSTALL.remove
             calls = []
 

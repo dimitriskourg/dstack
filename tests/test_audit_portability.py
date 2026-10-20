@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import importlib.util
+import json
 import sys
 import tempfile
 import unittest
@@ -67,7 +68,7 @@ class PortabilityAuditTests(unittest.TestCase):
             self.assertIn("config-dependent skill must reject harness aliases", messages)
             self.assertIn("config-dependent skill must fail closed with setup-dstack guidance", messages)
             self.assertIn("profile-consuming skill must require a concrete model and effort pair", messages)
-            self.assertIn("profile-consuming skill must name the worker_binding mechanisms", messages)
+            self.assertIn("profile-consuming skill must state how each host's spawn call takes the profile", messages)
             self.assertIn("profile-consuming skill must forbid inheriting session effort", messages)
 
     def test_config_dependent_skill_contract_passes(self):
@@ -77,13 +78,13 @@ class PortabilityAuditTests(unittest.TestCase):
                 "Map the system-provided product identity to `codex`, `claude`, or `cursor`; never invent an alias. "
                 "Read `~/.dstack/config.json` and select `hosts[<active-harness>]`; on failure, stop and name the exact problem. "
                 "Tell the user to invoke `setup-dstack` explicitly. Require a concrete model and effort pair. "
-                "Apply it through `worker_binding`: `spawn-arguments` carries both values in the spawn call and "
-                "`worker-definitions` uses the generated worker. Never inherit session effort.\n",
+                "Pass it as the native spawn call takes it: for `codex` and `claude`, `model` and `effort` as "
+                "separate spawn arguments; for `cursor`, a `model` that already carries effort. Never inherit session effort.\n",
                 name="arena",
             )
             self.assertEqual([], self.messages(skill))
 
-    def test_profile_consuming_skill_must_pin_effort_with_the_worker_binding(self):
+    def test_profile_consuming_skill_must_state_the_spawn_shape(self):
         with tempfile.TemporaryDirectory() as temp:
             skill = self.make_skill(
                 Path(temp),
@@ -94,10 +95,10 @@ class PortabilityAuditTests(unittest.TestCase):
                 name="arena",
             )
             messages = self.messages(skill)
-            self.assertIn("profile-consuming skill must name the worker_binding mechanisms", messages)
+            self.assertIn("profile-consuming skill must state how each host's spawn call takes the profile", messages)
             self.assertIn("profile-consuming skill must forbid inheriting session effort", messages)
 
-    def test_transcript_only_config_skill_needs_no_worker_binding(self):
+    def test_transcript_only_config_skill_needs_no_spawn_shape(self):
         with tempfile.TemporaryDirectory() as temp:
             skill = self.make_skill(
                 Path(temp),
@@ -125,14 +126,28 @@ class PortabilityAuditTests(unittest.TestCase):
             self.assertIn("transcript skill must accept linked worktrees via git common directory", messages)
             self.assertIn("transcript skill must resolve the repository entry with configure.py resolve", messages)
 
-    def test_shipped_schema_requires_a_worker_binding(self):
-        findings = [finding.message for finding in AUDIT.check_structure()]
-        self.assertNotIn("each host entry must require a worker binding", findings)
-        self.assertNotIn("config must define exactly the two supported worker binding mechanisms", findings)
-        self.assertNotIn("config must define exactly the two supported pair encodings", findings)
-        self.assertNotIn("worker binding must require mechanism, directory, and pair encoding", findings)
-        self.assertNotIn("config must define exactly the three canonical harness ids", findings)
-        self.assertNotIn("each host entry must require repository-scoped configuration", findings)
+    def test_shipped_schema_matches_each_host_spawn_shape(self):
+        schema = json.loads((AUDIT.ROOT / "schemas" / "config.schema.json").read_text(encoding="utf-8"))
+        self.assertEqual([], AUDIT.schema_findings(schema))
+
+    def test_schema_with_a_worker_binding_or_wrong_host_shape_fails(self):
+        schema = json.loads((AUDIT.ROOT / "schemas" / "config.schema.json").read_text(encoding="utf-8"))
+        schema["$defs"]["workerBinding"] = {"type": "object"}
+        schema["$defs"]["pairHost"]["required"].append("worker_binding")
+        schema["$defs"]["cursorBinding"]["required"].append("effort")
+        schema["properties"]["hosts"]["properties"]["cursor"] = {"$ref": "#/$defs/pairHost"}
+        schema["$defs"]["modelIdentifier"]["not"]["enum"].remove("inherit")
+        messages = AUDIT.schema_findings(schema)
+        self.assertIn("retired worker binding must stay absent from the schema", messages)
+        self.assertIn("pairHost must contain exactly profiles, invalid_bindings, and repositories", messages)
+        self.assertIn("cursorBinding must contain exactly model", messages)
+        self.assertIn("codex and claude must use pairHost and cursor must use cursorHost", messages)
+        self.assertIn("config must reject automatic and parent-inheritance binding aliases", messages)
+
+    def test_retired_worker_binding_terms_fail_in_skills(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(Path(temp), "Spawn `dstack-<profile>` through `worker_binding`.\n")
+            self.assertIn("retired worker binding", self.messages(skill))
 
     def test_supported_playbook_inventory_is_exact(self):
         playbooks = AUDIT.SKILLS / "dstack-mode" / "playbooks"

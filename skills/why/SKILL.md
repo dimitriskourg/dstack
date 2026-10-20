@@ -11,7 +11,7 @@ Investigate the motivation and intent behind code. The companion `how` skill ans
 
 Read **dstack-mode** Configuration. Map the system-provided product identity to `codex`, `claude`, or `cursor`, then read `~/.dstack/config.json` and select `hosts[<active-harness>]`. Never invent an alias. If the file is missing, unreadable, or invalid, the identity is unknown, its host entry is absent, or a required profile is missing or listed in `invalid_bindings`, stop and name the exact problem. Tell the user to invoke `setup-dstack` explicitly. Every profile must provide a concrete model and effort pair.
 
-Apply the profile through `worker_binding`: pass its exact model and effort for `spawn-arguments`; for `worker-definitions`, spawn `dstack-<profile>` without overrides. Stop if the binding is missing, rejected, or different. Never inherit session effort.
+Pass the profile exactly as the native spawn call takes it: for `codex` and `claude`, its `model` and `effort` as separate spawn arguments; for `cursor`, its `model` string, which already carries effort, as the spawn model. Stop if the profile is missing, rejected, or different. Never inherit session effort.
 
 Every spawn is a general-purpose subagent with full tool access. **Don't use a restricted read-only mode.** Where a host strips MCP access in that mode it disables MCP-backed investigators and the synthesizer's citation spot-checks. Investigators still shouldn't write anything. Investigators use the configured `fast-explorer` profile. The synthesizer uses the configured `skeptical-reviewer` profile. Pick each subagent's configured profile for the job, per the Subagents section of the **dstack-mode** skill.
 

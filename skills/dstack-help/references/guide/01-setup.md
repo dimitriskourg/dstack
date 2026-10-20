@@ -23,9 +23,9 @@ Run:
 
 [`/setup-dstack`](../../../setup-dstack/SKILL.md) detects the active harness, reads its model catalog, confirms four concrete model-and-effort profiles, and records this repository's transcript directory in `~/.dstack/config.json`.
 
-The profiles are `fast-explorer`, `feature-worker`, `bug-worker`, and `skeptical-reviewer`. Pick cheaper models or lower efforts where the work allows it. Every pair must be supported by the active harness; `auto` and `inherit-parent` are not profile values.
+The profiles are `fast-explorer`, `feature-worker`, `bug-worker`, and `skeptical-reviewer`. Pick cheaper models or lower efforts where the work allows it. Every pair must be supported by the active harness; `auto`, `inherit`, and `inherit-parent` are not profile values.
 
-Setup records how the harness applies both halves of the pair. When the spawn call cannot carry effort, setup synchronizes and verifies generated worker definitions. A model-only override would leave the worker on the session effort, so it is not enough.
+Each profile holds exactly what the harness's native spawn call takes: a separate model and effort, or one model id that already carries the effort. Setup writes no worker definition files. An id without effort would leave the worker on the session effort, so setup never stores one.
 
 Run setup in each repository. Transcript consumers select the canonical Git root, or a registered checkout sharing its Git common directory. They never fall back to another repository's transcripts. A missing configuration or required entry stops config-dependent work with an explicit setup instruction.
 
@@ -38,8 +38,6 @@ Say yes and it writes a project-local `verify-<app>` skill in the active harness
 If you're new to dstack, say yes. An agent that can check its own work keeps going until the check passes. An agent that can't hands every result back to you to check by hand. Of everything in this guide, the verification skill pays off the most.
 
 Then setup offers once to generate a formal verification skill with [`/create-formal-verification-skill`](../../../create-formal-verification-skill/SKILL.md), unless the project already has one. Tests check the cases someone thought to write. A formal verification skill checks one key property of your code, such as "a job never runs twice at once", in every case within a stated scope. Say yes when your code has concurrency, retries, a state machine, or a parser, where a bug is costly and tests rarely reach the case that breaks. Otherwise say no, and run it later if that changes. [Verify and ship](./06-verify-and-ship.md#prove-a-property-with-a-formal-verification-skill) covers it.
-
-After setup, start a new chat if the harness loads generated worker definitions only at startup.
 
 ## Keep the cost in check
 

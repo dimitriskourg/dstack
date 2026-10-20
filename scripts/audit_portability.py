@@ -64,7 +64,14 @@ LEAKAGE_PATTERNS: Tuple[Tuple[str, re.Pattern[str]], ...] = (
     ("legacy brand", re.compile(r"\b(?:pstack|ystack|poteto(?:-mode)?)\b", re.I)),
     ("config path override", re.compile(r"\bDSTACK_HOME\b|--dstack-home")),
     ("host selection override", re.compile(r"\bhost_override\b")),
+    (
+        "retired worker binding",
+        re.compile(r"\bworker_binding\b|\bworker-definitions\b|\bspawn-arguments\b|\bpair_encoding\b|"
+                   r"\bdefinitions_directory\b|\bdstack-<profile>|\bworker_bindings\.py\b"),
+    ),
 )
+HOST_BINDINGS = {"codex": "pairHost", "claude": "pairHost", "cursor": "cursorHost"}
+HOST_ENTRY_FIELDS = {"profiles", "invalid_bindings", "repositories"}
 REQUIRED_FRONTMATTER = {"name", "description"}
 OPTIONAL_FRONTMATTER = {"disable-model-invocation"}
 CODEX_SIDECAR = Path("agents") / "openai.yaml"
@@ -426,8 +433,8 @@ def check_skill(skill_dir: Path) -> List[Finding]:
         if skill_dir.name not in {"recall"}:
             if "concrete model and effort pair" not in body:
                 findings.append(Finding(relative(skill_file), "profile-consuming skill must require a concrete model and effort pair"))
-            if "`worker_binding`" not in body or not {"`spawn-arguments`", "`worker-definitions`"} <= set(re.findall(r"`[a-z-]+`", body)):
-                findings.append(Finding(relative(skill_file), "profile-consuming skill must name the worker_binding mechanisms"))
+            if "separate spawn arguments" not in body or "already carries effort" not in body:
+                findings.append(Finding(relative(skill_file), "profile-consuming skill must state how each host's spawn call takes the profile"))
             if not re.search(r"\b(?:never|do not|must not)\b[^.\n]{0,80}\bsession effort\b", body, re.IGNORECASE):
                 findings.append(Finding(relative(skill_file), "profile-consuming skill must forbid inheriting session effort"))
     findings.extend(check_sidecar(skill_dir, "disable-model-invocation" in fields))
@@ -492,6 +499,36 @@ def check_skill(skill_dir: Path) -> List[Finding]:
     return findings
 
 
+def schema_findings(value: Dict) -> List[str]:
+    messages: List[str] = []
+    definitions = value.get("$defs", {})
+    hosts = value.get("properties", {}).get("hosts", {})
+    if set(hosts.get("propertyNames", {}).get("enum", [])) != CANONICAL_HOST_IDS:
+        messages.append("config must define exactly the three canonical harness ids")
+    host_refs = {
+        host: entry.get("$ref", "").rpartition("/")[2]
+        for host, entry in hosts.get("properties", {}).items()
+    }
+    if host_refs != HOST_BINDINGS or hosts.get("additionalProperties") is not False:
+        messages.append("codex and claude must use pairHost and cursor must use cursorHost")
+    for name in sorted(set(HOST_BINDINGS.values())):
+        entry = definitions.get(name, {})
+        if set(entry.get("required", [])) != HOST_ENTRY_FIELDS or set(entry.get("properties", {})) != HOST_ENTRY_FIELDS:
+            messages.append("{} must contain exactly profiles, invalid_bindings, and repositories".format(name))
+        if set(entry.get("properties", {}).get("profiles", {}).get("properties", {})) != PROFILES:
+            messages.append("{} must define exactly the four supported profiles".format(name))
+    for name, fields in (("pairBinding", {"model", "effort"}), ("cursorBinding", {"model"})):
+        binding = definitions.get(name, {})
+        if set(binding.get("required", [])) != fields or set(binding.get("properties", {})) != fields:
+            messages.append("{} must contain exactly {}".format(name, " and ".join(sorted(fields))))
+    reserved = definitions.get("modelIdentifier", {}).get("not", {}).get("enum", [])
+    if set(reserved) != {"auto", "inherit", "inherit-parent"}:
+        messages.append("config must reject automatic and parent-inheritance binding aliases")
+    if "workerBinding" in definitions:
+        messages.append("retired worker binding must stay absent from the schema")
+    return messages
+
+
 def check_structure() -> List[Finding]:
     findings: List[Finding] = []
     for removed in ("adapters", "contracts"):
@@ -506,29 +543,7 @@ def check_structure() -> List[Finding]:
         findings.append(Finding(relative(schema), "schema must use JSON Schema draft 2020-12"))
     if set(value.get("required", [])) != {"schema_version", "hosts"} or set(value.get("properties", {})) != {"schema_version", "hosts"}:
         findings.append(Finding(relative(schema), "config root must contain only schema_version and hosts"))
-    profile_properties = value.get("properties", {}).get("hosts", {}).get("additionalProperties", {}).get("properties", {}).get("profiles", {}).get("properties", {})
-    if set(profile_properties) != PROFILES:
-        findings.append(Finding(relative(schema), "config must define exactly the four supported profiles"))
-    reserved = value.get("$defs", {}).get("modelIdentifier", {}).get("not", {}).get("enum", [])
-    if set(reserved) != {"auto", "inherit-parent"}:
-        findings.append(Finding(relative(schema), "config must reject automatic and parent-inheritance binding aliases"))
-    host_entry = value.get("properties", {}).get("hosts", {}).get("additionalProperties", {})
-    if "worker_binding" not in set(host_entry.get("required", [])):
-        findings.append(Finding(relative(schema), "each host entry must require a worker binding"))
-    host_ids = value.get("properties", {}).get("hosts", {}).get("propertyNames", {}).get("enum", [])
-    if set(host_ids) != CANONICAL_HOST_IDS:
-        findings.append(Finding(relative(schema), "config must define exactly the three canonical harness ids"))
-    if "repositories" not in set(host_entry.get("required", [])):
-        findings.append(Finding(relative(schema), "each host entry must require repository-scoped configuration"))
-    worker_binding = value.get("$defs", {}).get("workerBinding", {})
-    if set(worker_binding.get("required", [])) != {"mechanism", "definitions_directory", "pair_encoding"}:
-        findings.append(Finding(relative(schema), "worker binding must require mechanism, directory, and pair encoding"))
-    mechanisms = worker_binding.get("properties", {}).get("mechanism", {}).get("enum", [])
-    if set(mechanisms) != {"spawn-arguments", "worker-definitions"}:
-        findings.append(Finding(relative(schema), "config must define exactly the two supported worker binding mechanisms"))
-    encodings = worker_binding.get("properties", {}).get("pair_encoding", {}).get("enum", [])
-    if set(encodings) != {"sibling-fields", "model-brackets", None}:
-        findings.append(Finding(relative(schema), "config must define exactly the two supported pair encodings"))
+    findings.extend(Finding(relative(schema), message) for message in schema_findings(value))
 
     playbooks = SKILLS / "dstack-mode" / "playbooks"
     actual_playbooks = {path.stem for path in playbooks.glob("*.md")}
