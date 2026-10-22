@@ -14,7 +14,7 @@ Give the user the file's public copy: `https://github.com/dimitriskourg/dstack/b
 
 ## Locked keep-set
 
-55 skills, 24 principles, ten playbooks. What is out of this pack lives in [Supported scope](references/guide/06-supported-scope.md), not here.
+56 skills, 24 principles, ten playbooks. What is out of this pack lives in [Supported scope](references/guide/06-supported-scope.md), not here.
 
 ### Setup and routing
 
@@ -59,12 +59,15 @@ Name a skill directly when the user wants more or less than the playbook. Read i
 | Bring a verification skill back in line | [`/maintain-verification-skill`](../maintain-verification-skill/SKILL.md) |
 | Formally verify a race or invariant | [`/create-formal-verification-skill`](../create-formal-verification-skill/SKILL.md) |
 | Bring a formal verification back in line | [`/maintain-formal-verification-skill`](../maintain-formal-verification-skill/SKILL.md) |
+| Show what the user sees as a chart checked by a model | [`/statechart`](../statechart/SKILL.md) |
 | Turn a finished task into skill edits | [`/reflect`](../reflect/SKILL.md) |
 | Stop agents repeating the same mistakes | [`/correct`](../correct/SKILL.md) |
 
 Bundled so the workflow is complete: `/deslop`, `/control-ui`, `/comment-sicko`.
 
 Close calls: `/how` vs `/why` vs `/teach`; `/arena` vs `/swarm`; `/recall` vs `/ketchup` (session pickup resumes one chat or branch); `/architect` implements after it settles, add "with checkpoint" to review first.
+
+`/statechart` needs Java 11 or later and `TLA2TOOLS` set to a `tla2tools.jar`.
 
 ### Playbooks
 
