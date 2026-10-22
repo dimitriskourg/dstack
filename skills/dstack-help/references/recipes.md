@@ -17,6 +17,7 @@ Swap in the real paths, skills, and done checks. Informal wording works.
 - Bug: `/dstack-mode <symptom>. repro first, then fix and verify.`
 - Bug in an app: `/dstack-mode repro this with /verify-<app>. if it repros on main, fix it and show me a video as proof.`
 - Property tests rarely reach: `/create-formal-verification-skill`. After merges or refactors in that code: `/maintain-formal-verification-skill`.
+- Show a PM what the user sees, checked by a model: `/statechart what the user sees when they <action>`. Needs Java 11+ and `TLA2TOOLS` pointing at `tla2tools.jar`.
 - Bug with a cheap test: `/dstack-mode repro <bug> first. if there's a cheap test path, /tdd it. then fix and rerun.`
 - Feature: `/dstack-mode add <behavior>. <current output> stays byte-identical. verify both.`
 - Refactor: `/dstack-mode move <code> into one module, zero behavior change. record the current output first and prove it's unchanged after.`
@@ -32,6 +33,7 @@ Swap in the real paths, skills, and done checks. Informal wording works.
 
 - `/interrogate the whole branch, but skeptically. don't change anything yet. no nitpicks unless it's a real bug or regression.` Read the dismissals too.
 - `/create-formal-verification-skill prove <property> holds in <module>, even when <steps> interleave or retry.` After merges or refactors in that code: `/maintain-formal-verification-skill`.
+- `/statechart what the user sees when they <action>`. Turn an agreed chart into a TLA+ skeleton, or audit the code against its spec.
 - `/swarm check every package under <dir> against its check script. one worker per package. one report.`
 - `/dstack-mode open the pr. small ordered commits, evidence in the description.`
 - `/dstack-mode babysit this pr. get it green.` For status only: `/dstack-mode check on pr <number>. anything outstanding?`

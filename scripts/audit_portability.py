@@ -35,7 +35,7 @@ REQUIRED_SKILLS = {
     "comment-sicko", "control-ui", "correct", "create-formal-verification-skill", "create-verification-skill", "maintain-formal-verification-skill",
     "deslop", "dstack-config", "dstack-help", "dstack-mode",
     "how", "in-your-own-words", "interrogate", "ketchup", "maintain-verification-skill", "no-comments",
-    "recall", "reflect", "setup-dstack", "sharpen", "swarm", "tdd", "teach",
+    "recall", "reflect", "setup-dstack", "sharpen", "statechart", "swarm", "tdd", "teach",
     "technical-writing", "typescript-best-practices", "unslop", "why",
     "principle-attack-the-premise", "principle-boundary-discipline",
     "principle-build-the-lever",
@@ -457,7 +457,7 @@ def check_skill(skill_dir: Path) -> List[Finding]:
 
     package_texts: List[Tuple[Path, str]] = []
     for path in sorted(skill_dir.rglob("*")):
-        if not path.is_file() or path.suffix.lower() not in {".md", ".txt", ".json", ".py", ".sh", ".ts", ".js"}:
+        if not path.is_file() or path.suffix.lower() not in {".md", ".txt", ".json", ".py", ".sh", ".ts", ".js", ".mjs"}:
             continue
         text = path.read_text(encoding="utf-8")
         package_texts.append((path, text))
@@ -614,7 +614,7 @@ def check_structure() -> List[Finding]:
         "playbooks/{}.md".format(name) for name in EXCLUDED_DSTACK_PLAYBOOKS
     }
     for path in sorted(SKILLS.rglob("*")):
-        if not path.is_file() or path.suffix.lower() not in {".md", ".txt", ".json", ".py", ".sh", ".ts", ".js"}:
+        if not path.is_file() or path.suffix.lower() not in {".md", ".txt", ".json", ".py", ".sh", ".ts", ".js", ".mjs"}:
             continue
         text = path.read_text(encoding="utf-8")
         for reference in sorted(unsupported_references):
@@ -642,7 +642,7 @@ def check_invocation_targets(skill_dirs: Iterable[Path]) -> List[Finding]:
     findings: List[Finding] = []
     for skill_dir in skill_dirs:
         for path in sorted(skill_dir.rglob("*")):
-            if not path.is_file() or path.suffix.lower() not in {".md", ".txt", ".json", ".py", ".sh", ".ts", ".js"}:
+            if not path.is_file() or path.suffix.lower() not in {".md", ".txt", ".json", ".py", ".sh", ".ts", ".js", ".mjs"}:
                 continue
             for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
                 for target in SKILL_CALL.findall(line):

@@ -82,6 +82,14 @@ The qualifiers do real work. "don't change anything yet" keeps it read-only, and
 
 The generator picks the tool from the question, proves one property, and leaves a project-local skill the next agent can rerun on every relevant change. After merges or refactors in that code, run `/maintain-formal-verification-skill`. It updates the check from the code and says whether a failure is drift or a bug.
 
+## Show the PM what the user sees
+
+```text
+/statechart what the user sees when they edit a note offline
+```
+
+[`/statechart`](../../../statechart/SKILL.md) draws a Mermaid chart from a TLA+ model, marks each state works, still wrong, or fixed, and draws each bug as a numbered path. It also turns an agreed chart into a TLA+ skeleton, or audits the code against an existing spec. It needs Java 11 or later and `TLA2TOOLS` set to a `tla2tools.jar`.
+
 ## Stop correcting the same mistake
 
 ```text
