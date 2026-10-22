@@ -48,6 +48,7 @@ The skills below remain supported. The everyday keep-set is closed.
 - `create-formal-verification-skill`
 - `maintain-formal-verification-skill`
 - `maintain-verification-skill`
+- `statechart`
 - `tdd`
 - `typescript-best-practices`
 
