@@ -17,7 +17,7 @@ Swap in the real paths, skills, and done checks. Informal wording works.
 - Bug: `/dstack-mode <symptom>. repro first, then fix and verify.`
 - Bug in an app: `/dstack-mode repro this with /verify-<app>. if it repros on main, fix it and show me a video as proof.`
 - Property tests rarely reach: `/create-formal-verification-skill`. After merges or refactors in that code: `/maintain-formal-verification-skill`.
-- Show a PM what the user sees, checked by a model: `/statechart what the user sees when they <action>`. Needs Java 11+ and `TLA2TOOLS` pointing at `tla2tools.jar`.
+- Show how a system moves between states, checked by a model: `/statechart what the user sees when they <action>`. First run can install TLC with mise, or set `TLA2TOOLS`.
 - Bug with a cheap test: `/dstack-mode repro <bug> first. if there's a cheap test path, /tdd it. then fix and rerun.`
 - Feature: `/dstack-mode add <behavior>. <current output> stays byte-identical. verify both.`
 - Refactor: `/dstack-mode move <code> into one module, zero behavior change. record the current output first and prove it's unchanged after.`
@@ -42,5 +42,6 @@ Swap in the real paths, skills, and done checks. Informal wording works.
 
 - `/dstack-mode im going to bed. <goal>. done means <checks>. keep a decision log. don't ask me before committing. if you're truly stuck after a few hours, stop and write up why.`
 - `/ketchup` catches you up on this chat since your last message and lists every call that waits on you.
+- `/ketchup-video` is the same catch-up as a short silent video of slides, with the waiting calls as text under it.
 - `/reflect capture what we learned so the next run doesn't repeat it.` Approve only edits that change a future decision.
 - `/bro` restates the last reply in plain words.

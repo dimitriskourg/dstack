@@ -88,7 +88,7 @@ The generator picks the tool from the question, proves one property, and leaves 
 /statechart what the user sees when they edit a note offline
 ```
 
-[`/statechart`](../../../statechart/SKILL.md) draws a Mermaid chart from a TLA+ model, marks each state works, still wrong, or fixed, and draws each bug as a numbered path. It also turns an agreed chart into a TLA+ skeleton, or audits the code against an existing spec. It needs Java 11 or later and `TLA2TOOLS` set to a `tla2tools.jar`.
+[`/statechart`](../../../statechart/SKILL.md) draws a Mermaid chart from a TLA+ model of how a system moves between states, and draws each bug as a numbered path. It also turns an agreed chart into a TLA+ skeleton, or audits the code against an existing spec. The first run can install TLC and Java with mise, or set `TLA2TOOLS` to a `tla2tools.jar`.
 
 ## Stop correcting the same mistake
 
@@ -147,6 +147,8 @@ That's the whole prompt. [`/bro`](../../../bro/SKILL.md) restates the last messa
 ```
 
 [`/ketchup`](../../../ketchup/SKILL.md) tells you in plain words what changed since your last message, then lists each call waiting on you with its pick, evidence, and risk. It changes nothing while it reports.
+
+To watch the catch-up instead, run [`/ketchup-video`](../../../ketchup-video/SKILL.md). It shows what happened in a short silent video of slides, and lists the calls waiting on you as text under it.
 
 ## The pitfalls
 

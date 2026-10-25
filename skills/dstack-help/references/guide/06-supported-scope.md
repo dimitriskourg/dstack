@@ -27,6 +27,7 @@ The skills below remain supported. The everyday keep-set is closed.
 - `interrogate`
 - `recall`
 - `ketchup`
+- `ketchup-video`
 - `in-your-own-words`
 - `sharpen`
 - `reflect`

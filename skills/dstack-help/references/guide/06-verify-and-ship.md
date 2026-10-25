@@ -99,19 +99,19 @@ The skill also records which code each check covers and the commit where the che
 
 ## Show the behavior as a statechart
 
-A counterexample in model terms convinces you. The PM or designer who owns the behavior needs to see it in their terms. Run:
+A counterexample in model terms convinces you. The person who owns the behavior needs to see it in their terms. Run:
 
 ```text
 /statechart what the user sees when they edit a note offline
 ```
 
-[`/statechart`](../../../statechart/SKILL.md) draws a Mermaid statechart of what the user sees, generated from a TLA+ model, so the picture and the checked model can't drift apart. The reader's rules ("you never see Synced while you're offline") become invariants. Each bug TLC finds is a numbered path in the reader's words, and each state is marked works, still wrong, or fixed by your open PR. Before the hand-off, the agent reproduces each bug path in the real code, so a modeling error doesn't reach the reader as a bug.
+[`/statechart`](../../../statechart/SKILL.md) draws a Mermaid statechart of how a system moves between states, generated from a TLA+ model, so the picture and the checked model can't drift apart. It covers a product flow, a protocol, or a service. The reader's rules ("you never see Synced while you're offline") become invariants. Each bug TLC finds is a numbered path in the reader's words. Before the hand-off, the agent reproduces each bug path in the real code, so a modeling error doesn't reach the reader as a bug.
 
 It also runs the other way. Sketch the behavior as a chart, agree on it with the reader, and the skill writes a TLA+ skeleton from it. TLC checks the agreed chart's rules before any code exists. As guards from the real code go into the spec, each place the code departs from the chart shows up as a difference for the reader to decide.
 
 When the code already has a TLA+ spec, the skill can audit the code against it. The agent models what the code does and checks that model next to the unchanged spec. The chart marks the steps where the two differ, and each rule either one breaks is a numbered path.
 
-TLC needs Java 11 or later and `TLA2TOOLS` set to a `tla2tools.jar` from a TLA+ release. Set `JAVA` if `java` is not on PATH.
+A generated formal verification skill that uses TLA+ tells the next agent to read every result with `/statechart`. The first run can install TLC and Java with mise (about 305 MB, needs the network), or set `TLA2TOOLS` to a `tla2tools.jar` and Java 11 or later.
 
 ## Open the PR
 

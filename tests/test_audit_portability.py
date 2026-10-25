@@ -376,6 +376,33 @@ class PortabilityAuditTests(unittest.TestCase):
             skill = self.make_skill(Path(temp), "Read [the rubric](<references/rubric.md>).\n")
             self.assertIn("missing markdown link target 'references/rubric.md'", self.messages(skill))
 
+    def test_js_import_regex_is_not_a_markdown_link(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(
+                Path(temp),
+                "Run `scripts/tool.mjs`.\n",
+                {
+                    "scripts/tool.mjs": (
+                        'const imports = (text, dir) =>\n'
+                        '  [...text.matchAll(/\\b(?:from|import)\\s*\\(?\\s*["\'](\\.{1,2}\\/[^"\']+)["\']/g)];\n'
+                    ),
+                },
+            )
+            self.assertEqual([], self.messages(skill))
+
+    def test_python_bytecode_is_not_a_skill_asset(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(
+                Path(temp),
+                "Run `scripts/tool.py`.\n",
+                {"scripts/tool.py": "print(1)\n"},
+            )
+            cache = skill / "scripts" / "__pycache__"
+            cache.mkdir()
+            (cache / "tool.cpython-312.pyc").write_bytes(b"\0")
+            (skill / "scripts" / "tool.pyc").write_bytes(b"\0")
+            self.assertEqual([], self.messages(skill))
+
     def test_unknown_slash_command_in_docs_fails(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
