@@ -89,7 +89,7 @@ CODEX_SIDECAR = Path("agents") / "openai.yaml"
 SKILL_NAME = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 MAX_SKILL_NAME_LENGTH = 64
 ASSET_DIRECTORIES = ("references", "scripts", "assets")
-IGNORED_ASSET_NAMES = {"__pycache__"}
+IGNORED_ASSET_NAMES = {"__pycache__", "node_modules"}
 IGNORED_ASSET_SUFFIXES = {".pyc", ".pyo"}
 ASSET_REF = re.compile(r"(?<![A-Za-z0-9_.-])((?:references|scripts|assets)/[A-Za-z0-9_./-]+)")
 MARKDOWN_LINK = re.compile(r"\]\(<?([^)\s>]+)>?(?:\s+\"[^\"]*\")?\)")
@@ -380,12 +380,16 @@ def check_sidecar(skill_dir: Path, user_invoked: bool) -> List[Finding]:
     return findings
 
 
+def is_ignored_skill_path(path: Path) -> bool:
+    return any(part in IGNORED_ASSET_NAMES for part in path.parts)
+
+
 def is_package_asset(path: Path) -> bool:
     if not path.is_file():
         return False
     if path.suffix.lower() in IGNORED_ASSET_SUFFIXES:
         return False
-    return not any(part in IGNORED_ASSET_NAMES for part in path.parts)
+    return not is_ignored_skill_path(path)
 
 
 def reference_forms(source_dir: Path, skill_dir: Path, target: Path) -> Set[str]:
@@ -467,6 +471,8 @@ def check_skill(skill_dir: Path) -> List[Finding]:
 
     package_texts: List[Tuple[Path, str]] = []
     for path in sorted(skill_dir.rglob("*")):
+        if is_ignored_skill_path(path):
+            continue
         if not path.is_file() or path.suffix.lower() not in {".md", ".txt", ".json", ".py", ".sh", ".ts", ".js", ".mjs"}:
             continue
         text = path.read_text(encoding="utf-8")
@@ -626,6 +632,8 @@ def check_structure() -> List[Finding]:
         "playbooks/{}.md".format(name) for name in EXCLUDED_DSTACK_PLAYBOOKS
     }
     for path in sorted(SKILLS.rglob("*")):
+        if is_ignored_skill_path(path):
+            continue
         if not path.is_file() or path.suffix.lower() not in {".md", ".txt", ".json", ".py", ".sh", ".ts", ".js", ".mjs"}:
             continue
         text = path.read_text(encoding="utf-8")
@@ -654,6 +662,8 @@ def check_invocation_targets(skill_dirs: Iterable[Path]) -> List[Finding]:
     findings: List[Finding] = []
     for skill_dir in skill_dirs:
         for path in sorted(skill_dir.rglob("*")):
+            if is_ignored_skill_path(path):
+                continue
             if not path.is_file() or path.suffix.lower() not in {".md", ".txt", ".json", ".py", ".sh", ".ts", ".js", ".mjs"}:
                 continue
             for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):

@@ -29,4 +29,4 @@ After the sections, attach videos or screenshots when they prove a claim. Full S
 
 **Babysit.** Opening a request does not start Babysit. Post the URL and stop at the requested delivery boundary. Run a separate Babysit pass only when the user explicitly asks for PR or merge-request follow-up.
 
-Before opening the request, Call the Skill tool with `interrogate`. Call the Skill tool with `unslop`. Call the Skill tool with `no-comments`. Return the URL and do not start Babysit.
+Return the URL and do not start Babysit.

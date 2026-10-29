@@ -403,6 +403,18 @@ class PortabilityAuditTests(unittest.TestCase):
             (skill / "scripts" / "tool.pyc").write_bytes(b"\0")
             self.assertEqual([], self.messages(skill))
 
+    def test_node_modules_is_not_a_skill_asset(self):
+        with tempfile.TemporaryDirectory() as temp:
+            skill = self.make_skill(
+                Path(temp),
+                "Run `scripts/tool.py`.\n",
+                {"scripts/tool.py": "print(1)\n"},
+            )
+            vendor = skill / "scripts" / "node_modules" / "fast-check"
+            vendor.mkdir(parents=True)
+            (vendor / "package.json").write_text('{"name":"fast-check"}\n', encoding="utf-8")
+            self.assertEqual([], self.messages(skill))
+
     def test_unknown_slash_command_in_docs_fails(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

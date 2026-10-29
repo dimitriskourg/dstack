@@ -1,5 +1,5 @@
 interface:
   display_name: "Ketchup Video"
-  short_description: "Catch up as a short silent video of slides"
+  short_description: "Catch up as a short subtitled video of slides"
 policy:
   allow_implicit_invocation: false

@@ -44,12 +44,12 @@ Name a skill directly when the user wants more or less than the playbook. Read i
 | Understand a change, explained plainly | [`/teach`](../teach/SKILL.md) |
 | Catch up on recent work across chats | [`/recall`](../recall/SKILL.md) |
 | Catch up on this chat since the last user message | [`/ketchup`](../ketchup/SKILL.md) |
-| Catch up like `/ketchup`, in a short silent video of slides | [`/ketchup-video`](../ketchup-video/SKILL.md) |
+| Catch up like `/ketchup`, in a short subtitled video of slides | [`/ketchup-video`](../ketchup-video/SKILL.md) |
 | Know what a small diff could break outside itself | [`/blast-radius`](../blast-radius/SKILL.md) |
 | Settle types and module shape before code | [`/architect`](../architect/SKILL.md) |
 | Get several attempts at one brief | [`/arena`](../arena/SKILL.md) |
 | Run parallel checks over slices, or race workers | [`/swarm`](../swarm/SKILL.md) |
-| Have different models review a diff | [`/interrogate`](../interrogate/SKILL.md) |
+| Have adversaries try to break a change, keeping only findings a run proves | [`/interrogate`](../interrogate/SKILL.md) |
 | Fix a bug test-first | [`/tdd`](../tdd/SKILL.md) |
 | Apply TypeScript rules | [`/typescript-best-practices`](../typescript-best-practices/SKILL.md) |
 | Strip comments before review | [`/no-comments`](../no-comments/SKILL.md) |
@@ -60,7 +60,7 @@ Name a skill directly when the user wants more or less than the playbook. Read i
 | Bring a verification skill back in line | [`/maintain-verification-skill`](../maintain-verification-skill/SKILL.md) |
 | Formally verify a race or invariant | [`/create-formal-verification-skill`](../create-formal-verification-skill/SKILL.md) |
 | Bring a formal verification back in line | [`/maintain-formal-verification-skill`](../maintain-formal-verification-skill/SKILL.md) |
-| Draw how a system moves between states as a chart checked by a model | [`/statechart`](../statechart/SKILL.md) |
+| Draw how a system moves between states as a chart checked by a TLA+ model | [`/statechart`](../statechart/SKILL.md) |
 | Turn a finished task into skill edits | [`/reflect`](../reflect/SKILL.md) |
 | Stop agents repeating the same mistakes | [`/correct`](../correct/SKILL.md) |
 
