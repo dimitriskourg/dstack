@@ -3,6 +3,7 @@
 import contextlib
 import importlib.util
 import io
+import json
 import os
 import sys
 import tempfile
@@ -76,6 +77,33 @@ class InstallerTests(unittest.TestCase):
             self.assertFalse((root / "dstack-home").exists())
             self.assertFalse((root / "claude").exists())
 
+    def test_install_prints_one_count_per_destination_directory(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = self.make_source(root)
+
+            status, stdout, _ = self.run_installer(
+                source, ["--with-claude-links"] + self.destinations(root)
+            )
+
+            self.assertEqual(0, status)
+            resolved = root.resolve()
+            self.assertIn("Copied: 2 in {}".format(resolved / "agents" / "skills"), stdout)
+            self.assertIn("Linked: 2 in {}".format(resolved / "claude" / "skills"), stdout)
+            self.assertNotIn("->", stdout)
+
+    def test_verbose_install_lists_every_path(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = self.make_source(root)
+
+            status, stdout, _ = self.run_installer(
+                source, ["--verbose", "--with-claude-links"] + self.destinations(root)
+            )
+
+            self.assertEqual(0, status)
+            self.assertEqual(7, stdout.count(" -> "))
+
     def test_dstack_home_override_is_not_accepted(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -143,7 +171,7 @@ class InstallerTests(unittest.TestCase):
             collision.mkdir(parents=True)
 
             status, stdout, stderr = self.run_installer(
-                source, ["--dry-run"] + self.destinations(root)
+                source, ["--dry-run", "--verbose"] + self.destinations(root)
             )
 
             self.assertEqual(2, status)
@@ -426,6 +454,117 @@ class InstallerTests(unittest.TestCase):
             directory.mkdir()
 
             self.assertFalse(INSTALL.is_compatibility_link(directory))
+
+    def install_then_retire_beta(self, root: Path):
+        source = self.make_source(root)
+        status, _, _ = self.run_installer(
+            source, ["--with-claude-links"] + self.destinations(root)
+        )
+        self.assertEqual(0, status)
+        INSTALL.shutil.rmtree(str(source / "skills" / "beta"))
+        return source
+
+    def receipt_skills(self, root: Path):
+        receipt = root / "dstack-home" / INSTALL.RECEIPT_NAME
+        return json.loads(receipt.read_text(encoding="utf-8"))["skills"]
+
+    def test_install_records_every_skill_in_the_receipt(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = self.make_source(root)
+
+            status, _, _ = self.run_installer(source, self.destinations(root))
+
+            self.assertEqual(0, status)
+            self.assertEqual(["alpha", "beta"], sorted(self.receipt_skills(root)))
+
+    def test_update_removes_a_skill_the_source_dropped_and_its_link(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = self.install_then_retire_beta(root)
+            beta = root / "agents" / "skills" / "beta"
+            (beta / "__pycache__").mkdir()
+            (beta / "__pycache__" / "run.pyc").write_bytes(b"bytecode")
+
+            status, stdout, stderr = self.run_installer(
+                source, ["--update", "--with-claude-links"] + self.destinations(root)
+            )
+
+            self.assertEqual(0, status)
+            self.assertEqual("", stderr)
+            self.assertIn("Removed retired:", stdout)
+            self.assertFalse(INSTALL.path_exists(beta))
+            self.assertFalse(INSTALL.path_exists(root / "claude" / "skills" / "beta"))
+            self.assertTrue((root / "agents" / "skills" / "alpha" / "SKILL.md").is_file())
+            self.assertEqual(["alpha"], sorted(self.receipt_skills(root)))
+
+    def test_update_dry_run_previews_retired_removals_without_removing(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = self.install_then_retire_beta(root)
+
+            status, stdout, _ = self.run_installer(
+                source, ["--update", "--dry-run", "--with-claude-links"] + self.destinations(root)
+            )
+
+            self.assertEqual(0, status)
+            self.assertIn("Would remove retired:", stdout)
+            self.assertTrue((root / "agents" / "skills" / "beta" / "SKILL.md").is_file())
+            self.assertIn("beta", self.receipt_skills(root))
+
+    def test_update_keeps_a_retired_skill_edited_since_install(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = self.install_then_retire_beta(root)
+            edited = root / "agents" / "skills" / "beta" / "notes.md"
+            edited.write_text("mine\n", encoding="utf-8")
+
+            status, stdout, stderr = self.run_installer(
+                source, ["--update", "--with-claude-links"] + self.destinations(root)
+            )
+
+            self.assertEqual(0, status)
+            self.assertNotIn("Removed retired:", stdout)
+            self.assertIn("kept retired skill that changed since install", stderr)
+            self.assertEqual("mine\n", edited.read_text(encoding="utf-8"))
+            self.assertTrue(INSTALL.path_exists(root / "claude" / "skills" / "beta"))
+            self.assertIn("beta", self.receipt_skills(root))
+
+    def test_update_leaves_skills_missing_from_the_receipt_alone(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = self.make_source(root)
+            install_status, _, _ = self.run_installer(source, self.destinations(root))
+            self.assertEqual(0, install_status)
+            foreign = root / "agents" / "skills" / "grilling"
+            foreign.mkdir()
+            (foreign / "SKILL.md").write_text(
+                "---\nname: grilling\ndescription: other pack\n---\n", encoding="utf-8"
+            )
+
+            status, stdout, _ = self.run_installer(
+                source, ["--update"] + self.destinations(root)
+            )
+
+            self.assertEqual(0, status)
+            self.assertNotIn("retired", stdout)
+            self.assertTrue((foreign / "SKILL.md").is_file())
+
+    def test_install_rejects_a_corrupt_receipt_without_changing_files(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = self.make_source(root)
+            receipt = root / "dstack-home" / INSTALL.RECEIPT_NAME
+            receipt.parent.mkdir()
+            receipt.write_text("{not json", encoding="utf-8")
+
+            status, _, stderr = self.run_installer(source, self.destinations(root))
+
+            self.assertNotEqual(0, status)
+            self.assertIn("delete it and rerun", stderr)
+            self.assertFalse((root / "agents" / "skills" / "alpha").exists())
+            self.assertEqual("{not json", receipt.read_text(encoding="utf-8"))
+
 
 if __name__ == "__main__":
     unittest.main()
