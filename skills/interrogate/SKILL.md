@@ -13,7 +13,7 @@ The scope is what the user names. Otherwise it is the branch diff from its merge
 
 ## Fan out
 
-Call the Skill tool with `dstack-config`. Call the Skill tool with `arena`. Run only its Phase A steps 3 and 4 and Phase B, with these changes. Keep at least two independent reviewers. Do not copy into worktrees. Each adversary writes only under `/tmp/interrogate-<slug>/adversary-<n>/`. In place of the arena task and rationale, give each adversary the scope, the intent, and this brief:
+Call the Skill tool with `dstack-config`. Call the Skill tool with `arena`. Run only its Phase A steps 3 and 4 and Phase B, with these changes. Select reviewers from `skeptical-reviewer`, `bug-worker`, `feature-worker`, and `fast-explorer` instead of arena's runner rotation; always include `skeptical-reviewer`. Keep at least two independent reviewers. Do not copy into worktrees. Each adversary writes only under `/tmp/interrogate-<slug>/adversary-<n>/`. In place of the arena task and rationale, give each adversary the scope, the intent, and this brief:
 
 > Break this change. Prove each finding with a run against the real code, such as a failing test, a repro script, or command output that shows the wrong behavior. For a design or plan, run a prototype or probe the current tree. Keep repros in your own output directory. Report each finding with a title, the exact command, the output it printed, and the output the intent requires. Leave out anything you did not run. That covers style, naming, structure, and risks that need a future change to matter. No findings is a valid result.
 
