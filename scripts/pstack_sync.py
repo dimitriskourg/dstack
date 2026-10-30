@@ -1,25 +1,29 @@
 #!/usr/bin/env python3
-"""Absorb upstream pstack changes into dstack's kept skills.
+"""Absorb upstream pstack changes or inspect dstack's retained-tree alignment.
 
 Reads the upstream repository, the pin, and the exclusion lists from
 PSTACK_SYNC.md, shallow-fetches the pinned and target commits from that
 repository (or reads a local --pstack-dir offline), diffs them, and three-way merges each kept file
 after the mechanical rewrites. Anything matching a stop-and-ask rule is
 reported instead of written. Exit status 1 means a decision is pending.
+The separate --check-alignment mode reports whole-tree differences without
+changing skills or the pin; its exit status 0 does not approve the differences.
 """
 
 from __future__ import annotations
 
 import argparse
-import os
 import difflib
 import fnmatch
+import hashlib
 import importlib.util
+import json
+import os
 import re
 import subprocess
 import sys
 import tempfile
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Pattern, Sequence, Set, Tuple
 
@@ -77,6 +81,57 @@ class SyncConfig:
     excluded_playbooks: Set[str]
     excluded_files: List[str]
     owned: Set[str]
+
+
+@dataclass
+class AlignmentFile:
+    upstream_path: Optional[str]
+    dstack_path: str
+    status: str
+    upstream_sha256: Optional[str]
+    dstack_sha256: Optional[str]
+    diff: str = ""
+    normalized_diff: str = ""
+
+
+@dataclass
+class AlignmentReport:
+    repository: str
+    pinned: str
+    target: str
+    target_version: str
+    files: List[AlignmentFile]
+    excluded: List[Tuple[str, str]]
+    dstack_owned: List[str]
+    not_imported: List[str]
+
+    def render(self) -> str:
+        lines = [
+            "# pstack alignment report", "",
+            "- Repository: {}".format(self.repository),
+            "- Pinned: `{}`".format(self.pinned),
+            "- Compared: {} (`{}`)".format(self.target_version, self.target),
+            "", "Informational, not an approval or live-harness check. Normalized matches use only the existing mechanical rewrites.",
+        ]
+        for status in ("identical", "rewritten", "different", "missing-local", "local-only"):
+            entries = [entry for entry in self.files if entry.status == status]
+            lines += ["", "## {} ({})".format(status, len(entries)), ""]
+            if not entries:
+                lines.append("None.")
+            for entry in entries:
+                lines.append("- `{}`{}".format(
+                    entry.dstack_path,
+                    " <- `{}`".format(entry.upstream_path) if entry.upstream_path else ""))
+                diff = (entry.normalized_diff or entry.diff) if status not in {"identical", "rewritten"} else ""
+                if diff:
+                    fence = "`" * max(3, longest_backtick_run(diff) + 1)
+                    lines += ["", fence + "diff", diff, fence]
+        for heading, entries in (("Dstack-owned", self.dstack_owned), ("Not imported (no exclusion decision recorded)", self.not_imported)):
+            lines += ["", "## " + heading, ""]
+            lines += ["- `{}`".format(path) for path in entries] or ["None."]
+        lines += ["", "## Excluded by policy", ""]
+        lines += ["- `{}`: {}".format(path, reason) for path, reason in self.excluded] or ["None."]
+        return "\n".join(lines) + "\n"
 
 
 @dataclass
@@ -330,10 +385,18 @@ class Upstream:
         return self.git("rev-parse", "--verify", "FETCH_HEAD^{commit}").strip()
 
     def show(self, commit: str, path: str) -> Optional[str]:
+        content = self.show_bytes(commit, path)
+        return content.decode("utf-8") if content is not None else None
+
+    def show_bytes(self, commit: str, path: str) -> Optional[bytes]:
         result = run_git("show", "{}:{}{}".format(commit, self.prefix, path), cwd=self.dir)
         if result.returncode != 0:
             return None
-        return result.stdout.decode("utf-8")
+        return result.stdout
+
+    def files(self, commit: str) -> List[str]:
+        output = self.git("ls-tree", "--full-tree", "-r", "--name-only", "-z", commit, "--", self.prefix + "skills/")
+        return sorted(path[len(self.prefix):] for path in output.split("\0") if path)
 
     def version(self, commit: str) -> str:
         text = self.show(commit, "plugin.json") or ""
@@ -494,18 +557,158 @@ def sync(
     return report
 
 
+def alignment_diff(before: str, after: str, upstream_path: str, dstack_path: str) -> str:
+    lines = difflib.unified_diff(
+        before.splitlines(keepends=True), after.splitlines(keepends=True),
+        fromfile=upstream_path, tofile=dstack_path)
+    return "".join(line if line.endswith("\n") else line + "\n\\ No newline at end of file\n" for line in lines).rstrip("\n")
+
+
+def compare_file(
+    upstream_path: str,
+    local_path: str,
+    before: Optional[bytes],
+    after: Optional[bytes],
+    skills: Set[str],
+) -> AlignmentFile:
+    entry = AlignmentFile(
+        upstream_path if before is not None else None, local_path, "identical",
+        hashlib.sha256(before).hexdigest() if before is not None else None,
+        hashlib.sha256(after).hexdigest() if after is not None else None)
+    if before is None:
+        entry.status = "local-only"
+    elif after is None:
+        entry.status = "missing-local"
+    elif before == after:
+        return entry
+    else:
+        entry.status = "different"
+    try:
+        before_text = (before or b"").decode("utf-8")
+        after_text = (after or b"").decode("utf-8")
+        if "\0" in before_text or "\0" in after_text:
+            raise UnicodeError("binary content")
+    except UnicodeError:
+        entry.diff = "Binary content; compare the SHA-256 hashes in the JSON report."
+        return entry
+    before_label = "pstack/" + upstream_path if before is not None else "/dev/null"
+    after_label = "dstack/" + local_path if after is not None else "/dev/null"
+    entry.diff = alignment_diff(before_text, after_text, before_label, after_label)
+    normalized_before = rewrite(before_text, skills)
+    normalized_after = rewrite(after_text, skills)
+    if before is not None and after is not None and normalized_before == normalized_after:
+        entry.status = "rewritten"
+    else:
+        entry.normalized_diff = alignment_diff(normalized_before, normalized_after, before_label, after_label)
+    return entry
+
+
+def check_alignment(
+    target_ref: Optional[str] = None,
+    dstack_root: Path = ROOT,
+    pstack_dir: Optional[Path] = None,
+    repo_url: Optional[str] = None,
+    cache_dir: Optional[Path] = None,
+) -> AlignmentReport:
+    text = (dstack_root / SYNC_FILE).read_text(encoding="utf-8")
+    config = parse_sync(text)
+    upstream = (Upstream.local(pstack_dir) if pstack_dir is not None else Upstream.fetched(
+        repo_url or "https://github.com/{}.git".format(config.repository),
+        config.subpath, cache_dir or default_cache_dir()))
+    pinned = upstream.commit(config.commit)
+    target = upstream.commit(target_ref) if target_ref else pinned
+    upstream_files = upstream.files(target)
+    skills_root = dstack_root / "skills"
+    local_skills = {path.name for path in skills_root.iterdir() if path.is_dir() and (path / "SKILL.md").is_file()}
+    owned_skills = {SKILL_RENAMES.get(name, name) for name in config.owned}
+    owned = {"skills/" + name for name in local_skills & owned_skills}
+    excluded = []
+    for heading, prefix, suffix in (
+        ("Excluded skills", "skills/", ""),
+        ("Excluded playbooks", "skills/" + MODE + "/playbooks/", ".md"),
+        ("Excluded files", "skills/", ""),
+    ):
+        section = re.search(r"^## {}\n(.*?)(?=^## |\Z)".format(heading), text, re.M | re.S)
+        if section:
+            for match in re.finditer(r"^- `([^`]+)`(?::\s*(.*))?$", section.group(1), re.M):
+                excluded.append((prefix + match.group(1) + suffix, match.group(2) or "Excluded by policy."))
+    expected: Dict[str, str] = {}
+    not_imported: Set[str] = set()
+    for path in upstream_files:
+        if path.count("/") < 2:
+            continue
+        _, name, rest = path.split("/", 2)
+        local_name = SKILL_RENAMES.get(name, name)
+        if name in config.excluded_skills or name in config.owned:
+            continue
+        if any(fnmatch.fnmatch(path[len("skills/"):], pattern) for pattern in config.excluded_files):
+            continue
+        if local_name not in local_skills:
+            not_imported.add("skills/" + name)
+            continue
+        local_path = "skills/{}/{}".format(local_name, rest)
+        if name == MODE and rest.startswith("playbooks/") and rest.endswith(".md"):
+            if Path(rest).stem in config.excluded_playbooks:
+                continue
+            if not (dstack_root / local_path).is_file():
+                not_imported.add(path)
+                continue
+        if rest == "agents/openai.yaml":
+            continue
+        expected[local_path] = path
+    local_files: Dict[str, Path] = {}
+    for name in sorted(local_skills - owned_skills):
+        for path in sorted((skills_root / name).rglob("*")):
+            if not AUDIT.is_package_asset(path) or path.name == ".DS_Store":
+                continue
+            local_path = path.relative_to(dstack_root).as_posix()
+            if local_path == "skills/{}/agents/openai.yaml".format(name):
+                owned.add(local_path)
+            else:
+                local_files[local_path] = path
+    entries = []
+    for local_path in sorted(set(expected) | set(local_files)):
+        upstream_path = expected.get(local_path)
+        before = upstream.show_bytes(target, upstream_path) if upstream_path else None
+        if upstream_path and before is None:
+            raise SystemExit("Could not read upstream file: " + upstream_path)
+        after = local_files[local_path].read_bytes() if local_path in local_files else None
+        entries.append(compare_file(upstream_path or "/dev/null", local_path, before, after, local_skills))
+    return AlignmentReport(config.repository, pinned, target, upstream.version(target), entries,
+                           sorted(excluded), sorted(owned), sorted(not_imported))
+
+
 def main(argv: Sequence[str] = sys.argv[1:]) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("target", nargs="?",
-                        help="full target commit; a dry run also takes a branch or tag (default: main)")
+                        help="full target commit; read-only modes also take a branch or tag (default: main for sync, pin for alignment)")
     parser.add_argument("--pstack-dir", type=Path, help="offline only: read a local pstack folder instead of fetching")
     parser.add_argument("--dry-run", action="store_true", help="write nothing and leave the pin")
     parser.add_argument("--decided", action="store_true", help="every pending decision was settled by hand; move the pin")
+    parser.add_argument("--check-alignment", action="store_true", help="read-only comparison of the retained tree to pstack (default: pinned commit)")
+    parser.add_argument("--format", choices=("markdown", "json"), default="markdown", help="alignment report format (default: markdown)")
     parser.add_argument("--report", type=Path, help="also write the report to this file")
     parser.add_argument("--cache-dir", type=Path, help="fetch cache (default: ~/.cache/dstack/pstack-sync)")
     parser.add_argument("--repo-url", help=argparse.SUPPRESS)
     parser.add_argument("--dstack-root", type=Path, default=ROOT, help=argparse.SUPPRESS)
     args = parser.parse_args(list(argv))
+    if args.check_alignment:
+        if args.dry_run or args.decided:
+            parser.error("--check-alignment cannot be combined with --dry-run or --decided")
+        protected = [args.dstack_root] + ([args.pstack_dir] if args.pstack_dir else [])
+        if args.report and any(
+            args.report.resolve() == root.resolve() or root.resolve() in args.report.resolve().parents
+            for root in protected
+        ):
+            parser.error("alignment report output must be outside the source trees")
+        alignment = check_alignment(args.target, args.dstack_root, args.pstack_dir, args.repo_url, args.cache_dir)
+        text = json.dumps(asdict(alignment), sort_keys=True, indent=2) + "\n" if args.format == "json" else alignment.render()
+        sys.stdout.write(text)
+        if args.report:
+            args.report.write_text(text, encoding="utf-8")
+        return 0
+    if args.format != "markdown":
+        parser.error("--format json requires --check-alignment")
     if args.target is None and not args.dry_run:
         parser.error("a write run needs an explicit full target commit; run --dry-run first and pass the Target it prints")
     report = sync(

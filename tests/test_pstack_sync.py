@@ -3,6 +3,7 @@
 import contextlib
 import importlib.util
 import io
+import json
 import subprocess
 import sys
 import tempfile
@@ -106,6 +107,9 @@ class PstackSyncTests(unittest.TestCase):
 
     def run_sync(self, target, **options):
         return SYNC.sync(target, self.dstack, repo_url=self.upstream.as_uri(), cache_dir=self.cache, **options)
+
+    def run_alignment(self, target=None, **options):
+        return SYNC.check_alignment(target, self.dstack, repo_url=self.upstream.as_uri(), cache_dir=self.cache, **options)
 
     def main(self, *args):
         with contextlib.redirect_stdout(io.StringIO()):
@@ -327,8 +331,128 @@ class PstackSyncTests(unittest.TestCase):
         self.assertRegex(config.commit, r"^[0-9a-f]{40}$")
         self.assertIn("figure-it-out", config.excluded_skills)
         self.assertIn("shipping", config.excluded_playbooks)
-        self.assertEqual({"setup-pstack"}, config.owned)
+        self.assertEqual({"setup-pstack", "comment-sicko", "control-ui", "deslop", "dstack-config"}, config.owned)
         self.assertEqual(("cursor/plugins", "pstack/"), (config.repository, config.subpath))
+
+    def test_alignment_at_the_pin_reports_existing_drift_without_writing(self):
+        before = {path.relative_to(self.dstack): path.read_bytes() for path in self.dstack.rglob("*") if path.is_file()}
+        report = self.run_alignment()
+        entries = {entry.dstack_path: entry for entry in report.files}
+        self.assertEqual(self.pinned, report.target)
+        self.assertEqual("different", entries["skills/how/SKILL.md"].status)
+        self.assertIn("Line 2, edited by dstack.", entries["skills/how/SKILL.md"].normalized_diff)
+        self.assertEqual("rewritten", entries["skills/dstack-mode/SKILL.md"].status)
+        self.assertEqual("identical", entries["skills/dstack-mode/playbooks/bug-fix.md"].status)
+        self.assertIn("skills/setup-dstack", report.dstack_owned)
+        self.assertIn(("skills/figure-it-out", "out."), report.excluded)
+        self.assertIn(("skills/poteto-mode/playbooks/eval.md", "out."), report.excluded)
+        after = {path.relative_to(self.dstack): path.read_bytes() for path in self.dstack.rglob("*") if path.is_file()}
+        self.assertEqual(before, after)
+        self.assertEqual(0, self.main("--check-alignment"))
+
+    def test_alignment_normalizes_both_sides_and_retains_the_raw_diff(self):
+        (self.dstack / "skills/how/SKILL.md").write_text(HOW.replace("disable-model-invocation: true\n", ""), encoding="utf-8")
+        report = self.run_alignment()
+        entry = next(entry for entry in report.files if entry.dstack_path == "skills/how/SKILL.md")
+        self.assertEqual("rewritten", entry.status)
+        self.assertIn("-disable-model-invocation: true", entry.diff)
+        self.assertEqual("", entry.normalized_diff)
+        self.assertNotEqual(entry.upstream_sha256, entry.dstack_sha256)
+        self.assertNotIn("-disable-model-invocation: true", report.render())
+
+    def test_alignment_lists_new_skills_playbooks_and_missing_assets(self):
+        target = self.upstream_change({
+            "pstack/skills/README.md": "Skill packaging, not a skill\n",
+            "pstack/skills/new-skill/SKILL.md": "# New skill\n",
+            "pstack/skills/poteto-mode/playbooks/new-playbook.md": "# New playbook\n",
+            "pstack/skills/how/references/new.md": "New reference\n",
+            "pstack/skills/poteto-mode/scripts/excluded.py": "Excluded script\n",
+        })
+        report = self.run_alignment(target)
+        self.assertEqual(["skills/new-skill", "skills/poteto-mode/playbooks/new-playbook.md"], report.not_imported)
+        entry = next(entry for entry in report.files if entry.dstack_path == "skills/how/references/new.md")
+        self.assertEqual("missing-local", entry.status)
+        self.assertIsNone(entry.dstack_sha256)
+        self.assertIn("-New reference", entry.normalized_diff)
+        self.assertFalse(any(entry.dstack_path.endswith("excluded.py") for entry in report.files))
+        self.assertEqual(self.pinned, self.pin())
+
+    def test_alignment_separates_owned_sidecars_from_local_only_files(self):
+        sidecar = self.dstack / "skills/how/agents/openai.yaml"
+        sidecar.parent.mkdir()
+        sidecar.write_text("interface: {}\n", encoding="utf-8")
+        extra = self.dstack / "skills/how/extra.txt"
+        extra.write_text("Local only\n", encoding="utf-8")
+        local_skill = self.dstack / "skills/local-skill/SKILL.md"
+        local_skill.parent.mkdir()
+        local_skill.write_text("# Local skill\n", encoding="utf-8")
+        report = self.run_alignment()
+        self.assertIn("skills/how/agents/openai.yaml", report.dstack_owned)
+        entries = {entry.dstack_path: entry for entry in report.files}
+        self.assertNotIn("skills/how/agents/openai.yaml", entries)
+        for name in ("skills/how/extra.txt", "skills/local-skill/SKILL.md"):
+            self.assertEqual("local-only", entries[name].status)
+            self.assertIsNone(entries[name].upstream_path)
+
+    def test_alignment_handles_binary_content_and_ignores_generated_files(self):
+        for name, data in (("same.bin", b"\x00\xff"), ("different.bin", b"\x00\xfe")):
+            (self.upstream / "pstack/skills/how" / name).write_bytes(data)
+            (self.dstack / "skills/how" / name).write_bytes(b"\x00\xff")
+        target = self.commit("binary assets")
+        for name in ("__pycache__/cache.pyc", "node_modules/example/index.js", ".DS_Store"):
+            path = self.dstack / "skills/how" / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("generated", encoding="utf-8")
+        report = self.run_alignment(target)
+        entries = {entry.dstack_path: entry for entry in report.files}
+        self.assertEqual("identical", entries["skills/how/same.bin"].status)
+        binary = entries["skills/how/different.bin"]
+        self.assertEqual("different", binary.status)
+        self.assertIn("Binary content", binary.diff)
+        self.assertNotEqual(binary.upstream_sha256, binary.dstack_sha256)
+        self.assertFalse(any("generated" in entry.diff for entry in report.files))
+
+    def test_alignment_reports_deleted_upstream_files_as_local_only_not_owned(self):
+        target = self.upstream_change({"pstack/skills/how/SKILL.md": None})
+        report = self.run_alignment(target)
+        entry = next(entry for entry in report.files if entry.dstack_path == "skills/how/SKILL.md")
+        self.assertEqual("local-only", entry.status)
+        self.assertNotIn("skills/how", report.dstack_owned)
+
+    def test_alignment_local_folder_reads_the_git_snapshot_not_uncommitted_upstream(self):
+        self.write_upstream({"pstack/skills/how/SKILL.md": "Uncommitted upstream edit\n"})
+        report = SYNC.check_alignment(dstack_root=self.dstack, pstack_dir=self.upstream / "pstack")
+        entry = next(entry for entry in report.files if entry.dstack_path == "skills/how/SKILL.md")
+        self.assertIn("Line 2.", entry.diff)
+        self.assertNotIn("Uncommitted upstream edit", entry.diff)
+        self.assertFalse(self.cache.exists())
+
+    def test_alignment_preserves_missing_final_newlines_in_diffs(self):
+        (self.dstack / "skills/dstack-mode/playbooks/bug-fix.md").write_text("# Bug fix", encoding="utf-8")
+        report = self.run_alignment()
+        entry = next(entry for entry in report.files if entry.dstack_path.endswith("bug-fix.md"))
+        self.assertIn("\\ No newline at end of file", entry.diff)
+
+    def test_alignment_json_and_markdown_are_deterministic(self):
+        output = Path(self.temp.name) / "alignment.json"
+        self.assertEqual(0, self.main("--check-alignment", "--format", "json", "--report", str(output)))
+        first = output.read_bytes()
+        payload = json.loads(first)
+        self.assertEqual(self.pinned, payload["target"])
+        self.assertEqual(sorted(entry["dstack_path"] for entry in payload["files"]), [entry["dstack_path"] for entry in payload["files"]])
+        self.assertEqual(0, self.main("--check-alignment", "--format", "json", "--report", str(output)))
+        self.assertEqual(first, output.read_bytes())
+        self.assertEqual(self.run_alignment().render(), self.run_alignment().render())
+
+    def test_alignment_rejects_write_flags_and_reports_inside_the_source_tree(self):
+        for options in (("--decided",), ("--dry-run",), ("--report", str(self.dstack / "PSTACK_SYNC.md"))):
+            with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                self.main("--check-alignment", *options)
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            self.main("--dry-run", "--format", "json")
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            self.main("--check-alignment", "--pstack-dir", str(self.upstream), "--report", str(self.upstream / "pstack/plugin.json"))
+        self.assertEqual(self.pinned, self.pin())
 
 
 if __name__ == "__main__":

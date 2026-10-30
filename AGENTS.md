@@ -2,6 +2,8 @@
 
 Read `PSTACK_SYNC.md` before changing skills or absorbing pstack. Absorb upstream with `scripts/pstack_sync.py`; never import a new pstack skill or playbook, or add host-specific text, without the owner's agreement.
 
+For a sync review, follow the review checklist in `PSTACK_SYNC.md` and generate its read-only alignment report.
+
 This project is under development. Keep schema version 3 unless the user explicitly asks for a compatibility boundary. Version 2 (the `worker_binding` era) is retired: configs on it fail with an instruction to delete or rewrite `~/.dstack/config.json` and rerun `setup-dstack`, with no automatic migration.
 
 - Never edit pstack. Its upstream is [`cursor/plugins`](https://github.com/cursor/plugins/tree/main/pstack), subpath `pstack/`; `scripts/pstack_sync.py` fetches it read-only.
