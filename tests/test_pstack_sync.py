@@ -522,6 +522,15 @@ class PstackSyncTests(unittest.TestCase):
         empty_index = payload["files"][1]["raw"]["left"]
         self.assertEqual([], payload["sources"][empty_index])
 
+    def test_html_includes_system_light_and_dark_theme_controls(self):
+        document = self.run_alignment().render_html()
+        self.assertIn('for="theme">Appearance', document)
+        self.assertIn('<option value="system">System</option>', document)
+        self.assertIn('<option value="light">Light</option>', document)
+        self.assertIn('<option value="dark">Dark</option>', document)
+        self.assertNotIn('<html lang="en" data-theme=', document)
+        self.assertIn('id="alignment-summary"', document)
+
 
 if __name__ == "__main__":
     unittest.main()

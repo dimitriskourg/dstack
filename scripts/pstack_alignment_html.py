@@ -70,14 +70,17 @@ def render(report: AlignmentReport) -> str:
 </head>
 <body>
 <header class="report-header">
+<div class="report-toolbar"><div>
 <h1>pstack <span aria-hidden="true">/</span> dstack</h1>
 <p class="subtitle">A source snapshot, not a merge verdict.</p>
+</div><label class="theme-control" for="theme">Appearance<select id="theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label></div>
 <dl class="provenance"><div><dt>Upstream</dt><dd>""" + html.escape(report.repository) + """</dd></div>
 <div><dt>Version</dt><dd>""" + html.escape(report.target_version) + """</dd></div>
 <div><dt>Compared commit</dt><dd><code>""" + html.escape(report.target) + """</code></dd></div>
 <div><dt>Pinned commit</dt><dd><code>""" + html.escape(report.pinned) + """</code></dd></div></dl>
 <p class="muted">Local source text and content hashes are captured in this file. No network is needed. File permissions and live-harness behavior are not checked.</p>
 </header>
+<div id="alignment-summary" class="alignment-summary" aria-label="Alignment totals"></div>
 <nav class="tabs" aria-label="Report sections">
 <button type="button" id="compare-tab" aria-pressed="true">Compare files</button>
 <button type="button" id="scope-tab" aria-pressed="false">Scope &amp; exclusions</button>

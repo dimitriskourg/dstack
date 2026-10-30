@@ -96,6 +96,8 @@ Open the HTML file in a browser for a side-by-side view: pstack on the left, dst
 
 HTML embeds the captured sources and viewer assets. It needs JavaScript but no server, network, or external dependencies. Source text is displayed literally, not executed or rendered as Markdown. Binary files are compared by bytes and reported by hash, not normalized as text. All formats use sorted paths and omit timestamps, so the same inputs produce the same output. Content comparison does not check executable permissions or prove behavior.
 
+Use Appearance to choose Light, Dark, or System. System follows your device preference and is the default. Manual choices apply to the open report and reset when you reload it.
+
 This mode never changes skills or the pin. It may fetch into the existing upstream cache and write an explicitly requested report outside the dstack and offline upstream source trees. It cannot be combined with `--dry-run` or `--decided`. Exit 0 means the report was generated, not that every difference is approved. Run the static gates separately.
 
 ## Review a sync

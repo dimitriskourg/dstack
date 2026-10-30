@@ -11,6 +11,12 @@ const labels = {
 let selected = snapshot.files.find((entry) => entry.status === "different") || snapshot.files[0];
 let mode = "raw";
 
+document.getElementById("theme").addEventListener("change", (event) => {
+  const theme = event.target.value;
+  if (theme === "system") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.dataset.theme = theme;
+});
+
 function element(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -76,6 +82,7 @@ function renderFile() {
   container.replaceChildren();
   document.getElementById("file-name").textContent = selected ? selected.path : "No matching files";
   document.getElementById("file-status").textContent = selected ? labels[selected.status] : "";
+  document.getElementById("file-status").dataset.status = selected ? selected.status : "";
   const hashes = document.getElementById("hash-values");
   hashes.replaceChildren();
   document.getElementById("raw").setAttribute("aria-pressed", String(mode === "raw"));
@@ -150,6 +157,7 @@ function renderNavigation() {
     const button = element("button", "file-button");
     button.type = "button";
     button.setAttribute("aria-pressed", String(entry === selected));
+    button.dataset.status = entry.status;
     button.append(element("span", "", entry.path.split("/").slice(2).join("/")), element("span", "badge", labels[entry.status]));
     button.addEventListener("click", () => {
       selected = entry;
@@ -171,6 +179,14 @@ function fillScope(id, entries) {
     if (reason) item.append(element("span", "", reason));
     list.append(item);
   }
+}
+
+for (const [status, label] of Object.entries(labels)) {
+  const count = snapshot.files.filter((entry) => entry.status === status).length;
+  const total = element("div", "summary-item");
+  total.dataset.status = status;
+  total.append(element("strong", "", String(count)), element("span", "", label));
+  document.getElementById("alignment-summary").append(total);
 }
 
 fillScope("excluded-skills", snapshot.excluded.filter(([path]) => path.split("/").length === 2));
