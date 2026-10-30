@@ -19,7 +19,7 @@ Claude Code also needs the managed compatibility links under `~/.claude/skills`:
 python3 install.py --with-claude-links
 ```
 
-To refresh an existing install, run `python3 install.py --update` (add `--with-claude-links` if you use them). The installer records what it installed in `~/.dstack/installed.json`, so `--update` also removes skills the repository has since dropped, along with their Claude links. A dropped skill you edited locally is kept with a warning.
+To refresh an existing install, run `python3 install.py --update` (add `--with-claude-links` if you use them). The installer records what it installed in `~/.dstack/installed.json`, so `--update` also removes skills the repository has since dropped, along with their Claude links. A dropped skill you edited locally is kept with a warning. The installer prints one count per destination directory; add `--verbose` to list every path.
 
 To remove dstack, run `python3 uninstall.py --skills-only` to keep `~/.dstack`, or `python3 uninstall.py --all` to remove it too. Add `--dry-run` to preview. Unrelated skills are preserved.
 

@@ -77,6 +77,33 @@ class InstallerTests(unittest.TestCase):
             self.assertFalse((root / "dstack-home").exists())
             self.assertFalse((root / "claude").exists())
 
+    def test_install_prints_one_count_per_destination_directory(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = self.make_source(root)
+
+            status, stdout, _ = self.run_installer(
+                source, ["--with-claude-links"] + self.destinations(root)
+            )
+
+            self.assertEqual(0, status)
+            resolved = root.resolve()
+            self.assertIn("Copied: 2 in {}".format(resolved / "agents" / "skills"), stdout)
+            self.assertIn("Linked: 2 in {}".format(resolved / "claude" / "skills"), stdout)
+            self.assertNotIn("->", stdout)
+
+    def test_verbose_install_lists_every_path(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = self.make_source(root)
+
+            status, stdout, _ = self.run_installer(
+                source, ["--verbose", "--with-claude-links"] + self.destinations(root)
+            )
+
+            self.assertEqual(0, status)
+            self.assertEqual(7, stdout.count(" -> "))
+
     def test_dstack_home_override_is_not_accepted(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -144,7 +171,7 @@ class InstallerTests(unittest.TestCase):
             collision.mkdir(parents=True)
 
             status, stdout, stderr = self.run_installer(
-                source, ["--dry-run"] + self.destinations(root)
+                source, ["--dry-run", "--verbose"] + self.destinations(root)
             )
 
             self.assertEqual(2, status)

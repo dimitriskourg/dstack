@@ -74,12 +74,10 @@ class Operation:
     destination: Path
 
     def preview(self) -> str:
-        verb = "link" if self.kind == "link" else "copy"
-        return "Would {}: {} -> {}".format(verb, self.source, self.destination)
+        return "Would link" if self.kind == "link" else "Would copy"
 
     def completed(self) -> str:
-        verb = "Linked" if self.kind == "link" else "Copied"
-        return "{}: {} -> {}".format(verb, self.source, self.destination)
+        return "Linked" if self.kind == "link" else "Copied"
 
 
 class InstallError(Exception):
@@ -372,6 +370,21 @@ def apply_updates(operations: Sequence[Operation]) -> List[Tuple[Operation, str]
     return outcomes
 
 
+def print_outcomes(outcomes: Iterable[Tuple[Operation, str]], verbose: bool) -> None:
+    """Print each outcome when verbose, else one count per verb and destination directory."""
+
+    if verbose:
+        for operation, verb in outcomes:
+            print("{}: {} -> {}".format(verb, operation.source, operation.destination))
+        return
+    counts: Dict[Tuple[str, Path], int] = {}
+    for operation, verb in outcomes:
+        key = (verb, operation.destination.parent)
+        counts[key] = counts.get(key, 0) + 1
+    for (verb, directory), count in counts.items():
+        print("{}: {} in {}".format(verb, count, directory))
+
+
 def resolve_path(value: str) -> Path:
     return Path(value).expanduser().resolve()
 
@@ -384,6 +397,11 @@ def parser() -> argparse.ArgumentParser:
         "--dry-run",
         action="store_true",
         help="show the complete installation plan without changing files",
+    )
+    result.add_argument(
+        "--verbose",
+        action="store_true",
+        help="list every path instead of a count per destination directory",
     )
     result.add_argument(
         "--update",
@@ -441,9 +459,13 @@ def run(arguments: Sequence[str]) -> int:
                 if not root.is_dir() or root.is_symlink()
             ] + update_issues(operations)
             if options.dry_run:
-                for operation in operations:
-                    verb = "link" if operation.kind == "link" else "update"
-                    print("Would {}: {} -> {}".format(verb, operation.source, operation.destination))
+                print_outcomes(
+                    (
+                        (operation, "Would link" if operation.kind == "link" else "Would update")
+                        for operation in operations
+                    ),
+                    options.verbose,
+                )
                 for path in retired:
                     print("Would remove retired: {}".format(path))
                 for warning in retirement_warnings:
@@ -462,9 +484,7 @@ def run(arguments: Sequence[str]) -> int:
                     print("- {}".format(issue), file=sys.stderr)
                 print("No files changed.", file=sys.stderr)
                 return 2
-            outcomes = apply_updates(operations)
-            for operation, verb in outcomes:
-                print("{}: {} -> {}".format(verb, operation.source, operation.destination))
+            print_outcomes(apply_updates(operations), options.verbose)
             for path in retired:
                 remove_created(path)
                 print("Removed retired: {}".format(path))
@@ -479,8 +499,9 @@ def run(arguments: Sequence[str]) -> int:
             return 0
         collisions = collision_paths(operations)
         if options.dry_run:
-            for operation in operations:
-                print(operation.preview())
+            print_outcomes(
+                ((operation, operation.preview()) for operation in operations), options.verbose
+            )
             if collisions:
                 print("Dry run found destination collisions:", file=sys.stderr)
                 for path in collisions:
@@ -503,8 +524,9 @@ def run(arguments: Sequence[str]) -> int:
 
         apply_operations(operations)
         write_receipt(dstack_home, {**receipt, **installed})
-        for operation in operations:
-            print(operation.completed())
+        print_outcomes(
+            ((operation, operation.completed()) for operation in operations), options.verbose
+        )
         print("Installed dstack: {} operations completed.".format(len(operations)))
         return 0
     except (InstallError, OSError) as error:
