@@ -82,6 +82,7 @@ The sync dry run compares two upstream commits. After the pin advances, comparin
 ```bash
 python3 scripts/pstack_sync.py --check-alignment
 python3 scripts/pstack_sync.py --check-alignment --format json --report /tmp/dstack-alignment.json
+python3 scripts/pstack_sync.py --check-alignment --format html --report /tmp/dstack-alignment.html
 python3 scripts/pstack_sync.py <commit> --check-alignment
 ```
 
@@ -89,7 +90,11 @@ The default is the pinned commit, not upstream main. An explicit target lets you
 
 The report separates byte-identical files, matches after mechanical rewrites, remaining differences, missing local files, and local-only files. It lists dstack-owned skills and sidecars, policy exclusions with their reasons, and upstream skills or playbooks not imported without a recorded exclusion. Dstack-owned entries are inventoried, not compared. A local-only file is not automatically an approved adaptation; it may have been deleted upstream.
 
-Markdown shows the remaining normalized diffs. JSON also keeps raw diffs, relative source paths, and SHA-256 content hashes for a future side-by-side viewer. Binary files are compared by bytes and reported by hash, not normalized as text. Both formats use sorted paths and omit timestamps, so the same inputs produce the same output. Content comparison does not check executable permissions or prove behavior.
+Markdown shows the remaining normalized diffs. JSON also keeps raw diffs, original and normalized source text, relative source paths, and SHA-256 content hashes.
+
+Open the HTML file in a browser for a side-by-side view: pstack on the left, dstack on the right. Search skills and files, filter by alignment status, switch between original and normalized text, and expand unchanged lines. The Scope & exclusions tab lists unsupported skills and playbooks with recorded reasons, unclassified upstream entries, and dstack-owned files. Normalized text applies only the sync tool's mechanical rewrites; it does not decide whether other differences are justified.
+
+HTML embeds the captured sources and viewer assets. It needs JavaScript but no server, network, or external dependencies. Source text is displayed literally, not executed or rendered as Markdown. Binary files are compared by bytes and reported by hash, not normalized as text. All formats use sorted paths and omit timestamps, so the same inputs produce the same output. Content comparison does not check executable permissions or prove behavior.
 
 This mode never changes skills or the pin. It may fetch into the existing upstream cache and write an explicitly requested report outside the dstack and offline upstream source trees. It cannot be combined with `--dry-run` or `--decided`. Exit 0 means the report was generated, not that every difference is approved. Run the static gates separately.
 

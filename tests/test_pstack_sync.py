@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 
 import contextlib
+import base64
+import hashlib
+import html
 import importlib.util
 import io
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -453,6 +457,70 @@ class PstackSyncTests(unittest.TestCase):
         with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
             self.main("--check-alignment", "--pstack-dir", str(self.upstream), "--report", str(self.upstream / "pstack/plugin.json"))
         self.assertEqual(self.pinned, self.pin())
+
+    def html_payload(self, document):
+        return json.loads(re.search(r'<script id="report-data" type="application/json">(.*?)</script>', document, re.S).group(1))
+
+    def test_html_is_deterministic_and_preserves_source_snapshots(self):
+        report = self.run_alignment()
+        document = report.render_html()
+        self.assertEqual(document, self.run_alignment().render_html())
+        payload = self.html_payload(document)
+        for entry, captured in zip(report.files, payload["files"]):
+            for mode, before, after in (
+                ("raw", entry.upstream_text, entry.dstack_text),
+                ("normalized", entry.normalized_upstream_text, entry.normalized_dstack_text),
+            ):
+                for side, text in (("left", before), ("right", after)):
+                    index = captured[mode][side]
+                    self.assertEqual(text, None if index is None else "".join(payload["sources"][index]))
+        sources = ["".join(lines) for lines in payload["sources"]]
+        self.assertEqual(len(sources), len(set(sources)))
+        self.assertEqual([list(item) for item in report.excluded], payload["excluded"])
+        self.assertEqual(report.dstack_owned, payload["owned"])
+        self.assertEqual(report.not_imported, payload["not_imported"])
+
+    def test_html_cli_matches_renderer_and_does_not_write_sources(self):
+        output = Path(self.temp.name) / "alignment.html"
+        before = {path: path.read_bytes() for path in self.dstack.rglob("*") if path.is_file()}
+        self.assertEqual(0, self.main("--check-alignment", "--format", "html", "--report", str(output)))
+        self.assertEqual(self.run_alignment().render_html(), output.read_text(encoding="utf-8"))
+        self.assertEqual(before, {path: path.read_bytes() for path in self.dstack.rglob("*") if path.is_file()})
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            self.main("--dry-run", "--format", "html")
+
+    def test_html_escapes_untrusted_data_and_hashes_inline_assets(self):
+        attack = '</script><img src="https://invalid.example/" onerror="alert(1)">'
+        (self.dstack / "skills/how/SKILL.md").write_text(attack, encoding="utf-8")
+        report = self.run_alignment()
+        report.repository = attack
+        report.target_version = attack
+        report.excluded.append((attack, attack))
+        document = report.render_html()
+        self.assertNotIn(attack, document)
+        self.assertIn(html.escape(attack), document)
+        payload = self.html_payload(document)
+        self.assertIn([attack], payload["sources"])
+        self.assertIn([attack, attack], payload["excluded"])
+        for pattern in (r'<style>(.*?)</style>', r'<script>(.*?)</script>'):
+            asset = re.search(pattern, document, re.S).group(1)
+            digest = base64.b64encode(hashlib.sha256(asset.encode("utf-8")).digest()).decode("ascii")
+            self.assertIn("sha256-" + digest, document)
+        self.assertIn("default-src &#x27;none&#x27;", document)
+        self.assertNotRegex(document, r'<(?:script|link|img)\b[^>]*(?:src|href)=')
+
+    def test_html_distinguishes_binary_empty_and_missing_sources(self):
+        report = self.run_alignment()
+        report.files = [
+            SYNC.compare_file("skills/how/a", "skills/how/a", before, after, set())
+            for before, after in ((b"\x00", b"\xff"), (b"", b""), (None, b""), (b"", None))
+        ]
+        payload = self.html_payload(report.render_html())
+        self.assertEqual([True, False, False, False], [entry["binary"] for entry in payload["files"]])
+        self.assertEqual(None, payload["files"][2]["raw"]["left"])
+        self.assertEqual(None, payload["files"][3]["raw"]["right"])
+        empty_index = payload["files"][1]["raw"]["left"]
+        self.assertEqual([], payload["sources"][empty_index])
 
 
 if __name__ == "__main__":

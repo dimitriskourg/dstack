@@ -92,6 +92,10 @@ class AlignmentFile:
     dstack_sha256: Optional[str]
     diff: str = ""
     normalized_diff: str = ""
+    upstream_text: Optional[str] = None
+    dstack_text: Optional[str] = None
+    normalized_upstream_text: Optional[str] = None
+    normalized_dstack_text: Optional[str] = None
 
 
 @dataclass
@@ -104,6 +108,14 @@ class AlignmentReport:
     excluded: List[Tuple[str, str]]
     dstack_owned: List[str]
     not_imported: List[str]
+
+    def render_html(self) -> str:
+        spec = importlib.util.spec_from_file_location(
+            "pstack_alignment_html", Path(__file__).with_name("pstack_alignment_html.py"))
+        assert spec and spec.loader
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module.render(self)
 
     def render(self) -> str:
         lines = [
@@ -575,6 +587,18 @@ def compare_file(
         upstream_path if before is not None else None, local_path, "identical",
         hashlib.sha256(before).hexdigest() if before is not None else None,
         hashlib.sha256(after).hexdigest() if after is not None else None)
+    for content, raw_field, normalized_field in (
+        (before, "upstream_text", "normalized_upstream_text"),
+        (after, "dstack_text", "normalized_dstack_text"),
+    ):
+        if content is not None:
+            try:
+                text = content.decode("utf-8")
+                if "\0" not in text:
+                    setattr(entry, raw_field, text)
+                    setattr(entry, normalized_field, rewrite(text, skills))
+            except UnicodeDecodeError:
+                pass
     if before is None:
         entry.status = "local-only"
     elif after is None:
@@ -686,7 +710,7 @@ def main(argv: Sequence[str] = sys.argv[1:]) -> int:
     parser.add_argument("--dry-run", action="store_true", help="write nothing and leave the pin")
     parser.add_argument("--decided", action="store_true", help="every pending decision was settled by hand; move the pin")
     parser.add_argument("--check-alignment", action="store_true", help="read-only comparison of the retained tree to pstack (default: pinned commit)")
-    parser.add_argument("--format", choices=("markdown", "json"), default="markdown", help="alignment report format (default: markdown)")
+    parser.add_argument("--format", choices=("markdown", "json", "html"), default="markdown", help="alignment report format (default: markdown)")
     parser.add_argument("--report", type=Path, help="also write the report to this file")
     parser.add_argument("--cache-dir", type=Path, help="fetch cache (default: ~/.cache/dstack/pstack-sync)")
     parser.add_argument("--repo-url", help=argparse.SUPPRESS)
@@ -702,13 +726,18 @@ def main(argv: Sequence[str] = sys.argv[1:]) -> int:
         ):
             parser.error("alignment report output must be outside the source trees")
         alignment = check_alignment(args.target, args.dstack_root, args.pstack_dir, args.repo_url, args.cache_dir)
-        text = json.dumps(asdict(alignment), sort_keys=True, indent=2) + "\n" if args.format == "json" else alignment.render()
+        if args.format == "json":
+            text = json.dumps(asdict(alignment), sort_keys=True, indent=2) + "\n"
+        elif args.format == "html":
+            text = alignment.render_html()
+        else:
+            text = alignment.render()
         sys.stdout.write(text)
         if args.report:
             args.report.write_text(text, encoding="utf-8")
         return 0
     if args.format != "markdown":
-        parser.error("--format json requires --check-alignment")
+        parser.error("--format {} requires --check-alignment".format(args.format))
     if args.target is None and not args.dry_run:
         parser.error("a write run needs an explicit full target commit; run --dry-run first and pass the Target it prints")
     report = sync(
