@@ -171,6 +171,29 @@ class UninstallerTests(unittest.TestCase):
             self.assertNotIn("No files changed", stderr)
             self.assertTrue((skills / "alpha").is_dir())
 
+    def test_skills_only_removes_receipt_listed_skills_the_source_dropped(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = self.make_source(root)
+            skills, claude, dstack_home = self.install_fixture(root)
+            retired = skills / "gamma"
+            retired.mkdir()
+            (retired / "SKILL.md").write_text(
+                "---\nname: gamma\ndescription: retired\n---\n", encoding="utf-8"
+            )
+            receipt = dstack_home / UNINSTALL.RECEIPT_NAME
+            receipt.write_text(
+                json.dumps({"skills": {"alpha": "x", "beta": "x", "gamma": "x"}}),
+                encoding="utf-8",
+            )
+
+            status, _, stderr = self.run_uninstaller(source, root, ["--skills-only"])
+
+            self.assertEqual(0, status, stderr)
+            self.assertFalse(retired.exists())
+            self.assertFalse(receipt.exists())
+            self.assertTrue((dstack_home / "config.json").is_file())
+
 
 if __name__ == "__main__":
     unittest.main()

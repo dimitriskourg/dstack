@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import shutil
@@ -17,6 +18,7 @@ from typing import List, Sequence
 SOURCE_ROOT = Path(__file__).resolve().parent
 DSTACK_DIRECTORY = Path("~/.dstack").expanduser()
 MOUNT_POINT_REPARSE_TAG = getattr(stat, "IO_REPARSE_TAG_MOUNT_POINT", 0xA0000003)
+RECEIPT_NAME = "installed.json"
 
 
 class UninstallError(Exception):
@@ -80,6 +82,23 @@ def bundled_skill_names(source_root: Path) -> List[str]:
     return names
 
 
+def receipt_skill_names(dstack_home: Path) -> List[str]:
+    path = dstack_home / RECEIPT_NAME
+    if not path_exists(path):
+        return []
+    try:
+        skills = json.loads(path.read_text(encoding="utf-8"))["skills"]
+    except (ValueError, KeyError, TypeError) as error:
+        raise UninstallError(
+            "install receipt is unreadable: {}: {}; delete it and rerun".format(path, error)
+        )
+    if not isinstance(skills, dict) or not all(
+        isinstance(name, str) and isinstance(digest, str) for name, digest in skills.items()
+    ):
+        raise UninstallError("install receipt is malformed: {}; delete it and rerun".format(path))
+    return sorted(skills)
+
+
 def build_removals(
     source_root: Path,
     skills_directory: Path,
@@ -87,7 +106,7 @@ def build_removals(
     dstack_home: Path,
     remove_all: bool,
 ) -> List[Removal]:
-    names = bundled_skill_names(source_root)
+    names = sorted(set(bundled_skill_names(source_root)) | set(receipt_skill_names(dstack_home)))
     removals: List[Removal] = []
 
     for name in names:
@@ -107,6 +126,9 @@ def build_removals(
             removals.append(Removal("skill", skill))
 
     if not remove_all:
+        receipt = dstack_home / RECEIPT_NAME
+        if path_exists(receipt):
+            removals.append(Removal("install receipt", receipt))
         return removals
 
     if path_exists(dstack_home):

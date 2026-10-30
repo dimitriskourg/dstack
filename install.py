@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import os
 import re
 import shutil
@@ -12,7 +14,7 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List, Optional, Sequence, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 try:  # Windows-only; supplies CreateJunction.
     import _winapi
@@ -24,6 +26,8 @@ SOURCE_ROOT = Path(__file__).resolve().parent
 DSTACK_DIRECTORY = Path("~/.dstack").expanduser()
 SUPPORT_DIRECTORIES = ("schemas",)
 SUPPORT_FILES = ("LICENSE", "NOTICE.md")
+# Records installed skills so --update can prune the ones the source dropped.
+RECEIPT_NAME = "installed.json"
 # stat exposes this only on Windows builds; the tag value itself is stable.
 MOUNT_POINT_REPARSE_TAG = getattr(stat, "IO_REPARSE_TAG_MOUNT_POINT", 0xA0000003)
 
@@ -93,6 +97,86 @@ def skill_identity(path: Path) -> str:
         if match:
             return match.group(1)
     return ""
+
+
+def tree_digest(root: Path) -> str:
+    """Hash a skill tree, ignoring bytecode that running its scripts leaves behind."""
+
+    digest = hashlib.sha256()
+    for path in sorted(root.rglob("*"), key=lambda item: item.relative_to(root).as_posix()):
+        relative = path.relative_to(root)
+        if "__pycache__" in relative.parts or not path.is_file():
+            continue
+        content = path.read_bytes()
+        digest.update("{}\0{}\0".format(relative.as_posix(), len(content)).encode("utf-8"))
+        digest.update(content)
+    return digest.hexdigest()
+
+
+def read_receipt(dstack_home: Path) -> Dict[str, str]:
+    path = dstack_home / RECEIPT_NAME
+    if not path_exists(path):
+        return {}
+    try:
+        skills = json.loads(path.read_text(encoding="utf-8"))["skills"]
+    except (ValueError, KeyError, TypeError) as error:
+        raise InstallError(
+            "install receipt is unreadable: {}: {}; delete it and rerun".format(path, error)
+        )
+    if not isinstance(skills, dict) or not all(
+        isinstance(name, str) and isinstance(digest, str) for name, digest in skills.items()
+    ):
+        raise InstallError("install receipt is malformed: {}; delete it and rerun".format(path))
+    return skills
+
+
+def write_receipt(dstack_home: Path, skills: Dict[str, str]) -> None:
+    dstack_home.mkdir(parents=True, exist_ok=True)
+    path = dstack_home / RECEIPT_NAME
+    staged = path.with_name(path.name + ".tmp")
+    staged.write_text(
+        json.dumps({"skills": dict(sorted(skills.items()))}, indent=2) + "\n", encoding="utf-8"
+    )
+    os.replace(str(staged), str(path))
+
+
+def plan_retirements(
+    receipt: Dict[str, str],
+    current_names: Iterable[str],
+    skills_directory: Path,
+    claude_skills_directory: Path,
+) -> Tuple[List[Path], List[str], Dict[str, str]]:
+    """Return removals, warnings, and the receipt entries still kept for retired skills."""
+
+    current = set(current_names)
+    removals: List[Path] = []
+    warnings: List[str] = []
+    kept: Dict[str, str] = {}
+    for name, digest in sorted(receipt.items()):
+        if name in current:
+            continue
+        skill = skills_directory / name
+        link = claude_skills_directory / name
+        if path_exists(skill):
+            unchanged = (
+                skill.is_dir()
+                and not skill.is_symlink()
+                and (skill / "SKILL.md").is_file()
+                and skill_identity(skill / "SKILL.md") == name
+                and tree_digest(skill) == digest
+            )
+            if not unchanged:
+                warnings.append("kept retired skill that changed since install: {}".format(skill))
+                kept[name] = digest
+                continue
+        if path_exists(link):
+            if is_compatibility_link(link) and link.resolve() == skill.resolve():
+                removals.append(link)
+            else:
+                warnings.append("kept Claude entry dstack does not own: {}".format(link))
+        if path_exists(skill):
+            removals.append(skill)
+    return removals, warnings, kept
 
 
 def skill_directories(source_root: Path) -> List[Path]:
@@ -336,7 +420,17 @@ def run(arguments: Sequence[str]) -> int:
             claude_skills_directory=resolve_path(options.claude_skills_dir),
             with_claude_links=options.with_claude_links,
         )
+        dstack_home = DSTACK_DIRECTORY.resolve()
+        skills = skill_directories(SOURCE_ROOT)
+        receipt = read_receipt(dstack_home)
+        installed = {skill.name: tree_digest(skill) for skill in skills}
         if options.update:
+            retired, retirement_warnings, kept = plan_retirements(
+                receipt,
+                installed,
+                resolve_path(options.skills_dir),
+                resolve_path(options.claude_skills_dir),
+            )
             update_roots = (
                 resolve_path(options.skills_dir),
                 DSTACK_DIRECTORY.resolve(),
@@ -350,6 +444,10 @@ def run(arguments: Sequence[str]) -> int:
                 for operation in operations:
                     verb = "link" if operation.kind == "link" else "update"
                     print("Would {}: {} -> {}".format(verb, operation.source, operation.destination))
+                for path in retired:
+                    print("Would remove retired: {}".format(path))
+                for warning in retirement_warnings:
+                    print("Warning: {}".format(warning), file=sys.stderr)
                 if issues:
                     print("Update dry run found ownership or topology problems:", file=sys.stderr)
                     for issue in issues:
@@ -367,6 +465,12 @@ def run(arguments: Sequence[str]) -> int:
             outcomes = apply_updates(operations)
             for operation, verb in outcomes:
                 print("{}: {} -> {}".format(verb, operation.source, operation.destination))
+            for path in retired:
+                remove_created(path)
+                print("Removed retired: {}".format(path))
+            for warning in retirement_warnings:
+                print("Warning: {}".format(warning), file=sys.stderr)
+            write_receipt(dstack_home, {**kept, **installed})
             print(
                 "Updated dstack: {} operations completed; config.json was preserved.".format(
                     len(operations)
@@ -398,6 +502,7 @@ def run(arguments: Sequence[str]) -> int:
             return 2
 
         apply_operations(operations)
+        write_receipt(dstack_home, {**receipt, **installed})
         for operation in operations:
             print(operation.completed())
         print("Installed dstack: {} operations completed.".format(len(operations)))
