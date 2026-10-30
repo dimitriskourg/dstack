@@ -34,8 +34,8 @@ REQUIRED_SKILLS = {
     "architect", "arena", "blast-radius", "bro",
     "comment-sicko", "control-ui", "correct", "create-formal-verification-skill", "create-verification-skill", "maintain-formal-verification-skill",
     "deslop", "dstack-config", "dstack-help", "dstack-mode",
-    "how", "in-your-own-words", "interrogate", "ketchup", "maintain-verification-skill", "no-comments",
-    "recall", "reflect", "setup-dstack", "sharpen", "swarm", "tdd", "teach",
+    "how", "in-your-own-words", "interrogate", "ketchup", "ketchup-video", "maintain-verification-skill", "no-comments",
+    "recall", "reflect", "setup-dstack", "sharpen", "statechart", "swarm", "tdd", "teach",
     "technical-writing", "typescript-best-practices", "unslop", "why",
     "principle-attack-the-premise", "principle-boundary-discipline",
     "principle-build-the-lever",
@@ -89,6 +89,8 @@ CODEX_SIDECAR = Path("agents") / "openai.yaml"
 SKILL_NAME = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 MAX_SKILL_NAME_LENGTH = 64
 ASSET_DIRECTORIES = ("references", "scripts", "assets")
+IGNORED_ASSET_NAMES = {"__pycache__", "node_modules"}
+IGNORED_ASSET_SUFFIXES = {".pyc", ".pyo"}
 ASSET_REF = re.compile(r"(?<![A-Za-z0-9_.-])((?:references|scripts|assets)/[A-Za-z0-9_./-]+)")
 MARKDOWN_LINK = re.compile(r"\]\(<?([^)\s>]+)>?(?:\s+\"[^\"]*\")?\)")
 DOC_CLAIM = re.compile(
@@ -378,6 +380,18 @@ def check_sidecar(skill_dir: Path, user_invoked: bool) -> List[Finding]:
     return findings
 
 
+def is_ignored_skill_path(path: Path) -> bool:
+    return any(part in IGNORED_ASSET_NAMES for part in path.parts)
+
+
+def is_package_asset(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    if path.suffix.lower() in IGNORED_ASSET_SUFFIXES:
+        return False
+    return not is_ignored_skill_path(path)
+
+
 def reference_forms(source_dir: Path, skill_dir: Path, target: Path) -> Set[str]:
     forms = {target.relative_to(skill_dir).as_posix()}
     try:
@@ -457,7 +471,9 @@ def check_skill(skill_dir: Path) -> List[Finding]:
 
     package_texts: List[Tuple[Path, str]] = []
     for path in sorted(skill_dir.rglob("*")):
-        if not path.is_file() or path.suffix.lower() not in {".md", ".txt", ".json", ".py", ".sh", ".ts", ".js"}:
+        if is_ignored_skill_path(path):
+            continue
+        if not path.is_file() or path.suffix.lower() not in {".md", ".txt", ".json", ".py", ".sh", ".ts", ".js", ".mjs"}:
             continue
         text = path.read_text(encoding="utf-8")
         package_texts.append((path, text))
@@ -492,6 +508,8 @@ def check_skill(skill_dir: Path) -> List[Finding]:
                 reference = reference.rstrip(".,:;)")
                 if not (skill_dir / reference).exists():
                     findings.append(Finding(relative(path), "missing referenced asset {!r}".format(reference), line_number))
+            if path.suffix.lower() != ".md":
+                continue
             for reference in SIBLING_SKILL_REF.findall(line):
                 if not (skill_dir / reference).resolve().is_file():
                     findings.append(Finding(relative(path), "missing sibling skill {!r}".format(reference), line_number))
@@ -506,7 +524,7 @@ def check_skill(skill_dir: Path) -> List[Finding]:
         root = skill_dir / directory
         if not root.is_dir():
             continue
-        for asset in sorted(path for path in root.rglob("*") if path.is_file()):
+        for asset in sorted(path for path in root.rglob("*") if is_package_asset(path)):
             sources = [(path, text) for path, text in package_texts if path != asset]
             if any(any(form in text for form in reference_forms(path.parent, skill_dir, asset)) for path, text in sources):
                 continue
@@ -614,7 +632,9 @@ def check_structure() -> List[Finding]:
         "playbooks/{}.md".format(name) for name in EXCLUDED_DSTACK_PLAYBOOKS
     }
     for path in sorted(SKILLS.rglob("*")):
-        if not path.is_file() or path.suffix.lower() not in {".md", ".txt", ".json", ".py", ".sh", ".ts", ".js"}:
+        if is_ignored_skill_path(path):
+            continue
+        if not path.is_file() or path.suffix.lower() not in {".md", ".txt", ".json", ".py", ".sh", ".ts", ".js", ".mjs"}:
             continue
         text = path.read_text(encoding="utf-8")
         for reference in sorted(unsupported_references):
@@ -642,7 +662,9 @@ def check_invocation_targets(skill_dirs: Iterable[Path]) -> List[Finding]:
     findings: List[Finding] = []
     for skill_dir in skill_dirs:
         for path in sorted(skill_dir.rglob("*")):
-            if not path.is_file() or path.suffix.lower() not in {".md", ".txt", ".json", ".py", ".sh", ".ts", ".js"}:
+            if is_ignored_skill_path(path):
+                continue
+            if not path.is_file() or path.suffix.lower() not in {".md", ".txt", ".json", ".py", ".sh", ".ts", ".js", ".mjs"}:
                 continue
             for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
                 for target in SKILL_CALL.findall(line):

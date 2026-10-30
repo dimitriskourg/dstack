@@ -1,6 +1,6 @@
 # pstack sync
 
-Pinned: pstack 0.15.29, commit `88d47514b82e7c44f00f2b2a72ff6dd12158038c`.
+Pinned: pstack 0.15.36, commit `1ba91fc25c0977741dd0e267849e6234b037ed0a`.
 
 Upstream: repository `cursor/plugins`, subpath `pstack/` (<https://github.com/cursor/plugins/tree/main/pstack>). Never edit pstack. `scripts/pstack_sync.py` shallow-fetches the pinned and target commits itself and reads the pin and the lists below.
 

@@ -14,7 +14,7 @@ Give the user the file's public copy: `https://github.com/dimitriskourg/dstack/b
 
 ## Locked keep-set
 
-55 skills, 24 principles, ten playbooks. What is out of this pack lives in [Supported scope](references/guide/06-supported-scope.md), not here.
+57 skills, 24 principles, ten playbooks. What is out of this pack lives in [Supported scope](references/guide/06-supported-scope.md), not here.
 
 ### Setup and routing
 
@@ -44,11 +44,12 @@ Name a skill directly when the user wants more or less than the playbook. Read i
 | Understand a change, explained plainly | [`/teach`](../teach/SKILL.md) |
 | Catch up on recent work across chats | [`/recall`](../recall/SKILL.md) |
 | Catch up on this chat since the last user message | [`/ketchup`](../ketchup/SKILL.md) |
+| Catch up like `/ketchup`, in a short subtitled video of slides | [`/ketchup-video`](../ketchup-video/SKILL.md) |
 | Know what a small diff could break outside itself | [`/blast-radius`](../blast-radius/SKILL.md) |
 | Settle types and module shape before code | [`/architect`](../architect/SKILL.md) |
 | Get several attempts at one brief | [`/arena`](../arena/SKILL.md) |
 | Run parallel checks over slices, or race workers | [`/swarm`](../swarm/SKILL.md) |
-| Have different models review a diff | [`/interrogate`](../interrogate/SKILL.md) |
+| Have adversaries try to break a change, keeping only findings a run proves | [`/interrogate`](../interrogate/SKILL.md) |
 | Fix a bug test-first | [`/tdd`](../tdd/SKILL.md) |
 | Apply TypeScript rules | [`/typescript-best-practices`](../typescript-best-practices/SKILL.md) |
 | Strip comments before review | [`/no-comments`](../no-comments/SKILL.md) |
@@ -59,12 +60,15 @@ Name a skill directly when the user wants more or less than the playbook. Read i
 | Bring a verification skill back in line | [`/maintain-verification-skill`](../maintain-verification-skill/SKILL.md) |
 | Formally verify a race or invariant | [`/create-formal-verification-skill`](../create-formal-verification-skill/SKILL.md) |
 | Bring a formal verification back in line | [`/maintain-formal-verification-skill`](../maintain-formal-verification-skill/SKILL.md) |
+| Draw how a system moves between states as a chart checked by a TLA+ model | [`/statechart`](../statechart/SKILL.md) |
 | Turn a finished task into skill edits | [`/reflect`](../reflect/SKILL.md) |
 | Stop agents repeating the same mistakes | [`/correct`](../correct/SKILL.md) |
 
 Bundled so the workflow is complete: `/deslop`, `/control-ui`, `/comment-sicko`.
 
-Close calls: `/how` vs `/why` vs `/teach`; `/arena` vs `/swarm`; `/recall` vs `/ketchup` (session pickup resumes one chat or branch); `/architect` implements after it settles, add "with checkpoint" to review first.
+Close calls: `/how` vs `/why` vs `/teach`; `/arena` vs `/swarm`; `/recall` vs `/ketchup` vs `/ketchup-video` (session pickup resumes one chat or branch); `/architect` implements after it settles, add "with checkpoint" to review first.
+
+`/statechart` needs Java 11 or later. The first run can install TLC and Java with mise, or set `TLA2TOOLS` to a `tla2tools.jar`.
 
 ### Playbooks
 

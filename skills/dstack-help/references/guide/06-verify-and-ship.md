@@ -97,6 +97,20 @@ It writes a project-local skill that tells the next agent whether a change touch
 
 The skill also records which code each check covers and the commit where the check last matched it. Merges and refactors that skip the skill can leave the check passing on a description of code that's gone. After them, run [`/maintain-formal-verification-skill`](../../../maintain-formal-verification-skill/SKILL.md). It updates the verification from the code, reruns it, shows that each updated check can still fail, and tells you whether each failure is drift in the verification or a bug in the code.
 
+## Show the behavior as a statechart
+
+A counterexample in model terms convinces you. The person who owns the behavior needs to see it in their terms. Run:
+
+```text
+/statechart what the user sees when they edit a note offline
+```
+
+[`/statechart`](../../../statechart/SKILL.md) checks a TLA+ model and draws a Mermaid statechart of how a system moves between states, so the picture and the checked model can't drift apart. It covers a product flow, a protocol, or a service. The reader's rules ("you never see Synced while you're offline") become invariants. The report gives the shortest path to each state that breaks a rule. Before the hand-off, the agent reproduces each bug path in the real code, so a modeling error doesn't reach the reader as a bug.
+
+When the user asks for an image, or a chart is too large to read as text, the skill renders with Pele.
+
+A generated formal verification skill that uses TLA+ tells the next agent to read every result with `/statechart`. The first run can install TLC and Java with mise (about 305 MB, needs the network), or set `TLA2TOOLS` to a `tla2tools.jar` and Java 11 or later.
+
 ## Open the PR
 
 ```text

@@ -27,6 +27,7 @@ The skills below remain supported. The everyday keep-set is closed.
 - `interrogate`
 - `recall`
 - `ketchup`
+- `ketchup-video`
 - `in-your-own-words`
 - `sharpen`
 - `reflect`
@@ -48,6 +49,7 @@ The skills below remain supported. The everyday keep-set is closed.
 - `create-formal-verification-skill`
 - `maintain-formal-verification-skill`
 - `maintain-verification-skill`
+- `statechart`
 - `tdd`
 - `typescript-best-practices`
 

@@ -56,7 +56,7 @@ Each worker owns one package. The parent waits for every slice and returns one `
 /interrogate the whole branch, but skeptically. don't change anything yet. no nitpicks unless it's an actual bug or regression in behavior.
 ```
 
-The qualifiers do real work. "don't change anything yet" keeps it read-only, and the nitpick rule pre-filters the noise so `Act on` findings are worth your time.
+The qualifiers do real work. "don't change anything yet" keeps it read-only, and the nitpick rule pre-filters the noise so verified findings are worth your time.
 
 ## Fix a bug through a failing test
 
@@ -81,6 +81,14 @@ The qualifiers do real work. "don't change anything yet" keeps it read-only, and
 ```
 
 The generator picks the tool from the question, proves one property, and leaves a project-local skill the next agent can rerun on every relevant change. After merges or refactors in that code, run `/maintain-formal-verification-skill`. It updates the check from the code and says whether a failure is drift or a bug.
+
+## Show the PM what the user sees
+
+```text
+/statechart what the user sees when they edit a note offline
+```
+
+[`/statechart`](../../../statechart/SKILL.md) checks a TLA+ model and draws a Mermaid chart of how a system moves between states. The report gives the shortest path to each state that breaks a rule. The first run can install TLC and Java with mise, or set `TLA2TOOLS` to a `tla2tools.jar`.
 
 ## Stop correcting the same mistake
 
@@ -140,6 +148,8 @@ That's the whole prompt. [`/bro`](../../../bro/SKILL.md) restates the last messa
 
 [`/ketchup`](../../../ketchup/SKILL.md) tells you in plain words what changed since your last message, then lists each call waiting on you with its pick, evidence, and risk. It changes nothing while it reports.
 
+To watch the catch-up instead, run [`/ketchup-video`](../../../ketchup-video/SKILL.md). It shows what happened in a short subtitled video of slides, and lists the calls waiting on you as text under it.
+
 ## The pitfalls
 
 - **Enumerating skills in the prompt.** "use /how then /architect then /arena" reorders steps the playbook already sequences. State the goal and constraints. Name a skill only to override a default.
@@ -152,7 +162,7 @@ That's the whole prompt. [`/bro`](../../../bro/SKILL.md) restates the last messa
 - **Trusting an unvetted number.** A warm cache or a skipped code path can fake a speedup. Apply Explain the Number before the number goes anywhere.
 - **Correcting the same mistake by hand.** A correction in chat helps one run. `/correct` fixes the repo so no later run repeats it.
 - **Using `/arena` for coverage.** `/arena` repeats one design or code brief, then picks a base and grafts the best parts. `/swarm` partitions slices or declared race arms and aggregates one report.
-- **Accepting every review comment.** Bots and humans both file real catches and noise in one list. `/interrogate` sorts findings into act-on and dismissed buckets with reasons, and you can override either way.
+- **Accepting every review comment.** Bots and humans both file real catches and noise in one list. `/interrogate` keeps only findings a run proves, and lists the rest as Dropped.
 - **Using an inherited model or effort.** Dstack requires a concrete model-and-effort pair for every profile. `auto`, `inherit`, and `inherit-parent` are not configuration options. [Setup](./01-setup.md) covers the roles.
 - **Reporting success off a green build.** A build proves it compiles. Ask for the real command, flow, stored value, or profile, and expect the evidence in the reply.
 - **Writing a `SKILL.md` freehand.** Route it through the [Authoring or modifying a skill playbook](../../../dstack-mode/playbooks/authoring-a-skill.md) so validation and review happen.
