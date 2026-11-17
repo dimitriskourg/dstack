@@ -1,6 +1,6 @@
 # pstack sync
 
-Pinned: pstack 0.15.42, commit `bf0c7cd80abdbf7fe47b634978a7d1b4071f71a7`.
+Pinned: pstack 0.15.43, commit `2f87c854fe3e2fcda44ca86b46ede35aad3c46b7`.
 
 Upstream: repository `cursor/plugins`, subpath `pstack/` (<https://github.com/cursor/plugins/tree/main/pstack>). Never edit pstack. `scripts/pstack_sync.py` shallow-fetches the pinned and target commits itself and reads the pin and the lists below.
 
@@ -39,6 +39,14 @@ Upstream: repository `cursor/plugins`, subpath `pstack/` (<https://github.com/cu
 - `setup-pstack`: `setup-dstack` and `dstack-config` replace its model setup.
 
 `comment-sicko`, `control-ui`, `deslop`, `dstack-config`, and every `agents/openai.yaml` sidecar exist only in dstack. The sync never touches them.
+
+## Not imported
+
+These pstack items stay out of dstack. Reasons are one line each.
+
+- Default-model / Opus-first routing from 0.15.43 (`claude-opus-5-5-xhigh-fast`, Fable-as-exception, no role above xhigh, setup-pstack `# defaults: 3`). dstack keeps four profiles from `~/.dstack/config.json` via `dstack-config`.
+- Origin, watch-pr, and Bugbot text in Opening-a-PR / Babysit. dstack keeps gh/glab forge-neutral overlays and explicit-only Opening a PR.
+- Cursor skill-install paths in reflect (`.cursor/skills/`, `plugins/cache/`). dstack keeps `~/.agents/skills/`.
 
 ## Mechanical rewrites
 

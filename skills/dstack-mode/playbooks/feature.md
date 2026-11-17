@@ -3,7 +3,7 @@
 **You own the design. Plan, review, verify.** Delegate implementation. Stay in the lead.
 
 1. Trace the affected subsystem.
-2. Call the Skill tool with `architect`. Use it for parallel design exploration.
+2. Call the Skill tool with `architect`. Use it for the shape.
 3. Write the throughput checkpoint as four todo items. A dimension that genuinely does not apply (single file, no fan-out) keeps its item with `n/a: <reason>` rather than being dropped:
    - **Blocking first steps.** Gates run before fan-out.
    - **Independent workstreams.** Read-only exploration and artifacts outside the repository may parallelize. Repository writes serialize.

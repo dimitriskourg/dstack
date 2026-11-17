@@ -19,7 +19,7 @@ CONFIG_SKILL = "dstack-config"
 CONFIG_CALL = "Call the Skill tool with `dstack-config`."
 CONFIG_CALLERS = {
     "arena", "dstack-mode", "how", "interrogate",
-    "recall", "reflect", "swarm",
+    "recall", "swarm",
 }
 CONFIG_OWNERS = {CONFIG_SKILL, "setup-dstack"}
 CONFIG_PROCEDURE_MARKERS = (
