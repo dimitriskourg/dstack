@@ -59,7 +59,8 @@ REQUIRED_DSTACK_PLAYBOOKS = {
     "pause-safely", "prototype", "refactoring",
     "session-pickup",
 }
-REMOVED_DOCS = ("DIFFERENCES.md", "KNOWN_ISSUES.md", "docs")
+REMOVED_DOCS = ("DIFFERENCES.md", "KNOWN_ISSUES.md")
+ALLOWED_DOCS = {"docs/pstack-ingestion.md"}
 SYNC_PIN = re.compile(r"^Pinned: pstack \S+, commit `[0-9a-f]{40}`\.$", re.M)
 EXCLUDED_DSTACK_PLAYBOOKS = {
     "autonomous-run", "autopilot-full", "autopilot-stack", "eval",
@@ -111,7 +112,7 @@ PRINCIPLE_INDEX_ENTRY = re.compile(
     r"^- \*\*(?P<title>.+?)\.?\*\*(?: \(\*\*(?P<name>[a-z0-9-]+)\*\*\))?\.?"
 )
 PLAYBOOK_INDEX_ENTRY = re.compile(r"^- \*\*(?P<title>.+?)\.\*\*")
-PLAYBOOK_INDEX_LIST = re.compile(r"^[A-Z][A-Za-z ]*(?:, [A-Z][A-Za-z ]*)+\.$")
+PLAYBOOK_INDEX_LIST = re.compile(r"^[A-Z][A-Za-z0-9- ]*(?:, [A-Z][A-Za-z0-9- ]*)+\.$")
 PLAYBOOK_EXPLICIT_FILE = re.compile(r"(?:File:\s+)?`playbooks/([a-z0-9-]+)\.md`")
 LEGACY_SKILL_DIRECTIVE = re.compile(
     r"\b(?:run|apply|invoke|route through|route to|hand to|use)\s+"
@@ -594,6 +595,16 @@ def check_sync_file(root: Path) -> List[Finding]:
     for removed in REMOVED_DOCS:
         if (root / removed).exists():
             findings.append(Finding(removed, "retired document must stay absent; PSTACK_SYNC.md, README.md, and dstack-help replace it"))
+    docs = root / "docs"
+    if docs.is_dir():
+        for path in sorted(docs.rglob("*")):
+            if not path.is_file():
+                continue
+            rel = path.relative_to(root).as_posix()
+            if rel not in ALLOWED_DOCS:
+                findings.append(Finding(rel, "retired document must stay absent; PSTACK_SYNC.md, README.md, and dstack-help replace it"))
+    elif docs.is_file():
+        findings.append(Finding("docs", "retired document must stay absent; PSTACK_SYNC.md, README.md, and dstack-help replace it"))
     return findings
 
 

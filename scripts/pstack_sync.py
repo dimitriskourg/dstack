@@ -4,8 +4,17 @@
 Reads the upstream repository, the pin, and the exclusion lists from
 PSTACK_SYNC.md, shallow-fetches the pinned and target commits from that
 repository (or reads a local --pstack-dir offline), diffs them, and three-way merges each kept file
-after the mechanical rewrites. Anything matching a stop-and-ask rule is
-reported instead of written. Exit status 1 means a decision is pending.
+after the mechanical rewrites. Guide pages under docs/guide/ map onto
+dstack-help/references/guide/ and are treated like kept skills. Brand-new
+upstream files are never copied. Anything matching a stop-and-ask rule is
+reported instead of written.
+
+--drift compares every kept skill, principle, playbook, and guide page to
+rewritten upstream at the pin and fails on a difference that PSTACK_SYNC.md
+does not list. --decided refuses to move the pin unless every pending file
+matches upstream at the target or is listed under Not imported / Kept dstack
+wording / Allowed drift. Exit status 1 means a decision is pending, the pin
+was refused, or drift is unexplained.
 """
 
 from __future__ import annotations
@@ -50,6 +59,19 @@ SPAWN_CONFIG = re.compile(
     r"|(?<!mental )(?<!data )(?<!domain )\bmodels?\b(?![- ]the[- ]domain)",
     re.I,
 )
+GUIDE_UPSTREAM = "docs/guide/"
+GUIDE_LOCAL = "skills/dstack-help/references/guide/"
+GUIDE_RENAMES = {"02-poteto-mode.md": "02-dstack-mode.md"}
+REVERSE_SKILL_RENAMES = {value: key for key, value in SKILL_RENAMES.items()}
+REVERSE_GUIDE_RENAMES = {value: key for key, value in GUIDE_RENAMES.items()}
+LISTED_HEADINGS = ("Not imported", "Kept dstack wording", "Owned by dstack", "Allowed drift")
+LISTED_TOKEN = re.compile(r"`([^`]+)`")
+NEW_FILE_REASON = (
+    "new upstream file; not copied automatically; check dstack rules "
+    "(no unauthorized push, PR, ticket, or comment)"
+)
+DSTACK_ONLY_SKILLS = {"comment-sicko", "control-ui", "deslop", "dstack-config"}
+DRIFT_SKIP_PARTS = {"agents", "scripts"}
 
 
 def load_audit():
@@ -92,6 +114,7 @@ class Report:
     decisions: List[Tuple[str, str]] = field(default_factory=list)
     details: Dict[str, List[Tuple[str, str, str]]] = field(default_factory=dict)
     pin_note: str = ""
+    refused_pin: bool = False
 
     def decide(self, path: str, reason: str, *blocks: Tuple[str, str, str]) -> None:
         self.decisions.append((path, reason))
@@ -130,6 +153,49 @@ class Report:
         return "\n".join(lines) + "\n"
 
 
+@dataclass
+class DriftReport:
+    pinned: str
+    pinned_version: str
+    compared: int = 0
+    listed: List[Tuple[str, str]] = field(default_factory=list)
+    unexplained: List[Tuple[str, str]] = field(default_factory=list)
+    dstack_only: List[str] = field(default_factory=list)
+
+    def render(self) -> str:
+        result = "clean" if not self.unexplained else "{} unexplained difference(s)".format(len(self.unexplained))
+        lines = [
+            "# pstack drift report",
+            "",
+            "- Pin: {} (`{}`)".format(self.pinned_version, self.pinned),
+            "- Compared: {} kept file(s) after mechanical rewrites".format(self.compared),
+            "- Result: {}".format(result),
+        ]
+        for title, items in (
+            ("Listed (intentional)", self.listed),
+            ("Unexplained", [(path, diff) for path, diff in self.unexplained]),
+        ):
+            lines += ["", "## " + title, ""]
+            if not items:
+                lines.append("None.")
+                continue
+            for path, body in items:
+                lines.append("- `{}`".format(path) + (": {}".format(body) if "\n" not in body and len(body) < 200 else ""))
+                if "\n" in body:
+                    fence = "`" * max(3, longest_backtick_run(body) + 1)
+                    lines += ["", "  " + fence + "diff"]
+                    lines += [("  " + line).rstrip() for line in body.splitlines()]
+                    lines.append("  " + fence)
+                    lines.append("")
+        lines += ["", "## Dstack-only", ""]
+        if not self.dstack_only:
+            lines.append("None.")
+        else:
+            for path in self.dstack_only:
+                lines.append("- `{}`: no upstream counterpart at the pin".format(path))
+        return "\n".join(lines) + "\n"
+
+
 def longest_backtick_run(text: str) -> int:
     return max((len(run) for run in re.findall(r"`+", text)), default=0)
 
@@ -156,6 +222,115 @@ def clashing_lines(merged: str) -> Tuple[str, str, str]:
 def section_bullets(text: str, heading: str) -> List[str]:
     match = re.search(r"^## {}\n(.*?)(?=^## |\Z)".format(re.escape(heading)), text, re.M | re.S)
     return BULLET.findall(match.group(1)) if match else []
+
+
+def section_body(text: str, heading: str) -> str:
+    match = re.search(r"^## {}\n(.*?)(?=^## |\Z)".format(re.escape(heading)), text, re.M | re.S)
+    return match.group(1) if match else ""
+
+
+def listed_tokens(sync_text: str) -> List[str]:
+    tokens: List[str] = []
+    for heading in LISTED_HEADINGS:
+        tokens.extend(LISTED_TOKEN.findall(section_body(sync_text, heading)))
+    return tokens
+
+
+def decision_paths(path: str) -> List[str]:
+    left, sep, right = path.partition(" <- ")
+    paths = [left.strip()]
+    if sep:
+        paths.append(right.strip())
+    return paths
+
+
+def is_listed(path: str, tokens: Sequence[str]) -> bool:
+    candidates = decision_paths(path)
+    for candidate in list(candidates):
+        name = Path(candidate).name
+        stem = Path(candidate).stem
+        if name:
+            candidates.append(name)
+        if stem and stem != name:
+            candidates.append(stem)
+        parts = Path(candidate).parts
+        if len(parts) >= 2 and parts[0] == "skills":
+            candidates.append(parts[1])
+            candidates.append("skills/{}/".format(parts[1]))
+    seen = {item for item in candidates if item}
+    for token in tokens:
+        if not token:
+            continue
+        if token.endswith("/"):
+            prefix = token
+            if any(item == token.rstrip("/") or item.startswith(prefix) for item in seen):
+                return True
+            continue
+        if token in seen:
+            return True
+        if "/" in token:
+            if any(item == token or item.startswith(token.rstrip("/") + "/") for item in seen):
+                return True
+            continue
+        skill_prefix = "skills/{}/".format(token)
+        skill_file = "skills/{}/SKILL.md".format(token)
+        playbook_suffix = "/playbooks/{}.md".format(token)
+        if skill_file in seen or any(item.startswith(skill_prefix) or item.endswith(playbook_suffix) for item in seen):
+            return True
+    return False
+
+
+def local_skill_rel(upstream_path: str) -> str:
+    inner = upstream_path[len("skills/"):]
+    top, _, rest = inner.partition("/")
+    local_top = SKILL_RENAMES.get(top, top)
+    return "skills/{}/{}".format(local_top, rest) if rest else "skills/" + local_top
+
+
+def local_guide_rel(upstream_path: str) -> str:
+    name = upstream_path[len(GUIDE_UPSTREAM):]
+    return GUIDE_LOCAL + GUIDE_RENAMES.get(name, name)
+
+
+def upstream_rel_from_local(local_rel: str) -> Optional[str]:
+    if local_rel.startswith(GUIDE_LOCAL):
+        name = local_rel[len(GUIDE_LOCAL):]
+        return GUIDE_UPSTREAM + REVERSE_GUIDE_RENAMES.get(name, name)
+    if local_rel.startswith("skills/"):
+        inner = local_rel[len("skills/"):]
+        top, _, rest = inner.partition("/")
+        up_top = REVERSE_SKILL_RENAMES.get(top, top)
+        return "skills/{}/{}".format(up_top, rest) if rest else "skills/" + up_top
+    return None
+
+
+def comparable_text(local_text: str, upstream_raw: str, callable_skills: Set[str]) -> Tuple[str, str]:
+    return strip_cursor_frontmatter(local_text), rewrite(upstream_raw, callable_skills)
+
+
+def matches_rewritten_upstream(local_text: str, upstream_raw: str, callable_skills: Set[str]) -> bool:
+    ours, theirs = comparable_text(local_text, upstream_raw, callable_skills)
+    return ours == theirs
+
+
+def unified_body(theirs: str, ours: str) -> str:
+    diff = list(difflib.unified_diff(theirs.splitlines(), ours.splitlines(), lineterm="", n=1))
+    return "\n".join(diff[2:])
+
+
+def drift_markdown_paths(dstack_root: Path, config: SyncConfig) -> List[Path]:
+    skills_root = dstack_root / "skills"
+    owned_local = {SKILL_RENAMES.get(name, name) for name in config.owned} | set(config.owned)
+    skip_skills = owned_local | config.excluded_skills | DSTACK_ONLY_SKILLS
+    paths: List[Path] = []
+    for skill in sorted(path for path in skills_root.iterdir() if path.is_dir()):
+        if skill.name in skip_skills:
+            continue
+        for path in sorted(skill.rglob("*.md")):
+            if any(part in DRIFT_SKIP_PARTS for part in path.relative_to(skill).parts):
+                continue
+            paths.append(path)
+    return paths
 
 
 def parse_sync(text: str) -> SyncConfig:
@@ -248,6 +423,7 @@ def mention_pattern(skills: Iterable[str], playbooks: Iterable[str]) -> Optional
         alternatives += [
             r"playbooks/{}\.md".format(re.escape(stem)),
             r"\*\*{}\.?\*\*".format(re.escape(stem.replace("-", " "))),
+            r"\*\*{}\.?\*\*".format(re.escape(stem)),
         ]
     return re.compile("|".join(alternatives), re.I) if alternatives else None
 
@@ -284,6 +460,125 @@ def run_git(*args: str, cwd: Optional[Path] = None) -> subprocess.CompletedProce
 def default_cache_dir() -> Path:
     base = os.environ.get("XDG_CACHE_HOME") or str(Path.home() / ".cache")
     return Path(base) / "dstack" / "pstack-sync"
+
+
+def resolve_decision_pair(path: str) -> Tuple[str, str]:
+    """Return (local relative path, upstream relative path) for a needs-decision item."""
+    parts = decision_paths(path)
+    left, right = parts[0], parts[-1]
+    if " <- " in path:
+        return left, right
+    if left.startswith(GUIDE_UPSTREAM):
+        return local_guide_rel(left), left
+    if left.startswith("skills/"):
+        top = left[len("skills/"):].split("/", 1)[0]
+        if top in SKILL_RENAMES:
+            return local_skill_rel(left), left
+        return left, upstream_rel_from_local(left) or left
+    return left, right
+
+
+def file_matches_target(
+    path: str,
+    upstream: "Upstream",
+    target: str,
+    dstack_root: Path,
+    kept_skills: Set[str],
+) -> bool:
+    local_rel, up_rel = resolve_decision_pair(path)
+    local = dstack_root / local_rel
+    if not local.is_file():
+        return False
+    raw = upstream.show(target, up_rel)
+    if raw is None:
+        return False
+    return matches_rewritten_upstream(local.read_text(encoding="utf-8"), raw, kept_skills)
+
+
+def pending_unsettled(
+    report: Report,
+    sync_text: str,
+    upstream: "Upstream",
+    target: str,
+    dstack_root: Path,
+    kept_skills: Set[str],
+) -> List[str]:
+    tokens = listed_tokens(sync_text)
+    unsettled: List[str] = []
+    for path, _reason in report.decisions:
+        if is_listed(path, tokens) or file_matches_target(path, upstream, target, dstack_root, kept_skills):
+            continue
+        unsettled.append(path)
+    return unsettled
+
+
+def merge_kept(
+    status: str,
+    path: str,
+    local: Path,
+    local_rel: str,
+    report: Report,
+    upstream: "Upstream",
+    pinned: str,
+    target: str,
+    kept_skills: Set[str],
+    names_excluded: Optional[Pattern[str]],
+    dry_run: bool,
+) -> None:
+    report_path = "{} <- {}".format(local_rel, path) if local_rel != path else local_rel
+    try:
+        base_raw = upstream.show(pinned, path) if status != "A" else ""
+        theirs_raw = upstream.show(target, path)
+    except UnicodeDecodeError:
+        report.decisions.append((report_path, "binary file changed"))
+        return
+    if base_raw is None or theirs_raw is None:
+        report.decisions.append((report_path, "could not read upstream file"))
+        return
+    base = rewrite(base_raw, kept_skills)
+    theirs = rewrite(theirs_raw, kept_skills)
+    if base == theirs:
+        report.skipped.append((report_path, "only mechanically rewritten text changed"))
+        return
+    if local.is_file():
+        ours = local.read_text(encoding="utf-8")
+    elif status == "A":
+        ours = ""
+    else:
+        report.decisions.append((report_path, "dstack has no copy of this upstream file"))
+        return
+    ours_body, ours_frontmatter = take_cursor_frontmatter(ours)
+    merged, conflict = merge(ours_body, base, theirs)
+    merged = restore_frontmatter(merged, ours_frontmatter)
+    if not conflict and merged == ours:
+        report.skipped.append((report_path, "already in dstack"))
+        return
+
+    removed, added = line_changes(base, theirs)
+    reasons: List[str] = []
+    if conflict:
+        reasons.append("lands in or next to lines dstack changed")
+    if any(pattern.search(line) for pattern in HOST_PATTERNS for line in removed + added):
+        reasons.append("host-specific tool, path, or name")
+    new_keys = (frontmatter_keys(theirs) - frontmatter_keys(base)) - PORTABLE_FRONTMATTER
+    if new_keys:
+        reasons.append("new frontmatter key(s): " + ", ".join(sorted(new_keys)))
+    if any(SPAWN_CONFIG.search(line) for line in removed + added):
+        reasons.append("spawn, model, effort, or config wording")
+    if names_excluded and any(names_excluded.search(line) for line in added):
+        reasons.append("names an excluded skill or playbook")
+    if any(AUDIT.LEGACY_SKILL_DIRECTIVE.search(line) and "Call the Skill tool with" not in line for line in added):
+        reasons.append("skill call not in the exact Skill-tool phrase")
+    if not conflict and merged.count(CONFIG_CALL) < ours.count(CONFIG_CALL):
+        reasons.append("drops the dstack-config call line")
+    if reasons:
+        report.decide(report_path, "; ".join(reasons), upstream_hunks(base, theirs),
+                      clashing_lines(merged) if conflict else ("", "", ""))
+        return
+    if not dry_run:
+        local.parent.mkdir(parents=True, exist_ok=True)
+        local.write_text(merged, encoding="utf-8")
+    report.applied.append((report_path, "added" if status == "A" else "merged"))
 
 
 class Upstream:
@@ -384,6 +679,24 @@ def sync(
     outside: List[str] = []
 
     for status, path in upstream.changes(pinned, target):
+        if path.startswith(GUIDE_UPSTREAM):
+            name = path[len(GUIDE_UPSTREAM):]
+            local_rel = local_guide_rel(path)
+            local = dstack_root / local_rel
+            report_path = "{} <- {}".format(local_rel, path)
+            nested = "/" in name
+            if status == "A":
+                report.decisions.append((path if nested else report_path, NEW_FILE_REASON))
+                continue
+            if nested or not local.is_file():
+                report.skipped.append((path, "not a kept guide page"))
+                continue
+            if status == "D":
+                report.decisions.append((path, "kept guide page renamed or deleted upstream"))
+                continue
+            merge_kept(status, path, local, local_rel, report, upstream, pinned, target,
+                       kept_skills, names_excluded, dry_run)
+            continue
         if not path.startswith("skills/"):
             outside.append(path)
             continue
@@ -420,77 +733,86 @@ def sync(
             what = "kept skill" if rest == "SKILL.md" else "kept playbook" if playbook else "kept file"
             report.decisions.append((path, "{} renamed or deleted upstream".format(what)))
             continue
-        if status == "A" and playbook is not None:
-            report.decisions.append((path, "new pstack playbook; not imported"))
-            continue
         report_path = "{} <- {}".format(local_rel, path) if local_rel != path else local_rel
-        try:
-            base_raw = upstream.show(pinned, path) if status != "A" else ""
-            theirs_raw = upstream.show(target, path)
-        except UnicodeDecodeError:
-            report.decisions.append((report_path, "binary file changed"))
+        if status == "A":
+            if playbook is not None:
+                report.decisions.append((path, "new pstack playbook; not imported"))
+            else:
+                report.decisions.append((report_path, NEW_FILE_REASON))
             continue
-        if base_raw is None or theirs_raw is None:
-            report.decisions.append((report_path, "could not read upstream file"))
-            continue
-        base = rewrite(base_raw, kept_skills)
-        theirs = rewrite(theirs_raw, kept_skills)
-        if base == theirs:
-            report.skipped.append((report_path, "only mechanically rewritten text changed"))
-            continue
-        if local.is_file():
-            ours = local.read_text(encoding="utf-8")
-        elif status == "A":
-            ours = ""
-        else:
-            report.decisions.append((report_path, "dstack has no copy of this upstream file"))
-            continue
-        ours_body, ours_frontmatter = take_cursor_frontmatter(ours)
-        merged, conflict = merge(ours_body, base, theirs)
-        merged = restore_frontmatter(merged, ours_frontmatter)
-        if not conflict and merged == ours:
-            report.skipped.append((report_path, "already in dstack"))
-            continue
-
-        removed, added = line_changes(base, theirs)
-        reasons: List[str] = []
-        if conflict:
-            reasons.append("lands in or next to lines dstack changed")
-        if any(pattern.search(line) for pattern in HOST_PATTERNS for line in removed + added):
-            reasons.append("host-specific tool, path, or name")
-        new_keys = (frontmatter_keys(theirs) - frontmatter_keys(base)) - PORTABLE_FRONTMATTER
-        if new_keys:
-            reasons.append("new frontmatter key(s): " + ", ".join(sorted(new_keys)))
-        if any(SPAWN_CONFIG.search(line) for line in removed + added):
-            reasons.append("spawn, model, effort, or config wording")
-        if names_excluded and any(names_excluded.search(line) for line in added):
-            reasons.append("names an excluded skill or playbook")
-        if any(AUDIT.LEGACY_SKILL_DIRECTIVE.search(line) and "Call the Skill tool with" not in line for line in added):
-            reasons.append("skill call not in the exact Skill-tool phrase")
-        if not conflict and merged.count(CONFIG_CALL) < ours.count(CONFIG_CALL):
-            reasons.append("drops the dstack-config call line")
-        if reasons:
-            report.decide(report_path, "; ".join(reasons), upstream_hunks(base, theirs),
-                          clashing_lines(merged) if conflict else ("", "", ""))
-            continue
-        if not dry_run:
-            local.parent.mkdir(parents=True, exist_ok=True)
-            local.write_text(merged, encoding="utf-8")
-        report.applied.append((report_path, "added" if status == "A" else "merged"))
+        merge_kept(status, path, local, local_rel, report, upstream, pinned, target,
+                   kept_skills, names_excluded, dry_run)
 
     if outside:
         report.skipped.append(("{} path(s) outside skills/".format(len(outside)), "plugin packaging and docs"))
 
+    unsettled = pending_unsettled(report, sync_text, upstream, target, dstack_root, kept_skills)
     if pinned == target:
         report.pin_note = "Pin unchanged: target is the pinned commit."
     elif dry_run:
         report.pin_note = "Pin unchanged: dry run. Write run: python3 scripts/pstack_sync.py {}".format(target)
     elif report.decisions and not decided:
         report.pin_note = "Pin unchanged: {} decision(s) pending.".format(len(report.decisions))
+    elif decided and unsettled:
+        report.refused_pin = True
+        report.pin_note = (
+            "Pin unchanged: --decided refused; {} pending file(s) neither match upstream "
+            "at the target nor are listed under Not imported / Kept dstack wording.".format(len(unsettled))
+        )
+        for path in unsettled:
+            report.details.setdefault(path, [])
+            if not any(item[0] == "unsettled" for item in report.details[path]):
+                report.details[path].append((
+                    "unsettled", "text",
+                    "Neither matches rewritten upstream at the target nor is listed under "
+                    "Not imported / Kept dstack wording / Allowed drift.",
+                ))
     else:
         line = "Pinned: pstack {}, commit `{}`.".format(report.target_version, target)
         sync_path.write_text(PIN.sub(line, sync_text, count=1), encoding="utf-8")
         report.pin_note = "Pin moved to {} (`{}`).".format(report.target_version, target[:7])
+    return report
+
+
+def drift(
+    dstack_root: Path = ROOT,
+    pstack_dir: Optional[Path] = None,
+    repo_url: Optional[str] = None,
+    cache_dir: Optional[Path] = None,
+) -> DriftReport:
+    sync_path = dstack_root / SYNC_FILE
+    sync_text = sync_path.read_text(encoding="utf-8")
+    config = parse_sync(sync_text)
+    if pstack_dir is not None:
+        upstream = Upstream.local(pstack_dir)
+    else:
+        url = repo_url or "https://github.com/{}.git".format(config.repository)
+        upstream = Upstream.fetched(url, config.subpath, cache_dir or default_cache_dir())
+    pinned = upstream.commit(config.commit)
+    report = DriftReport(pinned, config.version)
+    kept_skills = {path.name for path in (dstack_root / "skills").iterdir() if path.is_dir()}
+    tokens = listed_tokens(sync_text)
+    for path in drift_markdown_paths(dstack_root, config):
+        local_rel = path.relative_to(dstack_root).as_posix()
+        up_rel = upstream_rel_from_local(local_rel)
+        raw = upstream.show(pinned, up_rel) if up_rel else None
+        if raw is None:
+            report.dstack_only.append(local_rel)
+            if not is_listed(local_rel, tokens):
+                report.unexplained.append((
+                    local_rel,
+                    "no upstream counterpart at the pin; list it under Allowed drift or Owned by dstack",
+                ))
+            continue
+        report.compared += 1
+        ours, theirs = comparable_text(path.read_text(encoding="utf-8"), raw, kept_skills)
+        if ours == theirs:
+            continue
+        body = unified_body(theirs, ours)
+        if is_listed(local_rel, tokens):
+            report.listed.append((local_rel, "listed in PSTACK_SYNC.md"))
+        else:
+            report.unexplained.append((local_rel, body))
     return report
 
 
@@ -500,12 +822,22 @@ def main(argv: Sequence[str] = sys.argv[1:]) -> int:
                         help="full target commit; a dry run also takes a branch or tag (default: main)")
     parser.add_argument("--pstack-dir", type=Path, help="offline only: read a local pstack folder instead of fetching")
     parser.add_argument("--dry-run", action="store_true", help="write nothing and leave the pin")
-    parser.add_argument("--decided", action="store_true", help="every pending decision was settled by hand; move the pin")
+    parser.add_argument("--decided", action="store_true",
+                        help="pending decisions were settled by hand; still refuses the pin unless each pending file matches upstream or is listed")
+    parser.add_argument("--drift", action="store_true",
+                        help="compare kept files to rewritten upstream at the pin; write nothing")
     parser.add_argument("--report", type=Path, help="also write the report to this file")
     parser.add_argument("--cache-dir", type=Path, help="fetch cache (default: ~/.cache/dstack/pstack-sync)")
     parser.add_argument("--repo-url", help=argparse.SUPPRESS)
     parser.add_argument("--dstack-root", type=Path, default=ROOT, help=argparse.SUPPRESS)
     args = parser.parse_args(list(argv))
+    if args.drift:
+        report = drift(args.dstack_root, pstack_dir=args.pstack_dir, repo_url=args.repo_url, cache_dir=args.cache_dir)
+        text = report.render()
+        sys.stdout.write(text)
+        if args.report:
+            args.report.write_text(text, encoding="utf-8")
+        return 1 if report.unexplained else 0
     if args.target is None and not args.dry_run:
         parser.error("a write run needs an explicit full target commit; run --dry-run first and pass the Target it prints")
     report = sync(
@@ -516,7 +848,7 @@ def main(argv: Sequence[str] = sys.argv[1:]) -> int:
     sys.stdout.write(text)
     if args.report:
         args.report.write_text(text, encoding="utf-8")
-    return 1 if report.decisions and not args.decided else 0
+    return 1 if (report.decisions and not args.decided) or report.refused_pin else 0
 
 
 if __name__ == "__main__":
