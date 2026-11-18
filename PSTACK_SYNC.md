@@ -48,6 +48,17 @@ These pstack items stay out of dstack. Reasons are one line each.
 - Origin, watch-pr, and Bugbot text in Opening-a-PR / Babysit. dstack keeps gh/glab forge-neutral overlays and explicit-only Opening a PR.
 - Cursor skill-install paths in reflect (`.cursor/skills/`, `plugins/cache/`). dstack keeps `~/.agents/skills/`.
 
+## Kept dstack wording
+
+These hand edits stay on every absorb. Reasons are one line each.
+
+- `blast-radius` and `why` say "pull request or merge request" where pstack says "PR", because dstack supports GitHub and GitLab.
+- `recall` step 4 says "Don't use a restricted read-only mode; where a host strips MCP access in that mode it disables MCP-backed investigators" where pstack says "in agent mode because readonly strips MCP access", because agent mode is Cursor-only.
+
+## Guide pages
+
+`dstack-help/references/guide/` copies the pstack `docs/guide/` pages of the same name by hand, with `02-poteto-mode.md` as `02-dstack-mode.md`. `06-supported-scope.md` exists only in dstack. The script does not read `docs/`, so port changes to these pages by hand on each absorb, with the mechanical rewrites applied.
+
 ## Mechanical rewrites
 
 The script applies these on every absorb, to the pinned and target pstack text alike:

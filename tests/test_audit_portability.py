@@ -196,9 +196,18 @@ class PortabilityAuditTests(unittest.TestCase):
             "principle-" + AUDIT.kebab_from_title(principles["principle-sequence-verifiable-units"]),
         )
         self.assertEqual("Investigation", playbooks["investigation"])
-        self.assertEqual("Authoring or modifying a skill", playbooks["authoring-a-skill"])
-        self.assertNotEqual("authoring-a-skill", AUDIT.kebab_from_title(playbooks["authoring-a-skill"]))
+        self.assertEqual("Authoring a skill", playbooks["authoring-a-skill"])
         self.assertEqual(AUDIT.REQUIRED_DSTACK_PLAYBOOKS, set(playbooks))
+
+    def test_comma_list_playbook_index_resolves_each_title(self):
+        body = "## Playbooks\n\nMatch the task to a playbook.\n\nBug fix, Ghost Playbook, Shipping.\n"
+        messages = [finding.message for finding in AUDIT.check_mode_index(body, set(), {"bug-fix"}, "mode.md")]
+        self.assertIn(
+            "playbook title 'Ghost Playbook' does not resolve to an existing playbook (ghost-playbook)",
+            messages,
+        )
+        self.assertIn("playbook title 'Shipping' resolves to excluded playbook 'shipping'", messages)
+        self.assertFalse(any("'Bug fix'" in message for message in messages))
 
     def test_unresolved_mode_title_fails(self):
         body = (
