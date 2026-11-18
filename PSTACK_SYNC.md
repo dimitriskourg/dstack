@@ -54,6 +54,7 @@ These hand edits stay on every absorb. Reasons are one line each.
 
 - `blast-radius` and `why` say "pull request or merge request" where pstack says "PR", because dstack supports GitHub and GitLab.
 - `recall` step 4 says "Don't use a restricted read-only mode; where a host strips MCP access in that mode it disables MCP-backed investigators" where pstack says "in agent mode because readonly strips MCP access", because agent mode is Cursor-only.
+- `dstack-mode/worker.md` adds one line after the stop rule: "Also stop for any external write the operator has not authorized: a push, a PR or MR, a ticket update, or a comment." dstack's Autonomy section requires explicit authorization for external writes, and pstack's stop rule does not cover them.
 
 ## Guide pages
 
