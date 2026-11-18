@@ -32,6 +32,7 @@ Upstream: repository `cursor/plugins`, subpath `pstack/`.
 ## Excluded playbooks
 
 - `eval`: out.
+- `autopilot-full`: out.
 
 ## Excluded files
 
@@ -40,6 +41,14 @@ Upstream: repository `cursor/plugins`, subpath `pstack/`.
 ## Owned by dstack
 
 - `setup-pstack`: replaced.
+
+## Not imported
+
+## Kept dstack wording
+
+## Allowed drift
+
+- `skills/dstack-help/references/guide/06-supported-scope.md`
 """
 
 
@@ -58,6 +67,9 @@ class PstackSyncTests(unittest.TestCase):
             "pstack/skills/poteto-mode/playbooks/eval.md": "# Eval\n\n" + BODY,
             "pstack/skills/figure-it-out/SKILL.md": "---\nname: figure-it-out\ndescription: x\n---\n\n" + BODY,
             "pstack/skills/setup-pstack/SKILL.md": "---\nname: setup-pstack\ndescription: x\n---\n\n" + BODY,
+            "pstack/skills/poteto-help/SKILL.md": "---\nname: poteto-help\ndescription: Help.\n---\n\nHelp.\n",
+            "pstack/docs/guide/01-setup.md": "# Setup\n\n" + BODY,
+            "pstack/docs/guide/02-poteto-mode.md": "# Mode\n\n" + BODY,
         })
         self.cache = root / "cache"
         self.git("init", "-q", "-b", "main")
@@ -69,6 +81,10 @@ class PstackSyncTests(unittest.TestCase):
             "skills/dstack-mode/SKILL.md": SYNC.rewrite_names(MODE),
             "skills/dstack-mode/playbooks/bug-fix.md": "# Bug fix\n\n" + BODY,
             "skills/setup-dstack/SKILL.md": "---\nname: setup-dstack\ndescription: x\n---\n\nOwn text.\n",
+            "skills/dstack-help/SKILL.md": "---\nname: dstack-help\ndescription: Help.\n---\n\nHelp.\n",
+            "skills/dstack-help/references/guide/01-setup.md": "# Setup\n\n" + BODY,
+            "skills/dstack-help/references/guide/02-dstack-mode.md": "# Mode\n\n" + BODY,
+            "skills/dstack-help/references/guide/06-supported-scope.md": "# Scope\n",
         }
         for path, text in self.local.items():
             target = self.dstack / path
@@ -170,15 +186,38 @@ class PstackSyncTests(unittest.TestCase):
         text = self.run_sync(target, dry_run=True).render()
         self.assertIn("  ````diff\n", text)
 
-    def test_decided_moves_the_pin_without_writing(self):
+    def test_decided_refuses_the_pin_until_listed_or_matched(self):
         target = self.upstream_change({"pstack/skills/how/SKILL.md": HOW.replace("Line 3.", "Line three.")})
         report = self.run_sync(target, decided=True)
         self.assertEqual(1, len(report.decisions))
-        text = report.render()
-        self.assertIn("## Decided by hand\n\n- `skills/how/SKILL.md`", text)
-        self.assertIn("1 decided by hand", text)
-        self.assertNotIn("Needs decision", text)
+        self.assertTrue(report.refused_pin)
+        self.assertIn("--decided refused", report.pin_note)
         self.assertEqual(self.local["skills/how/SKILL.md"], self.read("skills/how/SKILL.md"))
+        self.assertEqual(self.pinned, self.pin())
+        self.assertEqual(1, self.main(target, "--decided"))
+
+    def test_decided_moves_the_pin_when_the_file_is_listed(self):
+        target = self.upstream_change({"pstack/skills/how/SKILL.md": HOW.replace("Line 3.", "Line three.")})
+        sync_text = self.read("PSTACK_SYNC.md")
+        (self.dstack / "PSTACK_SYNC.md").write_text(
+            sync_text.replace("## Kept dstack wording\n", "## Kept dstack wording\n\n- `skills/how/SKILL.md`: keep the dstack edit.\n"),
+            encoding="utf-8",
+        )
+        report = self.run_sync(target, decided=True)
+        self.assertEqual(["skills/how/SKILL.md"], self.decision_paths(report))
+        self.assertFalse(report.refused_pin)
+        self.assertEqual(self.local["skills/how/SKILL.md"], self.read("skills/how/SKILL.md"))
+        self.assertEqual(target, self.pin())
+        self.assertIn("## Decided by hand\n\n- `skills/how/SKILL.md`", report.render())
+
+    def test_decided_moves_the_pin_when_a_new_file_was_copied_by_hand(self):
+        target = self.upstream_change({"pstack/skills/how/references/new.md": "new file\n"})
+        dest = self.dstack / "skills/how/references/new.md"
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text("new file\n", encoding="utf-8")
+        report = self.run_sync(target, decided=True)
+        self.assertTrue(any("not copied automatically" in reason for _, reason in report.decisions))
+        self.assertFalse(report.refused_pin)
         self.assertEqual(target, self.pin())
 
     def test_new_skill_and_new_playbook_are_not_imported(self):
@@ -329,6 +368,78 @@ class PstackSyncTests(unittest.TestCase):
         self.assertIn("shipping", config.excluded_playbooks)
         self.assertEqual({"setup-pstack"}, config.owned)
         self.assertEqual(("cursor/plugins", "pstack/"), (config.repository, config.subpath))
+        self.assertIn("skills/dstack-mode/worker.md", (SYNC.ROOT / "PSTACK_SYNC.md").read_text(encoding="utf-8"))
+
+    def test_new_file_in_a_kept_skill_is_not_copied(self):
+        target = self.upstream_change({"pstack/skills/how/references/new.md": "new file\n"})
+        report = self.run_sync(target)
+        self.assertTrue(any("not copied automatically" in reason for _, reason in report.decisions))
+        self.assertTrue(any("no unauthorized push" in reason for _, reason in report.decisions))
+        self.assertFalse((self.dstack / "skills/how/references/new.md").exists())
+        self.assertEqual(self.pinned, self.pin())
+
+    def test_guide_page_change_applies_like_a_kept_skill(self):
+        target = self.upstream_change({
+            "pstack/docs/guide/01-setup.md": "# Setup\n\n" + BODY.replace("Line 9.", "Line nine."),
+        })
+        report = self.run_sync(target)
+        self.assertEqual([], report.decisions)
+        self.assertEqual(
+            ["skills/dstack-help/references/guide/01-setup.md <- docs/guide/01-setup.md"],
+            [path for path, _ in report.applied],
+        )
+        self.assertIn("Line nine.", self.read("skills/dstack-help/references/guide/01-setup.md"))
+        self.assertEqual(target, self.pin())
+
+    def test_new_guide_page_is_not_copied(self):
+        target = self.upstream_change({"pstack/docs/guide/11-new.md": "# New\n"})
+        report = self.run_sync(target)
+        self.assertTrue(any("not copied automatically" in reason for _, reason in report.decisions))
+        self.assertFalse((self.dstack / "skills/dstack-help/references/guide/11-new.md").exists())
+        self.assertEqual(self.pinned, self.pin())
+
+    def test_hyphenated_excluded_playbook_name_needs_decision(self):
+        target = self.upstream_change({
+            "pstack/skills/how/SKILL.md": HOW.replace("Line 9.", "See **Autopilot-full**."),
+        })
+        report = self.run_sync(target)
+        self.assertIn("names an excluded skill or playbook", report.decisions[0][1])
+
+    def run_drift(self):
+        return SYNC.drift(self.dstack, pstack_dir=self.upstream)
+
+    def test_drift_fails_on_an_unlisted_difference(self):
+        report = self.run_drift()
+        unexplained = [path for path, _ in report.unexplained]
+        self.assertIn("skills/how/SKILL.md", unexplained)
+        self.assertEqual(1, self.main("--drift"))
+
+    def test_drift_passes_when_the_difference_is_listed(self):
+        sync_text = self.read("PSTACK_SYNC.md")
+        (self.dstack / "PSTACK_SYNC.md").write_text(
+            sync_text.replace(
+                "## Allowed drift\n",
+                "## Allowed drift\n\n- `skills/how/SKILL.md`\n",
+            ),
+            encoding="utf-8",
+        )
+        report = self.run_drift()
+        self.assertEqual([], report.unexplained)
+        self.assertIn("skills/how/SKILL.md", [path for path, _ in report.listed])
+        self.assertEqual(0, self.main("--drift"))
+
+    def test_drift_maps_guide_pages(self):
+        (self.dstack / "skills/dstack-help/references/guide/01-setup.md").write_text(
+            "# Setup\n\nLocal overlay.\n", encoding="utf-8")
+        report = self.run_drift()
+        unexplained = [path for path, _ in report.unexplained]
+        self.assertIn("skills/dstack-help/references/guide/01-setup.md", unexplained)
+
+    def test_repository_drift_is_listed(self):
+        report = SYNC.drift(SYNC.ROOT)
+        self.assertEqual([], report.unexplained, report.render())
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(0, SYNC.main(["--drift"]))
 
 
 if __name__ == "__main__":

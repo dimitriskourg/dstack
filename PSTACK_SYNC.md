@@ -58,7 +58,63 @@ These hand edits stay on every absorb. Reasons are one line each.
 
 ## Guide pages
 
-`dstack-help/references/guide/` copies the pstack `docs/guide/` pages of the same name by hand, with `02-poteto-mode.md` as `02-dstack-mode.md`. `06-supported-scope.md` exists only in dstack. The script does not read `docs/`, so port changes to these pages by hand on each absorb, with the mechanical rewrites applied.
+`scripts/pstack_sync.py` maps pstack `docs/guide/` onto `dstack-help/references/guide/`, with `02-poteto-mode.md` as `02-dstack-mode.md`, and treats those pages like kept skills. `06-supported-scope.md` exists only in dstack. Pages dstack does not keep (03, 04, 05, 07, README, images) stay out; a brand-new upstream file is never copied.
+
+## Allowed drift
+
+Kept files that may differ from rewritten upstream at the pin. `--drift` and `--decided` treat backtick paths here, and in Not imported / Kept dstack wording / Owned by dstack, as listed. Any other kept skill, principle, playbook, or guide-page difference fails.
+
+dstack-help (keep-set cheat sheet, excluded playbooks, bundled guide):
+
+- `skills/dstack-help/SKILL.md`
+- `skills/dstack-help/references/prompting.md`
+- `skills/dstack-help/references/recipes.md`
+- `skills/dstack-help/references/guide/01-setup.md`
+- `skills/dstack-help/references/guide/02-dstack-mode.md`
+- `skills/dstack-help/references/guide/06-verify-and-ship.md`
+- `skills/dstack-help/references/guide/08-principles.md`
+- `skills/dstack-help/references/guide/09-make-it-yours.md`
+- `skills/dstack-help/references/guide/10-recipes-and-pitfalls.md`
+- `skills/dstack-help/references/guide/06-supported-scope.md`
+
+Four profiles, `dstack-config`, and native subagent spawn (not Opus-first / default-model routing):
+
+- `skills/dstack-mode/SKILL.md`
+- `skills/arena/SKILL.md`
+- `skills/how/SKILL.md`
+- `skills/interrogate/SKILL.md`
+- `skills/swarm/SKILL.md`
+- `skills/recall/SKILL.md`
+
+Provider-neutral Skill-tool phrase, install path, and forge wording:
+
+- `skills/architect/SKILL.md`
+- `skills/blast-radius/SKILL.md`
+- `skills/create-formal-verification-skill/SKILL.md`
+- `skills/create-verification-skill/SKILL.md`
+- `skills/ketchup/SKILL.md`
+- `skills/maintain-verification-skill/SKILL.md`
+- `skills/no-comments/SKILL.md`
+- `skills/principle-explain-the-number/SKILL.md`
+- `skills/reflect/SKILL.md`
+- `skills/statechart/SKILL.md`
+- `skills/technical-writing/SKILL.md`
+- `skills/why/SKILL.md`
+
+`worker.md` Autonomy overlay and playbook overlays (Skill-tool phrase, four profiles, gh/glab, explicit-only Opening a PR):
+
+- `skills/dstack-mode/worker.md`
+- `skills/dstack-mode/playbooks/authoring-a-skill.md`
+- `skills/dstack-mode/playbooks/babysit.md`
+- `skills/dstack-mode/playbooks/bug-fix.md`
+- `skills/dstack-mode/playbooks/feature.md`
+- `skills/dstack-mode/playbooks/investigation.md`
+- `skills/dstack-mode/playbooks/opening-a-pr.md`
+- `skills/dstack-mode/playbooks/pause-safely.md`
+- `skills/dstack-mode/playbooks/prototype.md`
+- `skills/dstack-mode/playbooks/refactoring.md`
+- `skills/dstack-mode/playbooks/session-pickup.md`
+- `skills/dstack-mode/references/automated-review-triage.md`
 
 ## Mechanical rewrites
 
@@ -72,25 +128,30 @@ The script applies these on every absorb, to the pinned and target pstack text a
 
 ## Run it (weekly)
 
-From the repository root, on a clean working tree:
+From the repository root, on a clean working tree. Copy upstream wording verbatim on kept files. Record every skip or kept-dstack choice in the sync PR description and in this file (never only in private notes). Paste `--drift` output into every sync PR.
 
 ```bash
+python3 scripts/pstack_sync.py --drift             # kept files vs rewritten upstream at the pin
 python3 scripts/pstack_sync.py --dry-run           # report only; target defaults to origin main
 python3 scripts/pstack_sync.py <commit>            # write clean changes; moves the pin on exit 0
-python3 scripts/pstack_sync.py <commit> --decided  # after hand fixes; moves the pin to <commit>
+python3 scripts/pstack_sync.py <commit> --decided  # after hand fixes; moves the pin only if settled
 ```
 
 A write run takes only a full commit: the Target the dry run printed. A dry run also takes a branch or tag. `--pstack-dir <folder>` reads a local pstack folder instead of fetching, for offline use only.
 
-Exit 0: run the `AGENTS.md` gates and commit. Exit 1: the report shows, for each needs-decision item, pstack's change and the dstack lines it clashes with. Hand it to an agent to propose a fix per item, get the owner's approval, apply the approved fixes, then rerun with the same commit and `--decided`; those items are then listed as decided by hand.
+`--decided` does not move the pin unless every pending file either matches rewritten upstream at the target commit or is listed under Not imported / Kept dstack wording / Allowed drift.
+
+Exit 0: run the `AGENTS.md` gates and commit. Exit 1: the report shows, for each needs-decision item, pstack's change and the dstack lines it clashes with, or `--drift` names an unlisted difference, or `--decided` refused the pin. Hand needs-decision items to an agent to propose a fix per item, get the owner's approval, apply the approved fixes, list each skip or kept-dstack choice here, then rerun with the same commit and `--decided`.
+
+Before marking a sync PR ready, a separate reviewer (a strong model, not the absorb agent) reviews it using the pasted drift output. Open sync PRs as draft until that review lands. The owner decides ready and merge.
 
 ## Stop and ask
 
-- A new pstack skill or playbook.
+- A new pstack skill, playbook, guide page, or any other new upstream file. Never auto-copy. Check dstack rules: no unauthorized push, PR, ticket, or comment (including a `worker.md` Autonomy overlay when the file is a subagent brief).
 - A change to an excluded skill or playbook that names a kept one, or a kept file that starts naming an excluded one.
 - Host-specific tools, paths, or frontmatter.
 - Spawn, model, effort, or config wording.
-- A kept skill, playbook, or file renamed or deleted upstream.
+- A kept skill, playbook, guide page, or file renamed or deleted upstream.
 - A change in or next to lines dstack already changed.
 - Any change to a skill owned by dstack.
 

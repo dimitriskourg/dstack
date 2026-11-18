@@ -1,0 +1,25 @@
+name: Static gates
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Portability audit
+        run: python3 scripts/audit_portability.py
+      - name: Unit tests
+        run: python3 -m unittest discover -s tests -v
+      - name: Config schema
+        run: python3 -m json.tool schemas/config.schema.json >/dev/null
+      - name: Whitespace
+        run: git diff --check
+      - name: pstack drift
+        run: python3 scripts/pstack_sync.py --drift

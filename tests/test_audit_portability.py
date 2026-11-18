@@ -209,6 +209,16 @@ class PortabilityAuditTests(unittest.TestCase):
         self.assertIn("playbook title 'Shipping' resolves to excluded playbook 'shipping'", messages)
         self.assertFalse(any("'Bug fix'" in message for message in messages))
 
+    def test_comma_list_playbook_index_keeps_hyphenated_titles(self):
+        body = "## Playbooks\n\nBug fix, Autopilot-full, Autopilot-stack.\n"
+        entries = {stem: title for title, stem, _ in AUDIT.resolve_playbook_index(body)}
+        self.assertEqual("Autopilot-full", entries["autopilot-full"])
+        self.assertEqual("Autopilot-stack", entries["autopilot-stack"])
+        messages = [finding.message for finding in AUDIT.check_mode_index(
+            body, set(), {"bug-fix"}, "mode.md")]
+        self.assertIn("playbook title 'Autopilot-full' resolves to excluded playbook 'autopilot-full'", messages)
+        self.assertIn("playbook title 'Autopilot-stack' resolves to excluded playbook 'autopilot-stack'", messages)
+
     def test_unresolved_mode_title_fails(self):
         body = (
             "## Principles\n\n"
