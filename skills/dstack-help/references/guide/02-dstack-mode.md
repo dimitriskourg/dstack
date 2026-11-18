@@ -29,7 +29,7 @@ You don't write a spec. You say what's wrong or what you want, plus anything you
 /dstack-mode users get two notifications after a retry. repro first, then fix and verify.
 ```
 
-That's a Bug fix prompt. "repro first" is a real constraint, not politeness, and the playbook honors it. Watch the todo list fill with the Bug fix steps. A skipped step stays visible with `skip: <reason>`.
+That's a Bug fix prompt. "repro first" is a real constraint, not politeness, and the playbook honors it. Watch the todo list fill with the Bug fix steps.
 
 ## What goes in a prompt
 
@@ -66,7 +66,7 @@ When you're unsure whether a task is aimed right, put [`/sharpen`](../../../shar
 /sharpen write a migration guide for the v2 config format.
 ```
 
-Before it starts, the agent asks how a top expert would do the task, what you're really after, and whether the ask is over- or underspecified. It drops constraints that don't serve the goal as readily as it adds ones that do, leaves your choices open, and keeps one outside check that the result is right. Then it does the work.
+The agent says what a top professional would do that you didn't ask for, the rawest material they would start from, the methods and tools they would use, and what other than you or the agent would show the result is right. Then it rewrites your prompt to ask for exactly that, deeper but not bigger. The rewrite asks the agent to prototype any choice an experiment can settle and to recommend an option from what it observed, and it leaves product and preference choices to you. It doesn't do the task. Read the rewrite, then send it, for example with `/dstack-mode`.
 
 ## Follow up short
 
@@ -118,7 +118,7 @@ While the active local session can supervise the work, say what done means:
 
 Work you'll review later still has to match a playbook, often Feature. Keep a local decision log in the prompt if you want one. The [mode skill](../../../dstack-mode/SKILL.md#mode-lifetime) defines the active-session boundary.
 
-**Pitfall:** don't enumerate skills in your prompt ("use /how, then /architect, then /arena..."). The playbook already sequences them, and a hand-written sequence usually reorders or drops steps the playbook would have kept. Name a skill only when you want to override a specific choice.
+**Pitfall:** don't enumerate skills in your prompt ("use /architect, then /arena, then /interrogate..."). The playbook already sequences them, and a hand-written sequence usually reorders or drops steps the playbook would have kept. Name a skill only when you want to override a specific choice.
 
 Read [`dstack-mode`](../../../dstack-mode/SKILL.md) itself for the full routing rules.
 

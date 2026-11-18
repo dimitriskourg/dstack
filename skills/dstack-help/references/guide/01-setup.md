@@ -54,7 +54,7 @@ Pick something real but small, and describe it the way you'd describe it to a co
 /dstack-mode add a --json flag to this command. text output stays byte-identical. verify both.
 ```
 
-Watch the todo list. Its first items are the matched playbook's steps copied in, the Feature playbook for this prompt. If `/dstack-mode` skips a step, the step stays in the list with `skip: <reason>`, so you can see what it chose not to do.
+Watch the todo list. Its first items are the matched playbook's steps copied in, the Feature playbook for this prompt.
 
 From here you can type normal follow-ups. Mode lifetime depends on the active harness. Start each new task with `/dstack-mode`, and re-read it after a compaction that drops it from context. The [mode skill](../../../dstack-mode/SKILL.md) owns that contract.
 

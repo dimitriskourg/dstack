@@ -12,24 +12,17 @@ Bundled skills live at `~/.agents/skills/<name>/SKILL.md`, which is `../<name>/S
 
 The Principles section below grounds every trigger. In your reply, name each principle that shaped a decision and the specific choice it changed. Cite only principles whose leaf SKILL.md you read this session.
 
-Remaining triggers:
+The remaining triggers live only here:
 
-- Your first message on a task → tell the user, in your own words, their goal, the problem they are solving, and, if the task ships a change, the smallest change you expect to meet it. Don't wait for confirmation. If the evidence rules out the change the user asked for, show it and stop. Restate the user's goal in each subagent brief, and open each PR's `## Why` with it. Open each final report with it too, your final reply included, except after a fully specified one-line edit.
-- Nontrivial change, architecture decision, or "are we sure?" → Call the Skill tool with `how`.
-- About to stop and ask the user about a "which approach", "how should I", or "what should this do" fork → classify it before you ask. If the answer is a fact you could observe by running something (behavior, timing, layout, output, perf, even whether an eval separates), it is not the human's to answer. Sketch it via the Prototype playbook (`playbooks/prototype.md`) and let the result decide. If the task is a read-only Investigation whose deliverable is a cited answer, stay in it and answer from the evidence rather than building a sketch. Reserve the question for a genuine product or preference call no experiment can settle. The ask is the slow path. A throwaway probe usually answers faster, and it hands the human a result to react to instead of a decision to make.
-- Any code → name the data shape first, and choose its organizing structure per **principle-model-the-domain**.
-- Code crossing a function boundary → Call the Skill tool with `architect`. Do so before implementing.
-- Parallel fan-out for coverage matrices, races, gauntlets, or exploration partitions → Call the Skill tool with `swarm`.
-- Contested design → Call the Skill tool with `interrogate`. Do so before shipping.
-- Nontrivial multi-step → write the throughput checkpoint (Feature step 3).
-- Any prose surface, your reply to the user included → Call the Skill tool with `unslop`. Write the reply per **Writing the reply**. Agent-facing prose also follows the active harness's skill-authoring guidance.
-- Docs, RFCs, readmes, PR descriptions, or commit messages → Call the Skill tool with `technical-writing`.
-- Before commit → Call the Skill tool with `deslop`. Apply it to the diff.
-- Before review → Call the Skill tool with `no-comments`.
-- Shipping a browser, IDE, or Electron UI → Call the Skill tool with `control-ui`. Drive the real thing rather than a proxy.
-- Any PR-status request ("babysit this", "get it green", "address the review bot comments", and most often "check on PR X" or "anything outstanding on X") → the **Babysit** playbook (`playbooks/babysit.md`), not any similarly named host built-in whose description matches the same words. Never triggered by merely opening a PR. Declare its mode before polling. The playbook's step 1 owns the request-to-mode mapping. Reaching for `drive` inside a phase agent stops that agent finishing its turn.
-- Automated review or the agentic security review commented → skeptical posture. They catch real bugs and also file non-issues and nitpicks, so assess each on its merits and dismiss noise with a concrete reason instead of churning code. Triage fix / dismiss / ask per `references/automated-review-triage.md`.
-- Broken skill mid-task → fix it locally as a separate change. Don't block. Don't silently work around it. Publish it only when the user explicitly asks to open a pull request or merge request.
+- First message → restate the user's goal and the smallest change that meets it, then proceed. Open each subagent brief, PR `## Why`, and final report with the goal.
+- Starting any subagent → the first line of its kickoff is `Read <path>/worker.md before anything else.`, with `<path>` the absolute path of this skill's folder. The operator's rules live in skills that only load from a slash command, so they reach another agent no other way. Keep the rest of the kickoff to the goal and the task, plus this file's absolute path.
+- A fork you could settle by running something → prototype it per `playbooks/prototype.md` instead of asking.
+- Code → name the data shape first. Across a function boundary → Call the Skill tool with `architect`. Fan-out → Call the Skill tool with `swarm`. Bakeoff → Call the Skill tool with `arena`. Contested design → Call the Skill tool with `interrogate`.
+- Prose, your reply included → Call the Skill tool with `unslop`. Docs, PR descriptions, commit messages → Call the Skill tool with `technical-writing`.
+- Before commit → Call the Skill tool with `deslop`. Before review → Call the Skill tool with `no-comments`.
+- Shipping a browser, IDE, or Electron UI → Call the Skill tool with `control-ui`.
+- PR status → the **Babysit** playbook, not a host's built-in babysit skill.
+- Bot review comments → judge each on its merits.
 
 ## Principles
 
@@ -86,50 +79,25 @@ Read the leaf skill in full for any principle you apply. Each entry names when i
 
 ## Subagents
 
-**Any subagent you spawn inside a playbook step works in this mode** (code-writing delegates, ad-hoc helpers). The chat that receives `/dstack-mode` runs the playbook. Never spawn a subagent to run the playbook itself. Spawn it with the active harness's native subagent tool. Every supported harness can spawn subagents. If a nested spawn is denied, the current agent owns that work directly. Its brief includes this file's absolute path and tells the delegate to read that SKILL.md in full first, including the Principles index above, and to open a leaf `principle-*` skill at `../<name>/SKILL.md` from that path whenever it applies that principle. Routed workflow skills prescribe their own helpers for diverse-model review; respect what the skill prescribes rather than forcing this mode onto them.
+**Any subagent you spawn directly inside a playbook step works in this mode.** The chat that receives `/dstack-mode` runs the playbook itself. Spawn it with the active harness's native subagent tool. If a nested spawn is denied, the current agent owns that work directly. Its brief includes this file's absolute path and tells the delegate to read that SKILL.md in full first, including the Principles index above, and to open a leaf `principle-*` skill at `../<name>/SKILL.md` from that path whenever it applies that principle. Routed workflow skills (`interrogate`, `swarm`) prescribe their own helpers. Respect them.
 
 **Defaults for every spawn.** Run in the background when supported, preserve the tools the task needs, and pass file pointers instead of inlining large context. To change profiles, tell the user to invoke `setup-dstack` explicitly. Use `fast-explorer` for cheap read-only breadth, `feature-worker` for implementation, `bug-worker` for evidence-backed fixes, and `skeptical-reviewer` for judgment or independent review. If the harness cannot apply the configured pair, stop and report the rejected binding; do not inherit the parent model.
 
 **Match the pair to the job.** Before each spawn, pick the configured profile whose pair fits the job. Call the Skill tool with `dstack-config`. Name that profile and pass the values it returns unchanged in the native spawn call. Do not invent a slug, drop a half of the pair, raise or lower effort yourself, or inherit session effort. Verification stays on the swarm worker's configured pair. If the harness rejects the pair, stop and report the rejected binding.
 
-You own every subagent's work. Review the diff and write your own summary, don't pass through what it said. A second opinion is the same prompt on a different configured profile when possible. Agreement is high-signal.
+You own every subagent's work. Review the diff and write your own summary. A second opinion is the same prompt on a different configured profile.
 
-**Fresh subagents by default.** Give new work to a fresh subagent with consolidated scope, meaning the original brief, every later directive, and the prior agent's report and branch. This holds for a fix round, a follow-up, a retry, and the next queue item. Resume, message, or queue a follow-up on an existing subagent only when the new work strictly needs state that lives in that agent and is costly to move: its local checkout, its uncommitted changes, or a process it still runs, such as a dev server, a simulator, or a babysit watcher. A stop or hold order to a running agent is not reuse. A role such as a PR owner outlives its agent. Once that agent returns, a fresh agent takes the role's next round. Interrupt-chained resumes silently drop directives, so fire a fresh subagent with consolidated scope rather than trusting a "done" summary.
+**Fresh subagents by default.** Give a fix round, a follow-up, a retry, or the next queue item to a fresh subagent with the original brief, every later directive, and the prior agent's report and branch. Resume an existing subagent only when the work needs state that lives in it and is costly to move: its checkout, its uncommitted changes, or a process it still runs.
 
 ## Writing the reply
 
-Write the reply clean as you draft it. The cleanup-afterward pass has been measured to fail, so never generate the bad sentence in the first place.
-
-- **Short declarative sentences.** One thought per sentence, ended with a period.
-- **The long-dash character is banned outright.** Two cases. A file-list bullet joining a filename to its description with a dash. Write it as a sentence ("`main.js` owns persistence and the IPC handlers"). A bold section header joined to its text by a dash. Write the header as its own sentence ("**Verification.** End to end via CDP").
-- **A colon as a mid-sentence connector is also out** (unslop rule 14). A colon before a list is fine.
-- **Terse is not an excuse to drop content.** Short sentences, but every section the playbook's reply names stays: details, tradeoffs, choices, open decisions.
-- **Frame impact for the consumer and the maintainer.** Name who the work is for (an end user, a colleague importing the library) and what changes for them before any implementation detail. Then what the next engineer who owns this code inherits. If you can't say what either would notice, the work or the explanation is off.
-- **Never fabricate a link, citation, or transcript reference.** Link only artifacts you produced or read this session.
-- **Every claim carries its evidence or its label in the same sentence.** Measured, inferred, or guess. A prediction or an unseen cause is a guess. Never hand the human a check you could run.
-
-Every playbook ends with a reply written this way. When a forge artifact exists, link its actual GitHub or GitLab URL. Each playbook's own reply lines name only the content unique to that playbook.
-
-## Comments
-
-Comments follow the same rule as the reply. Write them clean as you go; a flat "no narrating comments" ban doesn't catch them, you have to not write them in the first place. The case we keep catching is a verify or test script that narrates its phases, a `// Phase 1: add cards` line above the block. Delete it; the assertion or log string is the only doc you need. Write `assert(ok, 'persisted across restart')`, not a `// move the card` comment plus the code. This applies to every file you produce, including the delegate's diff and the verify script. Keep a comment only for a non-obvious *why* the code can't show.
+Write short declarative sentences with no long dash and no colon as a connector. Lead with what changes for the user. Give each claim its evidence or a label (measured, inferred, or guess). Never hand the human a check you could run.
 
 ## Playbooks
 
-Your first todolist actions are the matched playbook's steps, copied in verbatim, before any task-specific todos and before you reason about the task. The failure mode is reading a playbook then writing a bespoke plan that drops its named steps (`architect`, the throughput checkpoint). A step you choose not to do stays in the list with a one-line `skip: <reason>`; skipping silently is not allowed. Match the task to a playbook below and open its full steps at `playbooks/<title>.md`, with the title in kebab case, hyphens kept and other punctuation dropped, unless the entry gives its file. Copy its steps in verbatim.
+Match the task to a playbook and open its steps at `playbooks/<title>.md`, with the title in kebab case. Copy its steps into the todolist tool first. Large or cross-cutting work still matches a playbook, often Feature or Refactoring. Split it into playbook-sized units.
 
-A large or cross-cutting effort still matches a playbook below, often Feature or Refactoring. Split it into playbook-sized units. A standing project-scale program is out of scope for this pack.
-
-- **Investigation.** Read-only question: how does X work, why was Y built this way, are we sure about Z, should we do X or Y.
-- **Bug fix.** A reported defect to reproduce, root-cause, and fix with runtime evidence.
-- **Feature.** New or changed behavior, built from a named data shape.
-- **Refactoring.** A behavior-preserving change to structure or shape (rename, extract, inline, dedupe, move).
-- **Prototype.** A throwaway sketch to make a design or behavioral decision cheaply, or to settle an empirical fork by observing it instead of asking the human ("prototype", "mock it up", "try this layout", "sketch it to decide").
-- **Authoring or modifying a skill.** Writing or editing a SKILL.md. File: `playbooks/authoring-a-skill.md`.
-- **Babysit.** Driving a pull request, merge request, or explicit ordered set to merge-ready: conflicts, review threads, and CI.
-- **Session pickup.** Resuming or taking over prior work from the current repository's active-harness transcript, an explicit transcript export, or a branch.
-- **Pause safely.** Suspending in-flight work cleanly so it can be resumed, on an explicit pause, going offline, a host restart, or imminent context compaction. The complement to Session pickup.
-- **Opening a PR.** Explicitly packaging and publishing already verified local work ("open a PR", "create a merge request"). It is never an automatic final step of another playbook.
+Investigation, Bug fix, Feature, Refactoring, Prototype, Authoring a skill, Babysit, Session pickup, Pause safely, Opening a PR.
 
 ## Mode lifetime
 

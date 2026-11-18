@@ -1,6 +1,6 @@
 # pstack sync
 
-Pinned: pstack 0.15.36, commit `1ba91fc25c0977741dd0e267849e6234b037ed0a`.
+Pinned: pstack 0.15.43, commit `2f87c854fe3e2fcda44ca86b46ede35aad3c46b7`.
 
 Upstream: repository `cursor/plugins`, subpath `pstack/` (<https://github.com/cursor/plugins/tree/main/pstack>). Never edit pstack. `scripts/pstack_sync.py` shallow-fetches the pinned and target commits itself and reads the pin and the lists below.
 
@@ -39,6 +39,26 @@ Upstream: repository `cursor/plugins`, subpath `pstack/` (<https://github.com/cu
 - `setup-pstack`: `setup-dstack` and `dstack-config` replace its model setup.
 
 `comment-sicko`, `control-ui`, `deslop`, `dstack-config`, and every `agents/openai.yaml` sidecar exist only in dstack. The sync never touches them.
+
+## Not imported
+
+These pstack items stay out of dstack. Reasons are one line each.
+
+- Default-model / Opus-first routing from 0.15.43 (`claude-opus-5-5-xhigh-fast`, Fable-as-exception, no role above xhigh, setup-pstack `# defaults: 3`). dstack keeps four profiles from `~/.dstack/config.json` via `dstack-config`.
+- Origin, watch-pr, and Bugbot text in Opening-a-PR / Babysit. dstack keeps gh/glab forge-neutral overlays and explicit-only Opening a PR.
+- Cursor skill-install paths in reflect (`.cursor/skills/`, `plugins/cache/`). dstack keeps `~/.agents/skills/`.
+
+## Kept dstack wording
+
+These hand edits stay on every absorb. Reasons are one line each.
+
+- `blast-radius` and `why` say "pull request or merge request" where pstack says "PR", because dstack supports GitHub and GitLab.
+- `recall` step 4 says "Don't use a restricted read-only mode; where a host strips MCP access in that mode it disables MCP-backed investigators" where pstack says "in agent mode because readonly strips MCP access", because agent mode is Cursor-only.
+- `dstack-mode/worker.md` adds one line after the stop rule: "Also stop for any external write the operator has not authorized: a push, a PR or MR, a ticket update, or a comment." dstack's Autonomy section requires explicit authorization for external writes, and pstack's stop rule does not cover them.
+
+## Guide pages
+
+`dstack-help/references/guide/` copies the pstack `docs/guide/` pages of the same name by hand, with `02-poteto-mode.md` as `02-dstack-mode.md`. `06-supported-scope.md` exists only in dstack. The script does not read `docs/`, so port changes to these pages by hand on each absorb, with the mechanical rewrites applied.
 
 ## Mechanical rewrites
 

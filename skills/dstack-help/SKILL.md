@@ -66,7 +66,7 @@ Name a skill directly when the user wants more or less than the playbook. Read i
 
 Bundled so the workflow is complete: `/deslop`, `/control-ui`, `/comment-sicko`.
 
-Close calls: `/how` vs `/why` vs `/teach`; `/arena` vs `/swarm`; `/recall` vs `/ketchup` vs `/ketchup-video` (session pickup resumes one chat or branch); `/architect` implements after it settles, add "with checkpoint" to review first.
+Close calls: `/how` vs `/why` vs `/teach`; `/arena` vs `/swarm`; `/recall` vs `/ketchup` vs `/ketchup-video` (session pickup resumes one chat or branch).
 
 `/statechart` needs Java 11 or later. The first run can install TLC and Java with mise, or set `TLA2TOOLS` to a `tla2tools.jar`.
 

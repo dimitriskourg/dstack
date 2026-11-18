@@ -19,7 +19,7 @@ CONFIG_SKILL = "dstack-config"
 CONFIG_CALL = "Call the Skill tool with `dstack-config`."
 CONFIG_CALLERS = {
     "arena", "dstack-mode", "how", "interrogate",
-    "recall", "reflect", "swarm", "why",
+    "recall", "swarm",
 }
 CONFIG_OWNERS = {CONFIG_SKILL, "setup-dstack"}
 CONFIG_PROCEDURE_MARKERS = (
@@ -111,6 +111,7 @@ PRINCIPLE_INDEX_ENTRY = re.compile(
     r"^- \*\*(?P<title>.+?)\.?\*\*(?: \(\*\*(?P<name>[a-z0-9-]+)\*\*\))?\.?"
 )
 PLAYBOOK_INDEX_ENTRY = re.compile(r"^- \*\*(?P<title>.+?)\.\*\*")
+PLAYBOOK_INDEX_LIST = re.compile(r"^[A-Z][A-Za-z ]*(?:, [A-Z][A-Za-z ]*)+\.$")
 PLAYBOOK_EXPLICIT_FILE = re.compile(r"(?:File:\s+)?`playbooks/([a-z0-9-]+)\.md`")
 LEGACY_SKILL_DIRECTIVE = re.compile(
     r"\b(?:run|apply|invoke|route through|route to|hand to|use)\s+"
@@ -333,12 +334,14 @@ def resolve_playbook_index(body: str) -> List[Tuple[str, str, int]]:
         if not in_playbooks:
             continue
         match = PLAYBOOK_INDEX_ENTRY.match(line)
-        if not match:
-            continue
-        title = match.group("title")
-        explicit = PLAYBOOK_EXPLICIT_FILE.search(line)
-        stem = explicit.group(1) if explicit else kebab_from_title(title)
-        entries.append((title, stem, line_number))
+        if match:
+            title = match.group("title")
+            explicit = PLAYBOOK_EXPLICIT_FILE.search(line)
+            stem = explicit.group(1) if explicit else kebab_from_title(title)
+            entries.append((title, stem, line_number))
+        elif PLAYBOOK_INDEX_LIST.match(line):
+            for title in line.rstrip(".").split(", "):
+                entries.append((title, kebab_from_title(title), line_number))
     return entries
 
 
