@@ -5,6 +5,7 @@ import importlib.util
 import io
 import json
 import os
+import stat
 import sys
 import tempfile
 import unittest
@@ -444,7 +445,10 @@ class InstallerTests(unittest.TestCase):
                 without_tag = os.stat_result(tuple(range(10)))
                 with mock.patch.object(INSTALL.os, "lstat", return_value=without_tag):
                     self.assertFalse(INSTALL.is_compatibility_link(directory))
-                tagged = mock.Mock(st_reparse_tag=INSTALL.MOUNT_POINT_REPARSE_TAG)
+                tagged = mock.Mock(
+                    st_mode=stat.S_IFDIR | 0o755,
+                    st_reparse_tag=INSTALL.MOUNT_POINT_REPARSE_TAG,
+                )
                 with mock.patch.object(INSTALL.os, "lstat", return_value=tagged):
                     self.assertTrue(INSTALL.is_compatibility_link(directory))
 
