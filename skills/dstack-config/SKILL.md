@@ -12,16 +12,18 @@ The caller names one profile (`fast-explorer`, `feature-worker`, `bug-worker`, o
 ## Resolve
 
 1. Map the system-provided product identity to `codex`, `claude`, or `cursor`. Never invent an alias, derive the id from repository files or transcript paths, or select another host.
-2. From the active checkout, resolve the repository entry and read the validated file:
+2. Read only `~/.dstack/config.json`, at `schema_version` 3, through the validating script. Run only the command for what the caller asked:
 
 ```text
+python3 <this-skill-dir>/../setup-dstack/scripts/configure.py profile --host <active-harness> --name <profile>
 python3 <this-skill-dir>/../setup-dstack/scripts/configure.py resolve --host <active-harness>
-python3 <this-skill-dir>/../setup-dstack/scripts/configure.py show
 ```
 
-Read only `~/.dstack/config.json`, at `schema_version` 3. `configure.py resolve` takes the canonical repository root from `git rev-parse --show-toplevel` with symlinks resolved, selects `hosts[<active-harness>]` and `repositories[<canonical-repository-root>]`, and checks that the entry's `repository_root` exactly matches its key. When that key is absent, it selects the registered checkout that shares `git rev-parse --git-common-dir`. Never use a repository with a different git common directory.
+For a profile, `configure.py profile` selects `hosts[<active-harness>].profiles.<profile>` and checks it against `invalid_bindings`. Profiles belong to the host, not to a repository, so a profile lookup needs no repository entry and works in any checkout or linked worktree.
 
-3. If the file is missing, unreadable, invalid, or an old schema version 2 file, the identity is unknown, the host or repository entry is absent, the requested profile is missing, or its value is listed in `invalid_bindings`, stop and name the exact problem. Tell the user to invoke `setup-dstack` explicitly. Never guess, omit, or inherit a value.
+For the transcripts directory, `configure.py resolve` takes the canonical repository root from `git rev-parse --show-toplevel` with symlinks resolved, selects `hosts[<active-harness>]` and `repositories[<canonical-repository-root>]`, and checks that the entry's `repository_root` exactly matches its key. When that key is absent, it selects the registered checkout that shares `git rev-parse --git-common-dir`. Never use a repository with a different git common directory.
+
+3. If the file is missing, unreadable, invalid, or an old schema version 2 file, the identity is unknown, the host entry is absent, the requested profile is missing, or its value is listed in `invalid_bindings`, stop and name the exact problem. For the transcripts directory, also stop when the repository entry is absent. Tell the user to invoke `setup-dstack` explicitly. Never guess, omit, or inherit a value.
 
 ## Return
 

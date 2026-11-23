@@ -27,7 +27,7 @@ The profiles are `fast-explorer`, `feature-worker`, `bug-worker`, and `skeptical
 
 Each profile holds exactly what the harness's native spawn call takes: a separate model and effort, or one model id that already carries the effort. Setup writes no worker definition files. An id without effort would leave the worker on the session effort, so setup never stores one.
 
-Run setup in each repository. Transcript consumers select the canonical Git root, or a registered checkout sharing its Git common directory. They never fall back to another repository's transcripts. A missing configuration or required entry stops config-dependent work with an explicit setup instruction.
+Profiles belong to the harness, so one setup pass per harness lets subagent skills run in every repository. Run setup again in a repository only to record its transcript directory. Transcript consumers select the canonical Git root, or a registered checkout sharing its Git common directory. They never fall back to another repository's transcripts. A missing configuration or required entry stops config-dependent work with an explicit setup instruction.
 
 ## Accept the verification offers, or don't
 
