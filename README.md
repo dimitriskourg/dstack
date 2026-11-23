@@ -25,7 +25,7 @@ To remove dstack, run `python3 uninstall.py --skills-only` to keep `~/.dstack`, 
 
 ## Set up
 
-Invoke `setup-dstack` explicitly in each harness and repository where you use dstack. It maps the harness to `codex`, `claude`, or `cursor`, asks you to confirm four profiles (`fast-explorer`, `feature-worker`, `bug-worker`, `skeptical-reviewer`), each a concrete model and effort, and records this repository's transcript directory in `~/.dstack/config.json`. There is no environment or command-line override for that path.
+Invoke `setup-dstack` explicitly in each harness where you use dstack. Profiles belong to the harness, so subagent skills work in any repository afterwards; rerun it in a repository only to record that repository's transcript directory for transcript-reading skills. It maps the harness to `codex`, `claude`, or `cursor`, asks you to confirm four profiles (`fast-explorer`, `feature-worker`, `bug-worker`, `skeptical-reviewer`), each a concrete model and effort, and records this repository's transcript directory in `~/.dstack/config.json`. There is no environment or command-line override for that path.
 
 Skills read the file only through the `dstack-config` skill, which stops and asks you to rerun `setup-dstack` when anything is missing.
 

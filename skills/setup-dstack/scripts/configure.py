@@ -324,6 +324,22 @@ def select_repository_entry(
     }
 
 
+def select_profile(config: Mapping[str, Any], host: str, profile: str) -> Dict[str, Any]:
+    checked = validate_config(config)
+    validate_host(host, "host")
+    if profile not in PROFILES:
+        raise ConfigError("profile must be one of {}, got {!r}".format(", ".join(PROFILES), profile))
+    if host not in checked["hosts"]:
+        raise ConfigError("host {!r} has no entry in {}".format(host, CONFIG_DISPLAY))
+    entry = checked["hosts"][host]
+    binding = entry["profiles"][profile]
+    if binding in entry["invalid_bindings"]:
+        raise ConfigError(
+            "profile {!r} for host {!r} is listed in invalid_bindings in {}".format(profile, host, CONFIG_DISPLAY)
+        )
+    return {"host": host, "profile": profile, "binding": binding}
+
+
 def merge_proposal(config: Mapping[str, Any], proposal: Mapping[str, Any]) -> Dict[str, Any]:
     merged = copy.deepcopy(config)
     previous = merged["hosts"].get(proposal["host"], {})
@@ -369,6 +385,9 @@ def parser() -> argparse.ArgumentParser:
     resolve = commands.add_parser("resolve")
     resolve.add_argument("--host", required=True)
     resolve.add_argument("--checkout")
+    profile = commands.add_parser("profile")
+    profile.add_argument("--host", required=True)
+    profile.add_argument("--name", required=True)
     return result
 
 
@@ -376,7 +395,7 @@ def run(arguments: Sequence[str]) -> int:
     options = parser().parse_args(arguments)
     path = CONFIG_PATH.resolve()
     try:
-        if options.command in {"validate", "resolve"} and not path.exists():
+        if options.command in {"validate", "resolve", "profile"} and not path.exists():
             raise ConfigError("configuration file does not exist: {}".format(path))
         config = default_config() if not path.exists() else validate_config(read_json(path, str(path)))
         if options.command == "show":
@@ -388,6 +407,10 @@ def run(arguments: Sequence[str]) -> int:
         if options.command == "resolve":
             checkout = canonicalize_path(options.checkout) if options.checkout else None
             selected = select_repository_entry(config, options.host, checkout)
+            print(json.dumps(selected, indent=2, ensure_ascii=False))
+            return 0
+        if options.command == "profile":
+            selected = select_profile(config, options.host, options.name)
             print(json.dumps(selected, indent=2, ensure_ascii=False))
             return 0
         proposal = load_proposal(options.proposal)

@@ -684,6 +684,91 @@ class ConfiguratorTests(unittest.TestCase):
             self.assertEqual("", stdout)
             self.assertIn("configuration file does not exist: {}".format(config.resolve()), stderr)
 
+    def test_profile_resolves_outside_any_registered_repository(self):
+        with self.git_workspace() as temporary:
+            root = Path(temporary)
+            registered = root / "registered"
+            other = root / "other"
+            config = root / "config.json"
+            proposal = root / "proposal.json"
+            repository_root = self.init_repo(registered)
+            other_root = self.init_repo(other)
+            self.write_json(
+                proposal,
+                self.proposal("claude", "live", "/tmp/transcripts", repository_root=repository_root),
+            )
+            self.assertEqual(0, self.apply(config, proposal)[0])
+            with mock.patch.object(CONFIGURE, "git_text", side_effect=AssertionError("profile must not run git")):
+                status, stdout, stderr = self.run_configurator(
+                    ["profile", "--host", "claude", "--name", "skeptical-reviewer"],
+                    config,
+                )
+            self.assertEqual(0, status, stderr)
+            self.assertEqual(
+                {
+                    "host": "claude",
+                    "profile": "skeptical-reviewer",
+                    "binding": {"model": "live-skeptical-reviewer", "effort": "medium"},
+                },
+                json.loads(stdout),
+            )
+            status, stdout, stderr = self.run_configurator(
+                ["resolve", "--host", "claude", "--checkout", other_root],
+                config,
+            )
+            self.assertEqual(2, status)
+            self.assertIn("only registers", stderr)
+
+    def test_profile_rejects_an_invalid_binding(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = root / "config.json"
+            proposal = root / "proposal.json"
+            self.write_json(
+                proposal,
+                self.proposal(
+                    "codex",
+                    "live",
+                    invalid_bindings=[{"model": "live-bug-worker", "effort": "medium"}],
+                ),
+            )
+            self.assertEqual(0, self.apply(config, proposal)[0])
+            status, stdout, stderr = self.run_configurator(
+                ["profile", "--host", "codex", "--name", "bug-worker"],
+                config,
+            )
+            self.assertEqual(2, status)
+            self.assertEqual("", stdout)
+            self.assertIn("invalid_bindings", stderr)
+
+    def test_profile_rejects_a_missing_host_or_unknown_profile(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = root / "config.json"
+            proposal = root / "proposal.json"
+            self.write_json(proposal, self.proposal("codex", "live"))
+            self.assertEqual(0, self.apply(config, proposal)[0])
+            status, _, stderr = self.run_configurator(
+                ["profile", "--host", "claude", "--name", "bug-worker"], config
+            )
+            self.assertEqual(2, status)
+            self.assertIn("host 'claude' has no entry", stderr)
+            status, _, stderr = self.run_configurator(
+                ["profile", "--host", "codex", "--name", "reviewer"], config
+            )
+            self.assertEqual(2, status)
+            self.assertIn("profile must be one of", stderr)
+
+    def test_profile_requires_an_existing_config(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            config = Path(temporary) / "config.json"
+            status, stdout, stderr = self.run_configurator(
+                ["profile", "--host", "claude", "--name", "bug-worker"], config
+            )
+            self.assertEqual(2, status)
+            self.assertEqual("", stdout)
+            self.assertIn("configuration file does not exist", stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

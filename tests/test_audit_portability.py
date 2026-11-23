@@ -62,7 +62,7 @@ class PortabilityAuditTests(unittest.TestCase):
         "Map the system-provided product identity to `codex`, `claude`, or `cursor`; never invent an alias. "
         "Read `~/.dstack/config.json` and select `hosts[<active-harness>]` and `repositories[<canonical-repository-root>]`, "
         "and verify its `repository_root` exactly matches; if that key is absent, use `git rev-parse --git-common-dir`. "
-        "Run `configure.py resolve`; on failure, stop and name the exact problem. "
+        "Run `configure.py profile` for a profile and `configure.py resolve` for transcripts; on failure, stop and name the exact problem. "
         "Tell the user to invoke `setup-dstack` explicitly. Require a concrete model and effort pair. "
         "Pass it as the native spawn call takes it: for `codex` and `claude`, `model` and `effort` as "
         "separate spawn arguments; for `cursor`, a `model` that already carries effort. Never inherit session effort. "
@@ -82,6 +82,7 @@ class PortabilityAuditTests(unittest.TestCase):
                 "config skill must verify the repository entry identity",
                 "config skill must accept linked worktrees via git common directory",
                 "config skill must resolve the repository entry with configure.py resolve",
+                "config skill must read profiles with configure.py profile",
                 "config skill must return the transcripts directory",
                 "config skill must fail closed with setup-dstack guidance",
                 "config skill must require a concrete model and effort pair",

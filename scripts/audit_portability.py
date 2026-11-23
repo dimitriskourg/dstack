@@ -425,6 +425,7 @@ def check_config_procedure(skill_file: Path, body: str) -> List[Finding]:
         ("`repository_root` exactly matches" in body, "config skill must verify the repository entry identity"),
         ("git rev-parse --git-common-dir" in body, "config skill must accept linked worktrees via git common directory"),
         ("configure.py resolve" in body, "config skill must resolve the repository entry with configure.py resolve"),
+        ("configure.py profile" in body, "config skill must read profiles with configure.py profile"),
         ("transcripts_directory" in body, "config skill must return the transcripts directory"),
         (
             "stop and name the exact problem" in body and "Tell the user to invoke `setup-dstack` explicitly." in body,

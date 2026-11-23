@@ -25,7 +25,7 @@ Give the user the file's public copy: `https://github.com/dimitriskourg/dstack/b
 | Find their way around this pack | `/dstack-help` |
 | Resolve a profile's spawn values or the transcripts directory (called by other skills) | [`dstack-config`](../dstack-config/SKILL.md) |
 
-No `~/.dstack/config.json`, or no entry for the active harness or repository, means `setup-dstack` has not run here. Config-dependent skills read it only through `dstack-config`. On failure it stops and tells the user to invoke `setup-dstack` explicitly.
+No `~/.dstack/config.json`, or no entry for the active harness, means `setup-dstack` has not run in this harness. Profiles need only the harness entry; transcript-reading skills also need this repository's entry. Config-dependent skills read it only through `dstack-config`. On failure it stops and tells the user to invoke `setup-dstack` explicitly.
 
 Preview with `python3 install.py --dry-run`, then install. [Guide page 1](references/guide/01-setup.md) has the command for each harness. Then `/setup-dstack`, then a real task with `/dstack-mode`, a goal, and a check that can pass or fail.
 
@@ -90,7 +90,7 @@ Playbooks are step lists inside `/dstack-mode`, not slash commands. The Playbook
 
 | Symptom | Fix |
 |---|---|
-| A skill stopped and asked for `setup-dstack` | Run `setup-dstack` in this repository. |
+| A skill stopped and asked for `setup-dstack` | Run `setup-dstack` in this harness, from this repository if the skill reads transcripts. |
 | The mode stopped applying | Start each task with `/dstack-mode`. |
 | A new profile choice had no effect | Rerun `setup-dstack`, then check that the profile holds exactly what the host's spawn call takes. |
 | Parallel agents overwrote each other | Repository writers serialize. Give parallel workers read-only slices or output outside the repository. |
