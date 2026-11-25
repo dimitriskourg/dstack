@@ -21,10 +21,14 @@ Mechanics first, history second. Each skill's report tells you which sources it 
 ```
 
 ```text
+/reframe <what you're trying to build>
+```
+
+```text
 /dstack-mode read this thread. restate the underlying issue in your own words, in plain english. don't change any code yet.
 ```
 
-A misreading shows up in the restatement, where it costs one message to correct. Keep your own theory to yourself until the agent has stated its own.
+A misreading shows up in the restatement, where it costs one message to correct. Keep your own theory to yourself until the agent has stated its own. When you can't name what you're after, `/reframe` teaches the expert words and rewrites your description with them. Send that rewrite, or run `/sharpen` on it.
 
 ## Prototype before you pick
 

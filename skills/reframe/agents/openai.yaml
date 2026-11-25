@@ -1,0 +1,5 @@
+interface:
+  display_name: "Reframe"
+  short_description: "Teach the expert words for what you're building"
+policy:
+  allow_implicit_invocation: false

@@ -1,6 +1,6 @@
 # pstack sync
 
-Pinned: pstack 0.15.43, commit `2f87c854fe3e2fcda44ca86b46ede35aad3c46b7`.
+Pinned: pstack 0.15.48, commit `9e278fe4d4ecd8bfe98b1b79bf4be662efb338cc`.
 
 Upstream: repository `cursor/plugins`, subpath `pstack/` (<https://github.com/cursor/plugins/tree/main/pstack>). Never edit pstack. `scripts/pstack_sync.py` shallow-fetches the pinned and target commits itself and reads the pin and the lists below.
 
@@ -45,6 +45,7 @@ Upstream: repository `cursor/plugins`, subpath `pstack/` (<https://github.com/cu
 These pstack items stay out of dstack. Reasons are one line each.
 
 - Default-model / Opus-first routing from 0.15.43 (`claude-opus-5-5-xhigh-fast`, Fable-as-exception, no role above xhigh, setup-pstack `# defaults: 3`). dstack keeps four profiles from `~/.dstack/config.json` via `dstack-config`.
+- Gemini 4 Neon panel pins from 0.15.44–0.15.45 (`gemini-4-neon-xhigh` in arena runners, cross-judge pool, interrogate reviewers, and setup-pstack defaults). dstack keeps four profiles from `~/.dstack/config.json` via `dstack-config`.
 - Origin, watch-pr, and Bugbot text in Opening-a-PR / Babysit. dstack keeps gh/glab forge-neutral overlays and explicit-only Opening a PR.
 - Cursor skill-install paths in reflect (`.cursor/skills/`, `plugins/cache/`). dstack keeps `~/.agents/skills/`.
 
