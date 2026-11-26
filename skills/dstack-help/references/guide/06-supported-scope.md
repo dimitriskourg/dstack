@@ -30,6 +30,7 @@ The skills below remain supported. The everyday keep-set is closed.
 - `ketchup-video`
 - `in-your-own-words`
 - `sharpen`
+- `reframe`
 - `reflect`
 - `correct`
 

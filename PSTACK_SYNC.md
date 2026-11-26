@@ -1,6 +1,6 @@
 # pstack sync
 
-Pinned: pstack 0.15.43, commit `2f87c854fe3e2fcda44ca86b46ede35aad3c46b7`.
+Pinned: pstack 0.15.48, commit `9e278fe4d4ecd8bfe98b1b79bf4be662efb338cc`.
 
 Upstream: repository `cursor/plugins`, subpath `pstack/` (<https://github.com/cursor/plugins/tree/main/pstack>). Never edit pstack. `scripts/pstack_sync.py` shallow-fetches the pinned and target commits itself and reads the pin and the lists below.
 
@@ -45,8 +45,10 @@ Upstream: repository `cursor/plugins`, subpath `pstack/` (<https://github.com/cu
 These pstack items stay out of dstack. Reasons are one line each.
 
 - Default-model / Opus-first routing from 0.15.43 (`claude-opus-5-5-xhigh-fast`, Fable-as-exception, no role above xhigh, setup-pstack `# defaults: 3`). dstack keeps four profiles from `~/.dstack/config.json` via `dstack-config`.
+- Gemini 4 Neon panel pins from 0.15.44–0.15.45 (`gemini-4-neon-xhigh` in arena runners, cross-judge pool, interrogate reviewers, and setup-pstack defaults). dstack keeps four profiles from `~/.dstack/config.json` via `dstack-config`.
 - Origin, watch-pr, and Bugbot text in Opening-a-PR / Babysit. dstack keeps gh/glab forge-neutral overlays and explicit-only Opening a PR.
 - Cursor skill-install paths in reflect (`.cursor/skills/`, `plugins/cache/`). dstack keeps `~/.agents/skills/`.
+- Help-catalog mentions of `/reframe` in `dstack-help/references/prompting.md`, `dstack-help/references/recipes.md`, and `dstack-help/references/guide/10-recipes-and-pitfalls.md`. Upstream did not change those pages in 0.15.43–0.15.48; add them in a follow-up, not this sync PR.
 
 ## Kept dstack wording
 
@@ -55,6 +57,7 @@ These hand edits stay on every absorb. Reasons are one line each.
 - `blast-radius` and `why` say "pull request or merge request" where pstack says "PR", because dstack supports GitHub and GitLab.
 - `recall` step 4 says "Don't use a restricted read-only mode; where a host strips MCP access in that mode it disables MCP-backed investigators" where pstack says "in agent mode because readonly strips MCP access", because agent mode is Cursor-only.
 - `dstack-mode/worker.md` adds one line after the stop rule: "Also stop for any external write the operator has not authorized: a push, a PR or MR, a ticket update, or a comment." dstack's Autonomy section requires explicit authorization for external writes, and pstack's stop rule does not cover them.
+- `statechart` keeps the `TLA2TOOLS` / `JAVA` fallback and the `scripts/` layout sentence where pstack only says the first run installs TLC with mise, because dstack documents the portable fallback.
 
 ## Guide pages
 
@@ -97,9 +100,12 @@ Provider-neutral Skill-tool phrase, install path, and forge wording:
 - `skills/no-comments/SKILL.md`
 - `skills/principle-explain-the-number/SKILL.md`
 - `skills/reflect/SKILL.md`
-- `skills/statechart/SKILL.md`
 - `skills/technical-writing/SKILL.md`
 - `skills/why/SKILL.md`
+
+`TLA2TOOLS` / `JAVA` fallback and `scripts/` layout:
+
+- `skills/statechart/SKILL.md`
 
 `worker.md` Autonomy overlay and playbook overlays (Skill-tool phrase, four profiles, gh/glab, explicit-only Opening a PR):
 

@@ -35,7 +35,7 @@ REQUIRED_SKILLS = {
     "comment-sicko", "control-ui", "correct", "create-formal-verification-skill", "create-verification-skill", "maintain-formal-verification-skill",
     "deslop", "dstack-config", "dstack-help", "dstack-mode",
     "how", "in-your-own-words", "interrogate", "ketchup", "ketchup-video", "maintain-verification-skill", "no-comments",
-    "recall", "reflect", "setup-dstack", "sharpen", "statechart", "swarm", "tdd", "teach",
+    "recall", "reflect", "reframe", "setup-dstack", "sharpen", "statechart", "swarm", "tdd", "teach",
     "technical-writing", "typescript-best-practices", "unslop", "why",
     "principle-attack-the-premise", "principle-boundary-discipline",
     "principle-build-the-lever",

@@ -14,7 +14,7 @@ Give the user the file's public copy: `https://github.com/dimitriskourg/dstack/b
 
 ## Locked keep-set
 
-57 skills, 24 principles, ten playbooks. What is out of this pack lives in [Supported scope](references/guide/06-supported-scope.md), not here.
+58 skills, 24 principles, ten playbooks. What is out of this pack lives in [Supported scope](references/guide/06-supported-scope.md), not here.
 
 ### Setup and routing
 
@@ -39,6 +39,7 @@ Name a skill directly when the user wants more or less than the playbook. Read i
 |---|---|
 | Check that the agent understood the goal and the problem | [`/in-your-own-words`](../in-your-own-words/SKILL.md) |
 | Get a prompt rewritten deeper before sending it, without doing the task | [`/sharpen`](../sharpen/SKILL.md) |
+| Learn the expert words for what they're building and get the description rewritten with them | [`/reframe`](../reframe/SKILL.md) |
 | Know how code works now | [`/how`](../how/SKILL.md) |
 | Know why code is shaped this way | [`/why`](../why/SKILL.md) |
 | Understand a change, explained plainly | [`/teach`](../teach/SKILL.md) |
@@ -66,7 +67,7 @@ Name a skill directly when the user wants more or less than the playbook. Read i
 
 Bundled so the workflow is complete: `/deslop`, `/control-ui`, `/comment-sicko`.
 
-Close calls: `/how` vs `/why` vs `/teach`; `/arena` vs `/swarm`; `/recall` vs `/ketchup` vs `/ketchup-video` (session pickup resumes one chat or branch).
+Close calls: `/how` vs `/why` vs `/teach`; `/sharpen` vs `/reframe`; `/arena` vs `/swarm`; `/recall` vs `/ketchup` vs `/ketchup-video` (session pickup resumes one chat or branch).
 
 `/statechart` needs Java 11 or later. The first run can install TLC and Java with mise, or set `TLA2TOOLS` to a `tla2tools.jar`.
 
